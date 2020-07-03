@@ -674,9 +674,106 @@ function ensureSlash (): boolean {
 
 ```
 
+```javascript
+// 获取“#”后面的hash
+export function getHash (): string {
+  const href = window.location.href
+  const index = href.indexOf('#')
+  return index === -1 ? '' : decodeURI(href.slice(index + 1))
+}
 
+```
 
-## 路由跳转
+```javascript
+function replaceHash (path) {
+  // supportsPushState判断是否存在history的API
+  // 使用replaceState或者window.location.replace替换文档
+  // getUrl获取完整的url
+  if (supportsPushState) {
+    replaceState(getUrl(path))
+  } else {
+    window.location.replace(getUrl(path))
+  }
+}
+
+```
+
+```javascript
+// getUrl返回了完整了路径，并且会添加#, 确保存在/#/
+function getUrl (path) {
+  const href = window.location.href
+  const i = href.indexOf('#')
+  const base = i >= 0 ? href.slice(0, i) : href
+  return `${base}#${path}`
+}
+
+```
+
+在replaceHash中，我们调用了replaceState方法，在replaceState方法中，又调用了pushState方法。在pushState中我们会调用saveScrollPosition方法，它会记录当前的滚动的位置信息。然后使用histroyAPI，或者window.location.replace完成文档的更新。
+
+```javascript
+
+export function replaceState (url?: string) {
+  pushState(url, true)
+}
+
+export function pushState (url?: string, replace?: boolean) {
+  // 记录当前的x轴和y轴，以发生导航的时间为key，位置信息记录在positionStore中
+  saveScrollPosition()
+  const history = window.history
+  try {
+    if (replace) {
+      history.replaceState({ key: _key }, '', url)
+    } else {
+      _key = genKey()
+      history.pushState({ key: _key }, '', url)
+    }
+  } catch (e) {
+    window.location[replace ? 'replace' : 'assign'](url)
+  }
+}
+
+```
+
+#### push, replace,
+
+在push和replace中，调用transitionTo方法
+
+```javascript
+
+push (location, onComplete, onAbort) {
+  const { current: fromRoute } = this
+  this.transitionTo(
+    location,
+    route => {
+      pushHash(route.fullPath)
+      handleScroll(this.router, route, fromRoute, false)
+      onComplete && onComplete(route)
+    },
+    onAbort
+  )
+}
+
+replace (location, onComplete, onAbort) {
+  const { current: fromRoute } = this
+  this.transitionTo(
+    location,
+    route => {
+      replaceHash(route.fullPath)
+      handleScroll(this.router, route, fromRoute, false)
+      onComplete && onComplete(route)
+    },
+    onAbort
+  )
+}
+
+```
+
+#### transitionTo, confirmTransition, updateRoute
+
+![image](https://user-gold-cdn.xitu.io/2019/4/14/16a1a436687810ab?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+transitionTo的location参数是我们的目标路径, 可以是string或者RawLocation对象。我们通过router.match方法，router.match会返回我们的目标路由对象。紧接着我们会调用confirmTransition函数。
 
 ```javascript
   transitionTo (
@@ -731,6 +828,468 @@ function ensureSlash (): boolean {
       }
     )
   }
+```
+
+confirmTransition函数中会使用，isSameRoute会检测是否导航到相同的路由，如果导航到相同的路由会停止🤚导航，并执行终止导航的回调。
+
+```javascript
+
+if (
+  isSameRoute(route, current) &&
+  route.matched.length === current.matched.length
+) {
+  this.ensureURL()
+  return abort()
+}
+
+```
+
+调用resolveQueue方法，resolveQueue接受当前的路由和目标的路由的matched属性作为参数，resolveQueue的工作方式可以如下图所示。我们会逐一比较两个数组的路由，寻找出需要销毁的，需要更新的，需要激活的路由，并返回它们（因为我们需要执行它们不同的路由守卫）
+
+![image](https://user-gold-cdn.xitu.io/2019/4/14/16a1a4366883a3ce?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+```javascript
+function resolveQueue (
+  current
+  next
+) {
+  let i
+  // 依次比对当前的路由和目标的路由的matched属性中的每一个路由
+  const max = Math.max(current.length, next.length)
+  for (i = 0; i < max; i++) {
+    // 当前路由路径和跳转路由路径不同时跳出遍历
+    if (current[i] !== next[i]) {
+      break
+    }
+  }
+  return {
+    // 可复用的组件对应路由
+    updated: next.slice(0, i),
+    // 需要渲染的组件对应路由
+    activated: next.slice(i),
+    // 失活的组件对应路由
+    deactivated: current.slice(i)
+  }
+}
+
+```
+
+下一步，我们会逐一提取出，所有要执行的路由守卫，将它们concat到队列queue。queue里存放里所有需要在这次路由更新中执行的路由守卫。
+
+
+
+第一步，我们使用extractLeaveGuards函数，提取出deactivated中所有需要销毁的组件内的“beforeRouteLeave”的守卫。extractLeaveGuards函数中会调用extractGuards函数，extractGuards函数，会调用flatMapComponents函数，flatMapComponents函数会遍历records(**resolveQueue返回deactivated**), 在遍历过程中我们将组件，组件的实例，route对象，传入了fn(**extractGuards中传入flatMapComponents的回调**), 在fn中我们会获取组件中beforeRouteLeave守卫。
+
+```javascript
+
+// 返回每一个组件中导航的集合
+function extractLeaveGuards (deactivated) {
+  return extractGuards(deactivated, 'beforeRouteLeave', bindGuard, true)
+}
+
+function extractGuards (
+  records,
+  name,
+  bind,
+  reverse?
+) {
+  const guards = flatMapComponents(
+    records,
+    // def为组件
+    // instance为组件的实例
+    (def, instance, match, key) => {
+      // 返回每一个组件中定义的路由守卫
+      const guard = extractGuard(def, name)
+      if (guard) {
+        // bindGuard函数确保了guard（路由守卫）的this指向的是Component中的实例
+        return Array.isArray(guard)
+          ? guard.map(guard => bind(guard, instance, match, key))
+          : bind(guard, instance, match, key)
+      }
+    }
+  )
+  // 返回导航的集合
+  return flatten(reverse ? guards.reverse() : guards)
+}
+
+export function flatMapComponents (
+  matched,
+  fn
+) {
+  // 遍历matched，并返回matched中每一个route中的每一个Component
+  return flatten(matched.map(m => {
+    // 如果没有设置components则默认是components{ default: YouComponent }，可以从addRouteRecord函数中看到
+    // 将每一个matched中所有的component传入fn中
+    // m.components[key]为components中的key键对应的组件
+    // m.instances[key]为组件的实例，这个属性是在routerview组件中beforecreated中被赋值的
+    return Object.keys(m.components).map(key => fn(
+      m.components[key],
+      m.instances[key],
+      m,
+      key
+    ))
+  }))
+}
+
+// 返回一个新数组
+export function flatten (arr) {
+  return Array.prototype.concat.apply([], arr)
+}
+
+// 获取组件中的属性
+function extractGuard (def, key) {
+  if (typeof def !== 'function') {
+    def = _Vue.extend(def)
+  }
+  return def.options[key]
+}
+
+// 修正函数的this指向
+function bindGuard (guard, instance) {
+  if (instance) {
+    return function boundRouteGuard () {
+      return guard.apply(instance, arguments)
+    }
+  }
+}
+
+```
+
+第二步，获取全局VueRouter对象beforeEach的守卫
+
+第三步, 使用extractUpdateHooks函数，提取出update组件中所有的beforeRouteUpdate的守卫。过程同第一步类似。
+
+第四步, 获取activated的options配置中beforeEach守卫
+
+第五部, 获取所有的异步组件
+
+
+
+在获取所有的路由守卫后我们定义了一个迭代器iterator。接着我们使用runQueue遍历queue队列。将queue队列中每一个元素传入fn(**迭代器iterator**)中，在迭代器中会执行路由守卫，并且路由守卫中必须明确的调用next方法才会进入下一个管道，进入下一次迭代。迭代完成后，会执行runQueue的callback。
+
+在runQueue的callback中，我们获取激活组件内的beforeRouteEnter的守卫，并且将beforeRouteEnter守卫中next的回调存入postEnterCbs中，在导航被确认后遍历postEnterCbs执行next的回调。
+
+在queue队列执行完成后，confirmTransition函数会执行transitionTo传入的onComplete的回调。
+
+```javascript
+// queue为路由守卫的队列
+// fn为定义的迭代器
+export function runQueue (queue, fn, cb) {
+  const step = index => {
+    if (index >= queue.length) {
+      cb()
+    } else {
+      if (queue[index]) {
+        // 使用迭代器处理每一个钩子
+        // fn是迭代器
+        fn(queue[index], () => {
+          step(index + 1)
+        })
+      } else {
+        step(index + 1)
+      }
+    }
+  }
+  step(0)
+}
+
+// 迭代器
+const iterator = (hook, next) => {
+  if (this.pending !== route) {
+    return abort()
+  }
+  try {
+    // 传入路由守卫三个参数，分别分别对应to，from，next
+    hook(route, current, (to: any) => {
+      if (to === false || isError(to)) {
+        // 如果next的参数为false
+        this.ensureURL(true)
+        abort(to)
+      } else if (
+        // 如果next需要重定向到其他路由
+        typeof to === 'string' ||
+        (typeof to === 'object' && (
+          typeof to.path === 'string' ||
+          typeof to.name === 'string'
+        ))
+      ) {
+        abort()
+        if (typeof to === 'object' && to.replace) {
+          this.replace(to)
+        } else {
+          this.push(to)
+        }
+      } else {
+        // 进入下个管道
+        next(to)
+      }
+    })
+  } catch (e) {
+    abort(e)
+  }
+}
+
+runQueue(
+  queue,
+  iterator,
+  () => {
+    const postEnterCbs = []
+    const isValid = () => this.current === route
+    // 获取所有激活组件内部的路由守卫beforeRouteEnter，组件内的beforeRouteEnter守卫，是无法获取this实例的
+    // 因为这时激活的组件还没有创建，但是我们可以通过传一个回调给next来访问组件实例。
+    // beforeRouteEnter (to, from, next) {
+    //   next(vm => {
+    //     // 通过 `vm` 访问组件实例
+    //   })
+    // }
+    const enterGuards = extractEnterGuards(activated, postEnterCbs, isValid)
+    // 获取全局的beforeResolve的路由守卫
+    const queue = enterGuards.concat(this.router.resolveHooks)
+    // 再一次遍历queue
+    runQueue(queue, iterator, () => {
+      // 完成过渡
+      if (this.pending !== route) {
+        return abort()
+      }
+      // 正在过渡的路由设置为null
+      this.pending = null
+      // 
+      onComplete(route)
+      // 导航被确认后，我们执行beforeRouteEnter守卫中，next的回调
+      if (this.router.app) {
+        this.router.app.$nextTick(() => {
+          postEnterCbs.forEach(cb => { cb() })
+        })
+      }
+    }
+  )
+})
+
+// 获取组件中的beforeRouteEnter守卫
+function extractEnterGuards (
+  activated,
+  cbs,
+  isValid
+) {
+  return extractGuards(activated, 'beforeRouteEnter', (guard, _, match, key) => {
+    // 这里没有修改guard（守卫）中this的指向
+    return bindEnterGuard(guard, match, key, cbs, isValid)
+  })
+}
+
+// 将beforeRouteEnter守卫中next的回调push到postEnterCbs中
+function bindEnterGuard (
+  guard,
+  match,
+  key,
+  cbs,
+  isValid
+) {
+  // 这里的next参数是迭代器中传入的参数
+  return function routeEnterGuard (to, from, next) {
+    return guard(to, from, cb => {
+      // 执行迭代器中传入的next，进入下一个管道
+      next(cb)
+      if (typeof cb === 'function') {
+        // 我们将next的回调包装后保存到cbs中，next的回调会在导航被确认的时候执行回调
+        cbs.push(() => {
+          poll(cb, match.instances, key, isValid)
+        })
+      }
+    })
+  }
+}
+
+```
+
+在confirmTransition的onComplete回调中，我们调用updateRoute方法, 参数是导航的路由。在updateRoute中我们会更新当前的路由(**history.current**), 并执行cb(**更新Vue实例上的_route属性，🌟这会触发RouterView的重新渲染**）
+
+```javascript
+updateRoute (route: Route) {
+  const prev = this.current
+  this.current = route
+  this.cb && this.cb(route)
+  // 执行after的钩子
+  this.router.afterHooks.forEach(hook => {
+    hook && hook(route, prev)
+  })
+}
+
+```
+
+接着我们执行transitionTo的回调函数onComplete。在回调中会调用replaceHash或者pushHash方法。它们会更新location的hash值。如果兼容historyAPI，会使用history.replaceState或者history.pushState。如果不兼容historyAPI会使用window.location.replace或者window.location.hash。而handleScroll方法则是会更新我们的滚动条的位置。
+
+```javascript
+
+// replaceHash方法
+(route) => {
+  replaceHash(route.fullPath)
+  handleScroll(this.router, route, fromRoute, false)
+  onComplete && onComplete(route)
+}
+
+// push方法
+route => {
+  pushHash(route.fullPath)
+  handleScroll(this.router, route, fromRoute, false)
+  onComplete && onComplete(route)
+}
+
+```
+
+#### go, forward, back
+
+在VueRouter上定义的go，forward，back方法都是调用history的属性的go方法
+
+```javascript
+// index.js
+
+go (n) {
+  this.history.go(n)
+}
+
+back () {
+  this.go(-1)
+}
+
+forward () {
+  this.go(1)
+}
+
+```
+
+而hash上go方法调用的是history.go，它是如何更新RouteView的呢？答案是hash对象在setupListeners方法中添加了对popstate或者hashchange事件的监听。在事件的回调中会触发RoterView的更新
+
+```
+// go方法调用history.go
+go (n) {
+  window.history.go(n)
+}
+
+```
+
+#### setupListeners
+
+我们在通过点击后退, 前进按钮或者调用back, forward, go方法的时候。我们没有主动更新_app.route和current。我们该如何触发RouterView的更新呢？通过在window上监听popstate，或者hashchange事件。在事件的回调中，调用transitionTo方法完成对_route和current的更新。
+
+或者可以这样说，在使用push，replace方法的时候，hash的更新在_route更新的后面。而使用go, back时，hash的更新在_route更新的前面。
+
+```javascript
+
+setupListeners () {
+  const router = this.router
+
+  const expectScroll = router.options.scrollBehavior
+  const supportsScroll = supportsPushState && expectScroll
+
+  if (supportsScroll) {
+    setupScroll()
+  }
+
+  window.addEventListener(supportsPushState ? 'popstate' : 'hashchange', () => {
+    const current = this.current
+    if (!ensureSlash()) {
+      return
+    }
+    this.transitionTo(getHash(), route => {
+      if (supportsScroll) {
+        handleScroll(this.router, route, current, true)
+      }
+      if (!supportsPushState) {
+        replaceHash(route.fullPath)
+      }
+    })
+  })
+}
+
+```
+
+## 组件
+
+### RouterView
+
+RouterView是可以互相嵌套的，RouterView依赖了parent.![route属性，parent.](https://juejin.im/equation?tex=route%E5%B1%9E%E6%80%A7%EF%BC%8Cparent.)route即this._routerRoot._route。我们使用Vue.util.defineReactive将_router设置为响应式的。在transitionTo的回调中会更新_route, 这会触发RouteView的渲染。
+
+```javascript
+export default {
+  name: 'RouterView',
+  functional: true,
+  // RouterView的name, 默认是default
+  props: {
+    name: {
+      type: String,
+      default: 'default'
+    }
+  },
+  render (_, { props, children, parent, data }) {
+    data.routerView = true
+
+    // h为渲染函数
+    const h = parent.$createElement
+    const name = props.name
+    const route = parent.$route
+    const cache = parent._routerViewCache || (parent._routerViewCache = {})
+
+    let depth = 0
+    let inactive = false
+    // 使用while循环找到Vue的根节点, _routerRoot是Vue的根实例
+    // depth为当前的RouteView的深度，因为RouteView可以互相嵌套，depth可以帮组我们找到每一级RouteView需要渲染的组件
+    while (parent && parent._routerRoot !== parent) {
+      if (parent.$vnode && parent.$vnode.data.routerView) {
+        depth++
+      }
+      if (parent._inactive) {
+        inactive = true
+      }
+      parent = parent.$parent
+    }
+    data.routerViewDepth = depth
+
+    if (inactive) {
+      return h(cache[name], data, children)
+    }
+
+    const matched = route.matched[depth]
+    if (!matched) {
+      cache[name] = null
+      return h()
+    }
+
+    // 获取到渲染的组件
+    const component = cache[name] = matched.components[name]
+
+    // registerRouteInstance会在beforeCreated中调用，又全局的Vue.mixin实现
+    // 在matched.instances上注册组件的实例, 这会帮助我们修正confirmTransition中执行路由守卫中内部的this的指向
+    data.registerRouteInstance = (vm, val) => {
+      const current = matched.instances[name]
+      if (
+        (val && current !== vm) ||
+        (!val && current === vm)
+      ) {
+        matched.instances[name] = val
+      }
+    }
+
+    ;(data.hook || (data.hook = {})).prepatch = (_, vnode) => {
+      matched.instances[name] = vnode.componentInstance
+    }
+
+    let propsToPass = data.props = resolveProps(route, matched.props && matched.props[name])
+    if (propsToPass) {
+      propsToPass = data.props = extend({}, propsToPass)
+      const attrs = data.attrs = data.attrs || {}
+      for (const key in propsToPass) {
+        if (!component.props || !(key in component.props)) {
+          attrs[key] = propsToPass[key]
+          delete propsToPass[key]
+        }
+      }
+    }
+    // 渲染组件
+    return h(component, data, children)
+  }
+}
+
 ```
 
 在路由跳转中，需要先获取匹配的路由信息，看下如何获取匹配的路由信息
