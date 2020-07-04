@@ -1313,9 +1313,6 @@ export default {
     if (name) {
       // 如果是命名路由，就判断记录中是否有该命名路由配置
       const record = nameMap[name]
-      if (process.env.NODE_ENV !== 'production') {
-        warn(record, `Route with name '${name}' does not exist`)
-      }
       // 没找到表示没有匹配的路由
       if (!record) return _createRoute(null, location)
       const paramNames = record.regex.keys
