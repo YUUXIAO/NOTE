@@ -4,18 +4,31 @@
 
 # VueRouter源码解析
 
-![img](https://user-gold-cdn.xitu.io/2018/5/8/1633d8c30a032a2d?imageslim)
-
 
 
 ### 前端路由原理
 
 前端路由的本质就是监听URL的变化，然后匹配路由规则，显示出对应的页面，无须刷新。
 
-路由模式
+![2](https://user-gold-cdn.xitu.io/2018/5/8/1633d876c5cdf6b4?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
 
-- Hash模式
-- History模式
+- _route是一个响应式的路由route对象，这个就是我们实例化Vue的时候挂载的那个vue-router实例
+- _router存储的就是我们从$options中拿到的vue-router对象 
+- _routerRoot指向我们的Vue根节点 
+- _routerViewCache是我们对View的缓存
+- $route和$router是定义在Vue.prototype上的两个getter,前者指向_routerRoot下的 _route,后者指向 _routerRoot下的 _router
+
+首先我们根据Vue的插件机制安装了vue-router，总结起来就是**封装了一个mixin，定义了两个'原型'，注册了两个组件**。
+
+在这个mixin中，beforeCreate钩子被调用然后判断vue-router是否实例话了并初始化路由相关逻辑，前文提到的`_routerRoot、_router、_route`便是在此时被定义的。
+
+定义了两个“原型”是指在Vue.prototype上定一个两个getter，也就`$route和$router`。注册了两个组件是指在这里注册了我们后续会用到的RouterView和RouterLink这两个组件。
+
+然后我们创建了一个VueRouter的实例，并将它挂载在Vue的实例上，这时候VueRouter的实例中的constructor初始化了各种钩子队列；初始化了matcher用于做我们的路由匹配逻辑并创建路由对象；初始化了history来执行过渡逻辑并执行钩子队列。
+
+接下里mixin中beforeCreate做的另一件事就是执行了我们VueRouter实例的init()方法执行初始化，这一套流程和我们点击RouteLink或者函数式控制路由的流程类似。
+
+在init方法中调用了history对象的transitionTo方法，然后去通过match获取当前路由匹配的数据并创建了一个新的路由对象route，接下来拿着这个route对象去执行confirmTransition方法去执行钩子队列中的事件，最后通过updateRoute更新存储当前路由数据的对象current，指向我们刚才创建的路由对象route。
 
 # 应用初始化
 
