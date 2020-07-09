@@ -103,20 +103,22 @@ export function install (Vue) {
   // beforeCreate mixin
   Vue.mixin({
     beforeCreate () {
+      // this.$options.router为VueRouter实例；
       // 判断组件是否存在 router 对象，该对象只在根组件上有
       if (isDef(this.$options.router)) {
         // _routerRoot, 指向了Vue的实例
         this._routerRoot = this
         // _router, 指向了VueRouter的实例
         this._router = this.$options.router
-        // 初始化路由
+        // router初始化，调用VueRouter的init方法
         this._router.init(this)
-        // 为 _route 属性实现双向绑定
+        // 使用Vue的defineReactive增加_route的响应式对象
         Vue.util.defineReactive(this, 'route', this.router.history.current)
       } else {
-        // 用于 router-view 层级判断找到根路由
-        this.routerRoot = (this.parent && this.parent.routerRoot) || this
+        // 将每一个组件的_routerRoot都指向根Vue实例;
+        this._routerRoot = (this.parent && this.parent.routerRoot) || this
       }
+      // 注册VueComponent 进行Observer处理；
       registerInstance(this, this)
     },
     destroyed () {
@@ -149,7 +151,9 @@ export function install (Vue) {
 constructor (options: RouterOptions = {}) {
     this.app = null
     this.apps = []
+   	// VueRouter 配置项
     this.options = options
+    // 三个钩子
     this.beforeHooks = []
     this.resolveHooks = []
     this.afterHooks = []
@@ -162,6 +166,7 @@ constructor (options: RouterOptions = {}) {
     if (this.fallback) {
       mode = 'hash'
     }
+    // node运行环境 mode = 'abstract';
     if (!inBrowser) {
       mode = 'abstract'
     }
@@ -198,11 +203,17 @@ matcher对象中包含了两个属性, addRoutes, match。
 createMathcher函数的作用就是创建路由映射表，然后通过闭包的方式让addRouters 和 match函数能够使用路由映射表的几个对象,最后返回 一个Matcher对象
 
 ```javascript
+
+// routes为我们初始化VueRouter的路由配置；
+// router就是我们的VueRouter实例；
 export function createMatcher (
   routes: Array<RouteConfig>,
   router: VueRouter
 ): Matcher {
   // 创建路由映射表
+  // pathList是根据routes生成的path数组；
+  // pathMap是根据path的名称生成的map；
+  // 如果我们在路由配置上定义了name，那么就会有这么一个name的Map；
   const { pathList, pathMap, nameMap } = createRouteMap(routes)
   
   // 添加路由
@@ -345,6 +356,7 @@ function addRouteRecord (
     pathList.push(record.path)
     pathMap[record.path] = record
   }
+  // 为定义了name的路由更新 name map
   if (name) {
     if (!nameMap[name]) {
       nameMap[name] = record
@@ -369,7 +381,7 @@ function addRoutes (routes) {
 }
 ```
 
-### match
+### 路由匹配函数==match
 
 match方法根据参数raw(可以是字符串也可以Location对象), 以及currentRoute（当前的路由对象返回Route对象)，在nameMap中查找对应的Route，并返回。
 
@@ -389,6 +401,7 @@ function match (
 
   if (name) {
     const record = nameMap[name]
+    // 如果没有这条路由记录就去创建一条路由对象；
     if (!record) return _createRoute(null, location)
     
     // 获取所有必须的params。如果optional为true说明params不是必须的
@@ -419,7 +432,8 @@ function match (
     for (let i = 0; i < pathList.length; i++) {
       const path = pathList[i]
       const record = pathMap[path]
-      // 使用pathList中的每一个regex，对path进行匹配
+      // 根据当前路径进行路由匹配
+      // 如果匹配就创建一条路由对象；
       if (matchRoute(record.regex, location.path, location.params)) {
         return _createRoute(record, location, redirectedFrom)
       }
@@ -434,6 +448,7 @@ function match (
 
 ```javascript
 
+// 根据不同的条件去创建路由对象
 function _createRoute (
   record: ?RouteRecord,
   location: Location,
