@@ -292,6 +292,8 @@ function addRouteRecord (
   const pathToRegexpOptions: PathToRegexpOptions = route.pathToRegexpOptions || {}
     
   // normalizePath, 会对path进行格式化
+  // 根据 pathToRegexpOptions.strict 判断是否删除末尾斜杠 /
+  // 根据是否以斜杠 / 开头判断是否需要拼接父级路由的路径
   // 会删除末尾的/，如果route是子级，会连接父级和子级的path，形成一个完整的path
   const normalizedPath = normalizePath(
     path,
@@ -584,7 +586,7 @@ export class History {
     this.router = router
     // normalizeBase会对base路径做出格式化的处理，会为base开头自动添加‘/’，删除结尾的‘/’，默认返回’/‘
     this.base = normalizeBase(base)
-    // 初始化的当前路由对象
+    // 生成一个基础的route对象
     this.current = START
     this.pending = null
     this.ready = false
@@ -804,7 +806,11 @@ replace (location, onComplete, onAbort) {
 transitionTo的location参数是我们的目标路径, 可以是string或者RawLocation对象。我们通过router.match方法，router.match会返回我们的目标路由对象。紧接着我们会调用confirmTransition函数。
 
 ```javascript
-  transitionTo (
+  
+// localtion为我们当前页面的路由
+// 调用VueRouter的match方法获取匹配的路由对象，创建下一个状态的路由对象
+// this.current是我们保存的当前状态的路由对象
+transitionTo (
     location: RawLocation,
     onComplete?: Function,
     onAbort?: Function
