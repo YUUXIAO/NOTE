@@ -146,11 +146,74 @@ Function.prototype.myapply = function (context) {
 
 ## 实现一个 bind 函数
 
+> 会创建一个新函数。当这个新函数被调用时，bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数。
+
+```javascript
+Function.prototype.bind2 = function(content) {
+    if(typeof this != "function") {
+        throw Error("not a function")
+    }
+    // 若没问参数类型则从这开始写
+    let fn = this;
+    let args = [...arguments].slice(1);
+    
+    let resFn = function() {
+        return fn.apply(this instanceof resFn ? this : content,args.concat(...arguments) )
+    }
+    function tmp() {}
+    tmp.prototype = this.prototype;
+    resFn.prototype = new tmp();
+    
+    return resFn;
+}
+```
+
 ## 浅拷贝、深拷贝的实现
 
 ## 实现一个节流函数
 
+> 可以理解为事件在一个管道中传输，加上这个节流阀以后，事件的流速就会减慢。实际上这个函数的作用就是如此，它可以将一个函数的调用频率限制在一定阈值内，例如 1s，那么 1s 内这个函数一定不会被调用两次
+
+```javascript
+function throttle(fn, wait) {
+  let prev = new Date();
+  return function() { 
+      const now = new Date();
+      if (now - prev > wait) {
+          fn.apply(this, arguments);
+          prev = new Date();
+      }
+  }
+}
+
+```
+
+
+
 ## 实现一个防抖函数
+
+> 当一次事件发生后，事件处理器要等一定阈值的时间，如果这段时间过去后 再也没有 事件发生，就处理最后一次发生的事件。假设还差 `0.01` 秒就到达指定时间，这时又来了一个事件，那么之前的等待作废，需要重新再等待指定时间。
+>
+> 典型例子：限制 鼠标连击 触发。
+
+```javascript
+function debounce(fn, delay) {
+  // 持久化一个定时器 timer
+  let timer = null;
+  // 闭包函数可以访问 timer
+  return function() {
+    // 通过 'this' 和 'arguments'
+    // 获得函数的作用域和参数
+    let context = this;
+    let args = arguments;
+    // 如果事件被触发，清除 timer 并重新开始计时
+    clearTimeout(timer);
+    timer = setTimeout(function() {
+      fn.apply(context, args);
+    }, delay);
+  }
+}
+```
 
 ## instanceof 的原理
 
