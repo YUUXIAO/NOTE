@@ -29,7 +29,7 @@
 2. LexicaEnviroment（词法环境）组件被创建；
 3. VariableEnviroment（变量环境）组件被创建；
 
-因此，执行上下文可以在概念上表示如下：
+执行上下文可以在概念上表示如下：
 
 ```javascript
 ExecutionContext = {  
@@ -39,21 +39,154 @@ ExecutionContext = {
 }
 ```
 
-<https://www.cnblogs.com/lhh520/p/10175420.html>
+##### This Biling:
 
-<https://juejin.im/post/5a05b4576fb9a04519690d42>
+> 在全局执行上下文中，`this` 的值指向全局对象，在浏览器中，`this` 的值指向 window 对象。
+>
+> 在函数执行上下文中，`this` 的值取决于函数的调用方式。如果它被一个对象引用调用，那么 `this` 的值被设置为该对象，否则 `this` 的值被设置为全局对象或 `undefined`（严格模式下）。
 
-<https://juejin.im/post/5ba32171f265da0ab719a6d7#heading-0>
+##### Lexical Environment:
 
-<https://juejin.im/post/5d387f696fb9a07eeb13ea60#heading-8>
+词法环境是一个包含标识符变量映射的结构。（这里的标识符表示变量/函数的名称，变量是对实际对象【包括函数类型对象】或原始值的引用）
+
+- 两个组成：
+
+1. **环境记录器**是存储变量和函数声明的实际位置
+2. **对外部环境的引用**意味着它可以访问其外部词法环境（父级词法环境（作用域））
+
+- 两种类型：
+
+1. **全局环境**（在全局执行上下文中）是没有外部环境引用的词法环境。全局环境的外部环境引用为null。它拥有内建的 Object/Array/等、在环境记录器内的原型函数（关联全局对象，比如 window 对象）还有任何用户定义的全局变量，并且this的值指向这个全局对象。
+
+2. **函数环境**，用户在函数中定义的变量被存储在环境记录中，包含了arguments对象。对外部环境的引用可以是全局环境或者任何包含此内部函数的外部函数。
+
+   对于函数环境而言，环境记录还包含了一个arguments对象，该对象包含了索引和传递给函数的参数之间的映射以及传递给函数的参数的长度（数量）。
+
+   ```javascript
+   function foo(a, b) {  
+     var c = a + b;  
+   }  
+   foo(2, 3);
+
+   // arguments 对象  
+   Arguments: {0: 2, 1: 3, length: 2},
+   ```
+
+**环境记录**同样也有两种类型：
+
+- **声明性环境记录**存储变量，函数和参数。一个函数环境包含声明性环境记录。
+- **对象环境记录**用于定义在全局执行上下文中出现的变量和函数的关联。全局环境包含对象环境记录。
+
+抽象地说，词法环境的伪代码中看起来像这样：
+
+```javascript
+GlobalExectionContext = {  // 全局执行上下文
+  LexicalEnvironment: {  // 词法环境
+    EnvironmentRecord: {  // 环境记录
+      Type: "Object",    //全局环境
+      // 标识符绑定在这里 
+    outer: <null>   // 对外部环境的引用
+  }  
+}
+
+FunctionExectionContext = {   //函数执行上下文
+  LexicalEnvironment: {  //词法环境
+    EnvironmentRecord: {  //环境记录
+      Type: "Declarative",  //函数环境
+      // 标识符绑定在这里 
+    outer: <Global or outer function environment reference>  //对外部环境的引用
+  }  
+}
+```
+
+##### Variable Environment ：
+
+变量环境是一个词法环境，其环境记录器持有**变量声明语句**在执行上下文中创建的绑定关系，它具有上面定义的词法环境的所有属性。
+
+在 ES6 中，词法环境和 变量环境的区别在于前者用于存储函数声明和变量（ `let` 和 `const` ）绑定，而后者仅用于存储变量（ `var` ）绑定。
+
+使用例子进行介绍：
+
+```javascript
+let a = 20;  
+const b = 30;  
+var c;
+
+function multiply(e, f) {  
+ var g = 20;  
+ return e * f * g;  
+}
+
+c = multiply(20, 30);
+```
+
+执行上下文如下：
+
+```javascript
+GlobalExectionContext = {
+
+  ThisBinding: <Global Object>,
+
+  LexicalEnvironment: {  
+    EnvironmentRecord: {  
+      Type: "Object",  
+      // 标识符绑定在这里  
+      a: < uninitialized >,  
+      b: < uninitialized >,  
+      multiply: < func >  
+    }  
+    outer: <null>  
+  },
+
+  VariableEnvironment: {  
+    EnvironmentRecord: {  
+      Type: "Object",  
+      // 标识符绑定在这里  
+      c: undefined,  
+    }  
+    outer: <null>  
+  }  
+}
+
+FunctionExectionContext = {  
+   
+  ThisBinding: <Global Object>,
+
+  LexicalEnvironment: {  
+    EnvironmentRecord: {  
+      Type: "Declarative",  
+      // 标识符绑定在这里  
+      Arguments: {0: 20, 1: 30, length: 2},  
+    },  
+    outer: <GlobalLexicalEnvironment>  
+  },
+
+  VariableEnvironment: {  
+    EnvironmentRecord: {  
+      Type: "Declarative",  
+      // 标识符绑定在这里  
+      g: undefined  
+    },  
+    outer: <GlobalLexicalEnvironment>  
+  }  
+}
+```
+
+**注意：**只有在遇到函数multiply的调用时才会创建函数执行上下文。
+
+**变量提升**的原因：在创建阶段，函数声明存储在环境中，而变量会被设置为 `undefined`（在 `var` 的情况下）或保持未初始化（在 `let` 和 `const` 的情况下）。所以这就是为什么可以在声明之前访问 `var` 定义的变量（尽管是 `undefined`），但如果在声明之前访问 `let` 和 `const` 定义的变量就会提示引用错误的原因。这就是所谓的变量提升。
 
 ### 执行栈
 
 > 执行栈也叫调用栈，具有FIFO结构，用于存储在代码执行期间创建的所有执行上下文；
 >
-> 当JavaScript引擎首次读取脚本时，会创建一个全局执行上下文并将其Push到当前执行栈中。每当发生函数调用时，引擎都会为该函数创建一个新的执行上下文并Push到当前执行栈的栈顶。
+> 当 JavaScript 引擎首次遇到你的脚本时，它会创建一个全局的执行上下文并且压入当前执行栈。每当引擎遇到一个函数调用，它会为该函数创建一个新的执行上下文并压入栈的顶部。
 >
-> 引擎会运行执行上下文在执行栈栈顶的函数，根据LIFO规则，当此函数运行完成后，其对应的执行上下文将会从执行栈中Pop出，上下文控制权将转到当前执行栈的下一个执行上下文。
+> 引擎会执行那些执行上下文位于栈顶的函数。当该函数执行结束时，执行上下文从栈中弹出，控制流程到达当前栈中的下一个上下文。
+>
+> JavaScript 是一门单线程的语言，这意味着它只有一个调用栈，因此，它同一时间只能做一件事。
+>
+> 调用栈是一种数据结构，它记录了我们在程序中的位置。如果我们运行到一个函数，它就会将其放置到栈顶。当从这个函数返回的时候，就会将这个函数从栈顶弹出，这就是调用栈做的事情。
 
 看一段代码
 
@@ -72,3 +205,19 @@ console.log('Inside Global Execution Context');
 ```
 
 ![img](https://img2018.cnblogs.com/blog/1332080/201812/1332080-20181225155822028-960093150.jpg)
+
+##### 堆栈溢出
+
+当达到调用栈最大的大小的时候就会发生这种情况，特别是在你写递归的时候却没有全方位的测试它。
+
+```javascript
+    function foo() {
+      foo();
+    }
+    foo();
+
+```
+
+当我们的引擎开始执行这段代码的时候，它从 foo 函数开始。然后这是个递归的函数，并且在没有任何的终止条件的情况下开始调用自己。因此，每执行一步，就会把这个相同的函数一次又一次地添加到调用堆栈中。然后它看起来就像是这样的：
+
+![img](https://user-gold-cdn.xitu.io/2017/11/11/3925f8363d7a763e6474709ccddf7d96?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
