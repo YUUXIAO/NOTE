@@ -1,0 +1,77 @@
+## 概述
+
+> symbol是ES6新引入的一种基础数据类型，该类型具有静态属性和静态方法，因为作为构造函数来它是不完整的，所以它不支持“new Symbol()”语法。
+>
+> 每个从Symbol()返回的symbol值都是唯一的。一个symbol值能作为对象属性的标志符。这是该数据类型仅有的目的。
+
+####  Symbol()
+
+```javascript
+let sym1 = Symbol("foo");
+let sym2 = Symbol("foo");
+
+sym1 === sym2; // false
+
+let sym = new Symbol(); // TypeError
+```
+
+#### Symbol.for()
+
+> 它接受一个字符串作为参数，然后全局环境中搜索是否有以该参数注册的Symbol值。如果有，就返回这个Symbol值。没有就创建并返回一个以该字符串作为名称的Symbol值。
+
+```javascript
+let sym1 = Symbol.for("foo");
+let sym2 = Symbol.for("foo");
+
+sym1 === sym2; // true
+```
+
+#### Symbol.keyFor()
+
+> 在全局注册表中搜索查找改symbol，如果有返回该symbol的key值，形式为string。如果没有返回undefined。
+
+```javascript
+let sym= Symbol.for("foo");
+
+console.log(Symbol.keyFor(sym)); // foo
+```
+
+## 应用场景
+
+#### 当做对象属性key来使用
+
+```javascript
+let s_name= Symbol("name");
+
+let obj= {
+    [s_name]: "lle",
+    age: 18,
+    title: "Engineer"
+};
+
+console.log(Object.keys(obj)); // ["age", "title"]
+
+for(let key in obj) {
+    console.log(key); // 输出age, title
+}
+
+console.log(Object.getOwnPropertyNames(obj)); // ["age", "title"]
+
+JSON.stringify(obj);  // {"age":18,"title":"Engineer"}
+```
+
+如果要获取可以用个以下三种方式:
+
+```javascript
+obj[s_name]；// lle
+Object.getOwnPropertySymbols(obj); // [Symbol(name)]
+Reflect.ownKeys(obj); // ["age", "title", Symbol(name)]
+```
+
+#### 使用Symbol来替代常量使用
+
+```javascript
+const NAME = Symbol();
+const Age = Symbol()
+```
+
