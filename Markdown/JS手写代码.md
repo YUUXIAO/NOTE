@@ -316,8 +316,12 @@ window.addEventListener('scroll', throttle(lazyLoad,1000))
 lazyLoad();  // 首次加载 
 ```
 
-
-
 ## rem 基本设置
+
+```
+
+```
+
+
 
 ## 手写实现 AJAX
