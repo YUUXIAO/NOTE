@@ -1,11 +1,18 @@
+
+
+<https://juejin.im/post/6844903809206976520>
+
+<https://www.cnblogs.com/chenwenhao/p/11294541.html>
+
 ## new 方法
 
 ```javascript
 /*
-* 1. 创建一个对象
-* 2. 链接到原型
-* 3. 绑定this值 
-* 4. 返回新对象 
+* 1. 它创建了一个全新的对象
+* 2. 它会被执行[[Prototype]]（也就是__proto__）链接
+* 3. 它使this指向新创建的对象 
+* 4. 通过new创建的每个对象将最终被[[Prototype]]链接到这个函数的prototype对象上
+* 5. 如果函数没有返回对象类型Object(包含Functoin, Array, Date, RegExg, Error)，那 么new表达式中的函数调用将返回该对象引用
 */
 
 function createNew() {
@@ -14,7 +21,7 @@ function createNew() {
     // 获取构造函数
     let constructor = [].shift.call(arguments)  
     
-    // 设置原型，使__proto__指向构造函数的原型，这样，新对像就可以访问到构造函数原型上的属性与方法
+    // 设置原型，使__proto__指向构造函数的原型，这样，新对象就可以访问到构造函数原型上的属性与方法
     obj.__proto__ = constructor.prototype  
 
   	// 改变this指向，这样，新对象就可以访问构造函数的属性和方法
@@ -168,13 +175,51 @@ Function.prototype.bind2 = function(content) {
 
 ## 浅拷贝、深拷贝的实现
 
+## JSON.stringify函数
+
+- Boolean | Number| String 类型会自动转换成对应的原始值
+- undefined 、任意函数以及 symbol，会被忽略（出现在非数组对象的属性值中时），或者被转换成 null（出现在数组中时）
+- 不可枚举的属性会被忽略
+- 如果一个对象的属性值通过某种间接的方式指回该对象本身，即循环引用，属性也会被忽略
+
+```javascript
+function jsonStringify(obj) {
+    let type = typeof obj;
+    if (type !== "object") {
+        if (/string|undefined|function/.test(type)) {
+            obj = '"' + obj + '"';
+        }
+        return String(obj);
+    } else {
+        let json = []
+        let arr = Array.isArray(obj)
+        for (let k in obj) {
+            let v = obj[k];
+            let type = typeof v;
+            if (/string|undefined|function/.test(type)) {
+                v = '"' + v + '"';
+            } else if (type === "object") {
+                v = jsonStringify(v);
+            }
+            json.push((arr ? "" : '"' + k + '":') + String(v));
+        }
+        return (arr ? "[" : "{") + String(json) + (arr ? "]" : "}")
+    }
+}
+jsonStringify({x : 5}) // "{"x":5}"
+jsonStringify([1, "false", false]) // "[1,"false",false]"
+jsonStringify({b: undefined}) // "{"b":"undefined"}"
+```
+
+
+
 ## 节流函数
 
 > 节流的意思是让函数有节制地执行，而不是毫无节制的触发一次就执行一次。什么叫有节制呢？就是在一段时间内，只执行一次。
 >
 > 规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发多次函数，只有一次生效
 
-#### 应用场景
+**应用场景：**
 
 1. 鼠标点击事件，比如mousedown只触发一次
 2. 监听滚动事件，比如是否滑到底部自动加载更多
@@ -204,7 +249,7 @@ function throttle(fn, delay) {
 >
 > 每次事件触发都会删除原有定时器，建立新的定时器。通俗意思就是反复触发函数，只认最后一次，从最后一次开始计时。
 
-#### 应用场景
+**应用场景：**
 
 1. search搜索，用户不断输入值时，用防抖来节约Ajax请求,也就是输入框事件。
 2. window触发resize时，不断的调整浏览器窗口大小会不断的触发这个事件，用防抖来让其只触发一次
