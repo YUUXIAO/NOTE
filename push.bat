@@ -1,5 +1,5 @@
 git add .
 
-git commit -m"."
+git commit -m "."
 git pull
 git push
