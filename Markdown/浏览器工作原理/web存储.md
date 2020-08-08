@@ -52,7 +52,13 @@
 
 #### Domain
 
-> Domain 指定了 Cookie 可以送达的主机名。假如没有指定，那么默认值为当前文档访问地址中的主机部分
+> Domain 指定了 Cookie 可以送达的主机名
+
+注意：
+
+1. 在setcookie中省略domain参数，那么domain默认为当前域名；
+2. domain参数可以设置父域名以及自身，但不能设置其它域名，包括子域名，否则cookie不起作用。
+3. cookie的作用域是domain本身以及domain下的所有子域名；
 
 #### Path
 
