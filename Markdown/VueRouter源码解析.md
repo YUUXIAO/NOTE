@@ -69,9 +69,44 @@ let a = new Vue({
 
 ```
 
+## Vue.use
 
+> ```
+> Vue.use(plugin)
+> ```
 
-## 路由注册
+安装Vue.js插件。如果插件是一个对象，必须提供install方法。如果插件是一个函数，它会被作为install方法。调用install方法时，会将Vue作为参数传入。install方法被同一个插件多次调用时，插件也只会被安装一次。
+
+作用：
+
+1. 插件的类型，可以是install方法，也可以是一个包含install方法的对象。
+2. 插件只能被安装一次，保证插件列表中不能有重复的插件。
+
+实现：
+
+```javascript
+Vue.use = function(plugin){
+  // 获取已安装插件
+  const installedPlugins = (this._installedPlugins || (this._installedPlugins = []));
+  // 如果已安装过该插件，直接返回
+  if(installedPlugins.indexOf(plugin)>-1){
+    return this;
+  }
+  // toArray方法将类数组转成真正的数组;使用toArray方法得到arguments
+  const args = toArray(arguments,1);
+  // 将Vue添加到args列表的最前面,保证install方法被执行时第一个参数是Vue，其余参数是注册插件时传入的参数
+  args.unshift(this);
+  if(typeof plugin.install === 'function'){
+      plugin.install.apply(plugin,args);
+  }else if(typeof plugin === 'function'){
+      plugin.apply(null,plugin,args);
+  }
+  installedPlugins.push(plugin);
+        return this;
+}
+```
+
+## 路由注册（install方法）
 
 - 在全局混入mixin【beforeCreate方法】
 - 在Vue的实例上初始化了一些私有属性
@@ -132,6 +167,8 @@ export function install (Vue) {
 }
 
 ```
+
+
 
 ## VueRouter 实例
 

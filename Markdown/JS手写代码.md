@@ -39,7 +39,6 @@ function People(name,age) {
 
 let peo = createNew(People,'Bob',22)
 console.log(peo.name)
-console.log(peo.age)
 ```
 
 ##  Promise
@@ -96,6 +95,8 @@ class Promise{
 
 ## call 函数
 
+> call 方法接收的是一个参数列表；
+
 ```javascript
 /*
 * 1. 将函数设为对象的属性
@@ -105,25 +106,25 @@ class Promise{
 */
 
 Function.prototype.call = function (context){
-  if(type0f this !== 'function'){
+  if(typeof this !== 'function'){
     throw new TypeError('not function');
   }
-  
+  // context指的是传入的函数
   context = context || window;
+  // 将 this 指向 context
   context.fn = this;
   
   let args = [...arguments].slice(1);
   let result = context.fn(args);
   
   delete context.fn;
-  
   return result
 }
 ```
 
-
-
 ## apply 函数
+
+> apply 方法接收的是一个包含多个参数的数组；
 
 ```javascript
 Function.prototype.myapply = function (context) {
@@ -174,6 +175,21 @@ Function.prototype.bind2 = function(content) {
 ```
 
 ## 浅拷贝、深拷贝的实现
+
+## instanceOf
+
+> 1. 在 left 的原型链中层层查找，是否有原型等于 prototype；
+>
+>
+> 2. 确定边界条件，如果 left === null，即找到头没找到返回 false；
+>
+>
+> 3. 如果 right === left，即找到返回 true；
+> 4. `left = left.__proto__`，不停的向上查找；
+
+
+
+
 
 ## JSON.stringify函数
 
