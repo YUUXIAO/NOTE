@@ -41,7 +41,7 @@ let peo = createNew(People,'Bob',22)
 console.log(peo.name)
 ```
 
-##  Promise
+##  Promise（简易版）
 
 ```javascript
 /*
