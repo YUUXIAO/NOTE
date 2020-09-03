@@ -95,7 +95,11 @@ class Promise{
 
 ## call 函数
 
-> call 方法接收的是一个参数列表；
+> call 是函数对象的原型方法，它的作用是绑定 this 参数，并执行函数；
+>
+> ```
+> function.call(thisArg, arg1, arg2, ...)；
+> ```
 
 ```javascript
 /*
@@ -105,7 +109,7 @@ class Promise{
 * 4. 如果不传入参数，默认指向window
 */
 
-Function.prototype.call = function (context){
+Function.prototype.myCall = function (context){
   if(typeof this !== 'function'){
     throw new TypeError('not function');
   }
@@ -147,8 +151,6 @@ Function.prototype.myapply = function (context) {
   return result
 }
 ```
-
-
 
 ## bind 函数
 
