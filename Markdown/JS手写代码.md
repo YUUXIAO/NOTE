@@ -6,6 +6,8 @@
 
 ## new 方法
 
+> new 运算符创建一个用户定义的对象类型的实例或具有构造函数的内置对象类型之一；
+
 ```javascript
 /*
 * 1. 它创建了一个全新的对象
@@ -18,13 +20,13 @@
 function createNew() {
     // 1.创建一个空对象
     let obj = {}  
-    // 获取构造函数
+    // 取出第一个参数，就是要传入的构造函数。因为shift会修改原数组，所以arguments会除去第一个参数
     let constructor = [].shift.call(arguments)  
     
-    // 设置原型，使__proto__指向构造函数的原型，这样，新对象就可以访问到构造函数原型上的属性与方法
+    // 将 obj 的原型指向构造函数，这样 obj 就可以访问到构造函数原型中的属性
     obj.__proto__ = constructor.prototype  
 
-  	// 改变this指向，这样，新对象就可以访问构造函数的属性和方法
+  	// 使用 apply，改变构造函数 this 的指向到新建的对象，这样 obj 就可以访问到构造函数中的属性
     let result = constructor.apply(obj, arguments)  
 
     // 如果返回值是一个对象就返回该对象，否则返回构造函数的一个实例对象
@@ -113,9 +115,7 @@ Function.prototype.myCall = function (context){
   if(typeof this !== 'function'){
     throw new TypeError('not function');
   }
-  // context指的是传入的函数
   context = context || window;
-  // 将 this 指向 context
   context.fn = this;
   
   let args = [...arguments].slice(1);
@@ -161,7 +161,7 @@ Function.prototype.bind2 = function(content) {
     if(typeof this != "function") {
         throw Error("not a function")
     }
-    // 若没问参数类型则从这开始写
+   
     let fn = this;
     let args = [...arguments].slice(1);
     
