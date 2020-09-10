@@ -4,6 +4,173 @@
 
 <https://www.cnblogs.com/chenwenhao/p/11294541.html>
 
+## 数组
+
+### 数组扁平化
+
+> 把一个多维数组变为一维数组；
+
+```javascript
+let array = [1, [2, 3, [4, 5]]];
+
+// ES6的flat()
+array.flat(Infinity); // [1, 2, 3, 4, 5]
+
+// 序列化后正则
+let str = JSON.stringify(array).replace(/(\[|\])/g, "");
+str = "[" + str + "]";
+JSON.parse(str); 
+
+// 递归处理
+function flat(arr) {
+  let result = [];
+  for (const item of arr) {
+    item instanceof Array
+      ? (result = result.concat(flat(item)))
+      : result.push(item);
+  }
+  return result;
+}
+
+// reduce 方法
+function flat(arr) {
+  return arr.reduce((prev, current) => {
+    return prev.concat(
+      current instanceof Array ? flat(current) : current
+    );
+  }, []);
+}
+
+// 迭代+扩展运算符
+while (array.some(Array.isArray)) {
+  debugger;
+  array = [].concat(...array);
+}
+```
+
+### 数组去重
+
+```javascript
+let array = ["banana", "apple", "orange", "lemon", "apple", "lemon"];
+
+// filter 方法
+function removeDuplicates(data) {
+  return data.filter((value, index) => data.indexOf(value) === index);
+}
+
+// ES6 的 Set
+function removeDuplicates(data) {
+  return [...new Set(data)];
+}
+
+// forEach 方法
+function removeDuplicates(data) {
+  let unique = [];
+  data.forEach(element => {
+    if (!unique.includes(element)) {
+      unique.push(element);
+    }
+  });
+  return unique;
+}
+
+//  reduce 方法
+function removeDuplicates(data) {
+  return data.reduce((acc, curr) => acc.includes(curr) ? acc : [...acc, curr], []);
+}
+
+// Array.from + ES6 Set
+function removeDuplicates(data) {
+  return Array.from(new Set(arr))
+}
+```
+
+### 从对象数组中删除重复的对象
+
+```javascript
+let users = [
+  { id: 1, name: 'susan', age: 25 },
+  { id: 2, name: 'cherry', age: 28 },
+  { id: 3, name: 'cindy', age: 27 },
+  { id: 2, name: 'cherry', age: 28 },
+  { id: 1, name: 'susan', age: 25 },
+]
+
+function uniqueByKey(data, key) {
+  const object = {};
+  data = data.reduce((prev, next) => {
+    // eslint-disable-next-line no-unused-expressions
+    object[next[key]]
+      ? ''
+      : (object[next[key]] = true && prev.push(next));
+    return prev;
+  }, []);
+  return data;
+}
+
+console.log(uniqueByKey(users, "id"));
+
+// [ { id: 1, name: 'susan', age: 25 },
+//   { id: 2, name: 'cherry', age: 28 },
+//   { id: 3, name: 'cindy', age: 27 } ]
+
+```
+
+### 数组取交集
+
+```javascript
+let a = [1, 2, 3];
+let b = [2, 4, 5];
+
+// Array.prototype.includes
+let intersection = a.filter(v => b.includes(v));
+
+// Array.from
+let aSet = new Set(a);
+let bSet = new Set(b);
+let intersection = Array.from(new Set(a.filter(v => bSet.has(v))));
+
+// Array.prototype.indexOf
+let intersection = a.filter((v) => b.indexOf(v) > -1);
+
+```
+
+### 数组取并集
+
+```javascript
+let a = [1, 2, 3];
+let b = [2, 4, 5];
+
+// Array.prototype.includes
+let union = a.concat(b.filter(v => !a.includes(v)));
+
+// Set
+let union = Array.from(new Set(a.concat(b)));
+
+// Array.prototype.indexOf
+let union = a.concat(b.filter((v) => a.indexOf(v) === -1));
+
+```
+
+### 数组取差集
+
+```javascript
+let a = [1, 2, 3];
+let b = [2, 4, 5];
+
+// Array.prototype.includes
+let difference = a.concat(b).filter(v => !a.includes(v) || !b.includes(v));
+
+// Array.from
+let aSet = new Set(a);
+let bSet = new Set(b);
+let difference = Array.from(new Set(a.concat(b).filter(v => !aSet.has(v) || !bSet.has(v))));
+
+// Array.prototype.indexOf
+let difference = a.filter((v) => b.indexOf(v) === -1).concat(b.filter((v) => a.indexOf(v) === -1));
+
+```
+
 ## new 方法
 
 > new 运算符创建一个用户定义的对象类型的实例或具有构造函数的内置对象类型之一；
@@ -381,10 +548,130 @@ lazyLoad();  // 首次加载
 
 ## rem 基本设置
 
+## 实现 AJAX
+
+## 字符串转二进制
+
+```javascript
+function charToBinary(text) {
+  let code = "";
+  for (let i of text) {
+    // 字符编码,toString()方法可以传入2 ~ 36 之间的整数表示基数，若省略该参数，则使用基数 10；
+    let number = i.charCodeAt().toString(2);
+    // 1 bytes = 8bit，将 number 不足8位的0补上
+    for (let a = 0; a <= 8 - number.length; a++) {
+       number = 0 + number;
+    }
+    code += number;
+  }
+  return code;
+}
 ```
 
+## 实现一个 sleep 函数
+
+> 比如 sleep(1000) 意味着等待1000毫秒，可从 Promise、Generator、Async/Await 等角度实现；
+
+```javascript
+//Promise
+const sleep = time => {
+  return new Promise(resolve => setTimeout(resolve,time))
+}
+sleep(1000).then(()=>{
+  console.log(1)
+})
+
+//Generator
+function* sleepGenerator(time) {
+  yield new Promise(function(resolve,reject){
+    setTimeout(resolve,time);
+  })
+}
+sleepGenerator(1000).next().value.then(()=>{console.log(1)})
+
+//async
+function sleep(time) {
+  return new Promise(resolve => setTimeout(resolve,time))
+}
+async function output() {
+  let out = await sleep(1000);
+  console.log(1);
+  return out;
+}
+output();
+
+//ES5
+function sleep(callback,time) {
+  if(typeof callback === 'function')
+    setTimeout(callback,time)
+}
+
+function output(){
+  console.log(1);
+}
+sleep(output,1000);
+
 ```
 
+## 模拟一个 localStorage
 
+```javascript
+'use strict'
+const valuesMap = new Map()
 
-## 手写实现 AJAX
+class LocalStorage {
+  getItem (key) {
+    const stringKey = String(key)
+    if (valuesMap.has(key)) {
+      return String(valuesMap.get(stringKey))
+    }
+    return null
+  }
+
+  setItem (key, val) {
+    valuesMap.set(String(key), String(val))
+  }
+
+  removeItem (key) {
+    valuesMap.delete(key)
+  }
+
+  clear () {
+    valuesMap.clear()
+  }
+
+  key (i) {
+    if (arguments.length === 0) {
+      throw new TypeError("Failed to execute 'key' on 'Storage': 1 argument required, but only 0 present.") // this is a TypeError implemented on Chrome, Firefox throws Not enough arguments to Storage.key.
+    }
+    let arr = Array.from(valuesMap.keys())
+    return arr[i]
+  }
+
+  get length () {
+    return valuesMap.size
+  }
+}
+const instance = new LocalStorage()
+
+global.localStorage = new Proxy(instance, {
+  set: function (obj, prop, value) {
+    if (LocalStorage.prototype.hasOwnProperty(prop)) {
+      instance[prop] = value
+    } else {
+      instance.setItem(prop, value)
+    }
+    return true
+  },
+  get: function (target, name) {
+    if (LocalStorage.prototype.hasOwnProperty(name)) {
+      return instance[name]
+    }
+    if (valuesMap.has(name)) {
+      return instance.getItem(name)
+    }
+  }
+})
+
+```
+
