@@ -31,6 +31,23 @@ Array.from(arrayLike); // ["name", "age", "sex"]
 Array.prototype.concat.apply([], arrayLike)
 ```
 
+### 类数组检测
+
+```javascript
+// 字符串和函数有length属性，但是它们可以用 typeof 检测排除
+function isArrayLike(o) {
+  if (o &&                                // o is not null, undefined, etc.
+      typeof o === 'object' &&            // o is an object
+      isFinite(o.length) &&               // o.length is a finite number
+      o.length >= 0 &&                    // o.length is non-negative
+      o.length===Math.floor(o.length) &&  // o.length is an integer
+      o.length < 4294967296)              // o.length < 2^32
+      return true;                        // Then o is array-like
+  else
+      return false;                       // Otherwise it is not
+}
+```
+
 ## Arguments对象
 
 > Arguments 对象只定义在函数体中，包括了函数的参数和其他属性。在函数体中，arguments 指代该函数的 Arguments 对象；
@@ -88,4 +105,37 @@ function foo(name, age, sex, hobbit) {
 }
 foo('name', 'age')
 ```
+
+### 传递参数
+
+> 将参数从一个函数传递到另一个函数；
+
+```javascript
+function foo() {
+    bar.apply(this, arguments);
+}
+function bar(a, b, c) {
+   console.log(a, b, c);
+}
+
+foo(1, 2, 3)
+```
+
+### arguments转数组
+
+```javascript
+// 使用ES6的 ... 运算符，我们可以轻松将 arguments 转成数组；
+function func(...arguments) {
+    console.log(arguments); // [1, 2, 3]
+}
+
+func(1, 2, 3);
+```
+
+### 应用场景
+
+1. 参数不定长；
+2. 函数柯里化；
+3. 递归调用；
+4. 函数重载；
 
