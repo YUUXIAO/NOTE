@@ -400,33 +400,29 @@ jsonStringify({b: undefined}) // "{"b":"undefined"}"
 
 ## 节流函数
 
-> 节流的意思是让函数有节制地执行，而不是毫无节制的触发一次就执行一次。什么叫有节制呢？就是在一段时间内，只执行一次。
->
-> 规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发多次函数，只有一次生效
+> 规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发多次函数，只有一次生效；
 
 **应用场景：**
 
 1. 鼠标点击事件，比如mousedown只触发一次
-2. 监听滚动事件，比如是否滑到底部自动加载更多
+2. 监听滚动事件，比如是否滑到底部自动加载更多；
 
 ```javascript
 function throttle(fn, delay) {
-    let flag = true,
+  let timer = null;
+  return function () {
+    let context = this;
+    let args = arguments;
+
+    if (!timer) {
+      timer = setTimeout(() => {
+        fn.apply(context, args);
         timer = null;
-    return function (...args) {
-        let context = this;
-        if (!flag) return;
-        flag = false;
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-            fn.apply(context, args);
-            flag = true;
-        }, delay)
+      }, delay);
     }
+  };
 }
 ```
-
-
 
 ## 防抖函数
 
