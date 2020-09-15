@@ -97,7 +97,7 @@ function extend() {
       i = 2;
     }
     // 如果target不是对象，我们是无法进行复制的，所以设为{}
-    if (typeof target !== "object" && target !== null) {
+    if (typeof target !== "object" && !isFunction(target)) {
       target = {};
     }
 
@@ -111,7 +111,12 @@ function extend() {
           let src = target[name];
           // 要复制的对象的属性值
           let copy = option[name];
-
+          
+          // 解决循环引用
+          if (target === copy) {
+              continue;
+          }
+          
           if (deep && copy && typeof copy === "object") {
             target[name] = extend(deep, src, copy);
           } else if (copy !== undefined) {
@@ -123,5 +128,59 @@ function extend() {
 
     return target;
   }
+```
+
+## 类型不一致
+
+判断目标属性值跟要复制的对象的属性值类型是否一致：
+
+1. 如果待复制对象属性值类型为数组，目标属性值类型不为数组的话，目标属性值就设为 []；
+2. 如果待复制对象属性值类型为对象，目标属性值类型不为对象的话，目标属性值就设为 {}；
+
+```javascript
+var clone, copyIsArray;
+
+...
+
+if (deep && copy && (isPlainObject(copy) ||
+        (copyIsArray = Array.isArray(copy)))) {
+
+    if (copyIsArray) {
+        copyIsArray = false;
+        clone = src && Array.isArray(src) ? src : [];
+
+    } else {
+        clone = src && isPlainObject(src) ? src : {};
+    }
+
+    target[name] = extend(deep, clone, copy);
+
+} else if (copy !== undefined) {
+    target[name] = copy;
+}
+```
+
+## 循环引用
+
+可能会遇到循环引用的情况，例如：
+
+```javascript
+var a = {name : b};
+var b = {name : a}
+var c = extend(a, b);
+console.log(c);
+```
+
+了避免这个问题，需要判断要复制的对象属性是否等于 target，如果等于，我们就跳过：
+
+```javascript
+...
+src = target[name];
+copy = options[name];
+
+if (target === copy) {
+    continue;
+}
+...
 ```
 
