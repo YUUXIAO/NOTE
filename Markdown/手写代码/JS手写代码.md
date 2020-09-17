@@ -456,7 +456,67 @@ function debounce(fn, delay) {
 
 ## instanceof 的原理
 
-## 柯里化函数的实现
+## 高阶函数实现AOP（面向切面编程）
+
+```javascript
+Function.prototype.before = function (beforefn) {
+    let _self = this; // 缓存原函数的引用
+    return function () { // 代理函数
+        beforefn.apply(this, arguments); // 执行前置函数
+        return _self.apply(this, arguments); // 执行原函数
+    }
+}
+
+Function.prototype.after = function (afterfn) {
+    let _self = this;
+    return function () {
+        let set = _self.apply(this, arguments);
+        afterfn.apply(this, arguments);
+        return set;
+    }
+}
+
+let func = () => console.log('func');
+func = func.before(() => {
+    console.log('===before===');
+}).after(() => {
+    console.log('===after===');
+});
+
+func();
+
+// 输出结果：
+===before===
+func
+===after===   
+```
+
+## 斐波那契数列
+
+> 斐波那契数列从第三项开始，每一项都等于前两项之和。指的是这样一个数列：0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144 …
+
+```javascript
+// 递归
+function fib(n) {
+  if (n === 1 || n === 2) return n - 1;
+  return fib(n - 1) + fib(n - 2)
+}
+console.log(fib(10)); // 34
+
+// 非递归
+function fib(n) {
+  let a = 0;
+  let b = 1;
+  let c = a + b;
+  for (let i = 3; i < n; i++) {
+    a = b;
+    b = c;
+    c = a + b;
+  }
+  return c;
+}
+console.log(fib(10)); // 34
+```
 
 ## Object.create 的基本实现原理
 
