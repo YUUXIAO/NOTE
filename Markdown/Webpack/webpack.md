@@ -185,8 +185,8 @@ plugins: [
 > 摇树优化：一个模块可能有多个方法，只要其中某个方法使用到了，则整个文件都会被打到 bundle 里面去，tree shaking 就是只把用到的方法打入到 bundle ，没有用到的方法会在 uglify 阶段被擦除掉；
 
 1.  webpack 默认支持，在 .babelrc 里设置 module：false 即可；
-2. webpack 会在 mode 为 production  的情况下默认开启 tree shaking；
-3. 要求：必须是 es6 语法，cjs 的方式不支持；
+2.  webpack 会在 mode 为 production  的情况下默认开启 tree shaking；
+3.  要求：必须是 es6 语法，cjs 的方式不支持；
 
 #### 原理
 
@@ -297,10 +297,87 @@ new addAssetHtmlWebpackPlugin([
 
 ![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/a10ffd865c8b437abbffd70a6e606809~tplv-k3u1fbpfcp-zoom-1.image)
 
-## module、chunk、bundle
+### splitChunks 和 dll 的区别
+
+1. splitChunks 是在构建时拆包，dll 是提前构建好基础库，打包的时候就不需要打基础库了，时间上 dll 比 splitChunks 快一点；
+2. dll 需要多配置一个 webpack.dll.config.js ， 而且一旦 dll 中的依赖有更新，得走两遍打包，比 splitChunks 麻烦一些 ;
+3. 推荐使用 splitChunks 去提取页面间的公共 js 文件，DllPlugin 用于基础包（框架包、业务包）的分离；
+
+### 多进程打包
+
+> 使用 thread-loader 开启多进程打包，加快打包速度；
+
+- 启动进程需要大概  600ms ，进程间通信也有花销，项目小的话开启多进程得不偿失，所以只有当项目比较大，打包耗时较长的时候才适合使用多进程。
+
+```javascript
+module: {
+  rules: [
+    {
+      test: /.js$/, 
+      use: [
+        {
+          loader: 'thread-loader',
+          options: {
+            workers: 2 //开启两个进程
+          }
+        },
+        {
+          loader: 'babel-loader',
+          options: {
+            presets: ['@babel/preset-env'],
+            cacheDirectory: true 
+          }     
+        }
+      ]
+    },
+  ]
+}
+```
+
+### module、chunk、bundle的区别
 
 1. module：模块，源代码中的一个文件就是一个模块；
 2. chunk：一个入口文件所依赖的一大块就是一个 chunk，可以理解为一个 entry 对应一个 chunk；
 3. bundle：打包后的资源，一般来说一个 chunk 就对应一个 bundle，但也可以通过一些插件进行拆包，把一个大 chunk 拆分为多个 bundle，比如 MiniCssExtractPlugin；
 
-### 
+## 多页面打包通用配置
+
+多页面打包需要多个入口文件，多个 HtmlWebpackPlugin 产生多个 html；
+
+```javascript
+// 核心方法
+const setMPA = () => {
+  const entry = {};
+  const htmlWebpackPlugins = [];
+
+  const entryFiles = glob.sync(path.join(__dirname, './src/*/index.js'));
+  entryFiles.forEach(entryFile => {
+    const match = entryFile.match(/src\/(.*)\/index\.js/);
+    const pageName = match && match[1];
+
+    entry[pageName] = entryFile;
+    htmlWebpackPlugins.push(
+      new HtmlWebpackPlugin({ 
+        template: path.join(__dirname, `src/${pageName}/index.html`),
+        filename: `${pageName}.html`,
+        chunks: [pageName], //要包含哪些chunk
+        inject: true, //将chunks自动注入html
+        minify: {
+          html5: true,
+          collapseWhitespace: true,
+          preserveLineBreaks: false,
+          minifyCSS: true,
+          minifyJS: true,
+          removeComments: false
+        }
+      }),
+    )
+  })
+
+  return {
+    entry,
+    htmlWebpackPlugins
+  }
+}
+```
+
