@@ -1,8 +1,43 @@
+> webpack 是一个 Javascript 静态模块打包器，它会递归构建一个依赖关系图，这个关系图包含应用程序所需要的每个模块，然后将这些模块打包成一个或多个 bundle； 
+
+## 核心概念
+
+### Entry
+
+指定 webpack 应该使用哪个模块作为构建其内部关系的开始，进入入口，webpack 会找出有哪些模块是 webpack 直接或间接依赖的，各个依赖立即被处理，最后输出到名为bundles 的文件中；
+
+可以在 entry 中配置一个或多个入口，默认的入口起点是 ：./src ；
+
+### Output
+
+webpack在哪里输出所创建的bundles,以及如何命名这些文件，默认输出文件的目录是./dist；
+
+### Loader
+
+webpack本身只能理解JavaScript，loader使得webpack可以去处理非JavaScript文件，loader可以将所有类型的文件转换为webpack可以处理的文件，然后就可以利用webpack的打包能力进行处理；
+
+### Plugins
+
+插件的应用范围为从打包优化压缩到重新定义环境中的变量，插件功能很强大，可以用于处理各式各样的任务。想要使用plugins，只需要使用require()引入某个插件，然后在plugins数组中添加该插件选项；
+
+webpack插件是一个具有apply属性的JavaScript对象，apply属性会被webpack compiler调用，并且compiler对象可在整个生命周期访问；
+
+### 模式
+
+通过选择development或是production之中的一个，来设置mode参数，可以启用相应webpack配置下的优化
+
+## 模块化带来的问题
+
+1. 无法保证所有的浏览器都冶容模块化标准；
+2. 依赖的模块太多、划分太细会导致一次发送多个请求向服务端请求模块资源造成效率低下；
+3. 不仅仅 js 需要模块化，其它的 CSS 、HTML、图片等资源也需要模块化；
+4. 因为模块比整个程序有更小的接触面，使得校验、测试、调试更加方便
+
 ## 作用
 
 1. 开发时，启动本地服务；
 2. 解决 js 、css 的依赖问题（比如引入顺序问题）；
-3. 将 ES6、vue / react、 jsx 语法编译为浏览器可识别的代码；
+3. 具备代码编译能力：将 ES6、vue / react、 jsx 语法编译为浏览器可识别的代码；
 4. 合并、压缩、优化打包后的体积；
 5. css 前缀补齐 / 预处理器；
 6. 使用 eslint 校验代码；
