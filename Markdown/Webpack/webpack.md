@@ -4,23 +4,29 @@
 
 ### Entry
 
-指定 webpack 应该使用哪个模块作为构建其内部关系的开始，进入入口，webpack 会找出有哪些模块是 webpack 直接或间接依赖的，各个依赖立即被处理，最后输出到名为bundles 的文件中；
-
-可以在 entry 中配置一个或多个入口，默认的入口起点是 ：./src ；
+指定webpack开始构建的入口模块，从该模块开始构建并计算出直接或间接依赖的模块或者库；
 
 ### Output
 
-webpack在哪里输出所创建的bundles,以及如何命名这些文件，默认输出文件的目录是./dist；
+webpack在哪里输出所创建的bundles,以及如何命名这些文件；
 
-### Loader
+### Loaders
 
-Loader 让 webpack 能够去处理那些非 JavaScript 文件（webpack 自身只理解 JavaScript）。loader 可以将所有类型的文件转换为 webpack 能够处理的有效模块，然后就可以利用 webpack 的打包能力，对它们进行处理；
+由于webpack只能处理javascript，所以我们需要对一些非js文件处理成webpack能够处理的模块，比如sass文件；
 
 ### Plugins
 
 插件的应用范围为从打包优化压缩到重新定义环境中的变量，插件功能很强大，可以用于处理各式各样的任务；
 
 webpack插件是一个具有apply属性的JavaScript对象，apply属性会被webpack compiler调用，并且compiler对象可在整个生命周期访问；
+
+### chunk
+
+code split 的产物。我们可以对 一些代码打包成一个单独的 chunk，比如某些公共模块、去重、更好的利用缓存；或者按需加载某些功能模块，优化加载时间；
+
+在 webpack3 及以前使用 CommonsChunkPlugin 将一些公共代码分割成一个 chunk，实现单独加载；
+
+在 webpack4 中 CommonsChunkPlugin 被废弃，使用 SplitChunksPlugin；
 
 ### 模式
 
@@ -416,3 +422,46 @@ const setMPA = () => {
 }
 ```
 
+## 构建流程分析
+
+webpack 的运行流程是一个串行的过程，从启动到结束会依次执行以下流程：
+
+1. 从配置文件和 Shell 语句中读取与合并参数，并初始化需要使用的插件和配置插件等执行环境所需要的参数；
+2. 初始化完成后会调用 Compiler 的 run 来真正启动 webpack 编译构建过程；
+3. webpack 的构建流程包括 compile、make、build 、seal、emit 阶段，执行完这些阶段就完成了构建过程；
+
+### 初始化
+
+#### entry-options 启动
+
+从配置文件和 Shell 语句中读取与合并参数，得出最终的参数；
+
+#### run 实例化
+
+compiler：用上一步得到的参数初始化 Compiler 对象，加载所有配置的插件，执行对象的 run 方法开始执行编译
+
+### 编译构建
+
+#### entry 确定入口
+
+根据配置中的 entry 找出所有的入口文件；
+
+#### make 编译模块
+
+从入口文件出发，调用所有配置的 Loader 对模块进行编译，再找出该模块依赖的模块，再递归本步骤直到所有入口依赖文件都经过了本步骤的处理；
+
+#### build module 完成模块编译
+
+经过上面一步使用 Loader 翻译完所模块后，得到了每个模块被翻译后的最终内容以及它们之间的依赖；
+
+#### seal 输出资源
+
+根据入口和模块之间的依赖关系，组装成一个个包含多个模块的 Chunk，再把每个 Chunk 转换成一个单独的文件加入到输出列表，这步是可以修改输出内容的最后机会；
+
+#### emit 输出完成
+
+在确定好输出内容后，根据配置确定输出的路径和文件名，把文件内容写入到文件系统；
+
+
+
+![img](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/71b263000fa94db792cf1e98d67a578a~tplv-k3u1fbpfcp-zoom-1.image)
