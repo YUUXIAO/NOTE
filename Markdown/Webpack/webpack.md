@@ -465,3 +465,55 @@ compiler：用上一步得到的参数初始化 Compiler 对象，加载所有�
 
 
 ![img](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/71b263000fa94db792cf1e98d67a578a~tplv-k3u1fbpfcp-zoom-1.image)
+
+## webpack 打包精简后的代码示例
+
+1. webpack 将所有模块（可以简单理解为文件）包裹于一个函数中，并传入默认参数，将所有模块放入一个数组中，取名 modules，并通过数组下标来作为 moduleId；
+2. 将 modules 传入一个自执行函数中，自执行函数中包含一个 installedModules 已经加载过的模块和一个模块加载函数，最后加载入口模块并返回；
+3. _ webpack_require _ 模块加载，先判断 installedModules 是否已经加载，加载过了就直接返回 exports 数据，没有加载过该模块就通过 modules[moduleId].call(module.exports, module, module.exports, __ webpack_require __) 执行模块并且将 module.exports 给返回；
+
+换个说法：
+
+1. 经过 webpack 打包出来的是一个匿名闭包函数；
+2. modules 是一个数组，每一项是一个模块初始化函数；
+3. __ webpack_require __ 用来加载模块，返回 module.exports；
+4. 通过 WEBPACK_REQUIRE_METHOD(0) 启动程序；
+
+```javascript
+// dist/index.xxxx.js
+(function(modules) {
+  // 已经加载过的模块
+  var installedModules = {};
+
+  // 模块加载函数
+  function __webpack_require__(moduleId) {
+    if(installedModules[moduleId]) {
+      return installedModules[moduleId].exports;
+    }
+    var module = installedModules[moduleId] = {
+      i: moduleId,
+      l: false,
+      exports: {}
+    };
+    modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+    module.l = true;
+    return module.exports;
+  }
+  __webpack_require__(0);
+})([
+/* 0 module */
+(function(module, exports, __webpack_require__) {
+  ...
+}),
+/* 1 module */
+(function(module, exports, __webpack_require__) {
+  ...
+}),
+/* n module */
+(function(module, exports, __webpack_require__) {
+  ...
+})]);
+
+
+```
+
