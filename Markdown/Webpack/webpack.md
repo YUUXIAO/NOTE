@@ -389,6 +389,138 @@ module: {
 2. chunk：一个入口文件所依赖的一大块就是一个 chunk，可以理解为一个 entry 对应一个 chunk；
 3. bundle：打包后的资源，一般来说一个 chunk 就对应一个 bundle，但也可以通过一些插件进行拆包，把一个大 chunk 拆分为多个 bundle，比如 MiniCssExtractPlugin；
 
+## 文件指纹
+
+### 优点
+
+1. 用作版本管理，发布项目时，只需要发布修改过的文件；
+2. 对于没有修改过的文件，用户在访问的时候依旧可以使用浏览器缓存，无需二次加载，加速页面访问；
+
+### 生成文件指纹
+
+1. Hash：和整个项目的构建有关，只要项目文件有修改，整个项目的构建的 hash 值也会修改；
+2. Chunkhash：和 webpack 打包的 chunk 有关，不同的 entry 会生成不同的 chunkhash 值，chunkhash 是使用 md5 加密，hash 的长度值为 32位，[chunkhash:8]表示取hash值的前8位；
+3. Contenthash：根据文件内容来定义 hash ，文件内容不变就不变；
+
+#### JS文件指纹设置
+
+使用 output 的 filename，使用 [ chunkhash ]；
+
+```javascript
+ output: {
+    path: path.join(__dirname, 'dist'),
+    filename: '[name]_[chunkhash:8].js'
+  },
+```
+
+#### CSS 指纹设置
+
+需要使用 MiniCSSExtractPlugin 将 CSS 提取成独立的文件，然后使用 [ Contenthash ] 设置指纹；
+
+MiniCSSExtractPlugin 和 style-loader 功能是互斥的；
+
+```javascript
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+  plugins: [
+    // 把css提取成单独的文件
+    new MiniCssExtractPlugin({
+      filename: '[name]_[contenthash:8].css'
+    })
+  ]
+```
+
+#### 图片和字体的指纹设置
+
+设置 file-loader 的 name , 使用 [ hash ]；
+
+```javascript
+{
+  test: /.(png|jpg|gif|jpeg)$/,
+  use: [
+    {
+      loader: 'file-loader',
+      options: {
+        name: '[name]_[hash:8].[ext]'
+      }
+    }
+  ]
+},
+```
+
+## 代码压缩
+
+### JS 文件的压缩
+
+> UglifyJS Webpack Plugin 插件用来缩小（压缩优化）js文件，至少需要 Node v6.9.0和Webpack v4.0.0版本；
+
+1. webpack 4 之前的版本是通过 webpack.optimize.CommonsChunkPlugin 来压缩js；
+2. webpack 4 版本之后被移除了，使用 config.optimization.splitChunks 来代替；
+
+```javascript
+//webpack.config.js
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+module.exports = {
+  optimization: {
+    minimizer: [
+      new UglifyJsPlugin({
+      test: /\.js(\?.*)?$/i,  //测试匹配文件,
+      include: /\/includes/, //包含哪些文件
+      excluce: /\/excludes/, //不包含哪些文件
+      //允许过滤哪些块应该被uglified（默认情况下，所有块都是uglified）。 
+      //返回true以uglify块，否则返回false。
+      chunkFilter: (chunk) => {
+          // `vendor` 模块不压缩
+          if (chunk.name === 'vendor') {
+            return false;
+          }
+          return true;
+        }
+      }),
+      cache: false,   //是否启用文件缓存，默认缓存在node_modules/.cache/uglifyjs-webpack-plugin.目录
+      parallel: true,  //使用多进程并行运行来提高构建速度
+    ],
+  },
+};
+```
+
+### CSS 文件的压缩
+
+使用 optimize-css-assets-webpack-plugin 插件，同时使用 cssnano；
+
+```javascript
+plugins:[
+  new OptimizeCSSAssetsPlugin({
+    assetsNameRegExp: /\.css$/g,
+    cssProcessor: require('cssnano')
+  })
+]
+```
+
+### html 文件的压缩
+
+使用 html-webpack-plugin 插件；
+
+```javascript
+plugins:[
+  new HtmlWebpackPlugin({
+    template: path.join(_dirname,'./src/search.html'),
+    filename: 'search.html',
+    chunks:	[search],
+    inject: true，
+    minify: {
+      html5：true,
+      collapseWhitespace: true,
+      preserveLineBreaks: true,
+      minifyCss: true,
+      minifyJS：true,
+      removeComments: false
+    }
+  })
+]
+```
+
+
+
 ## 多页面打包通用配置
 
 多页面打包需要多个入口文件，多个 HtmlWebpackPlugin 产生多个 html；

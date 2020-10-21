@@ -1,14 +1,55 @@
+## webpack 文件监听
+
+> 文件监听是在发现源码发生改变时，自动重新构建新的输出文件；
+>
+> 缺陷：每次需要手动刷新浏览器；
+
+webpack 开启监听模式，有两种方法：
+
+1. 启动 webpack 命令时，加上 --watch 参数；
+2. 在配置 webpack.config.js 中 设置 watch: true；
+
+### 文件监听原理
+
+轮询判断文件的最后编辑时间是否在变化，某个文件发生了变化，并不会立即告诉监听者，而是先缓存起来，等 aggregateTimeout；
+
+```javascript
+module.exports = {
+	// 默认为 false， 也就是不开启
+	watch: true,
+	// 只有开启监听模式的时候，watchOptions 才有意义
+	watchOptions: {
+		// 默认为空，不监听的文件或文件夹，支持正则匹配
+		ignored: /node_modules/,
+		// 监听到变化后会等 300ms 再去执行，默认 300ms
+		aggregateTimeout: 300,
+		// 判断文件是否发生变化是通过不停询问系统指定文件有没有变化实现的，默认每秒问 1000 次
+		poll: 1000
+	}
+}
 ```
-Hot Module Replacement，简称 HMR，无需完全刷新整个页面的同时，更新模块；
-```
 
-好处：
+## webpack 热更新及原理解析
 
-1. 保存应用的状态： webapck HMR 则不会刷新浏览器，只需要局部刷新页面上发生变化的模块，同时可以保留当前的页面状态，比如复选框的选中状态、输入框的输入；
-2. 简化开发流程，不需要手动运行代码打包刷新页面，通过 HMR 工作流自动化完成；
-3. HMR 兼容市面上大多前端框架或库，能够监听 React 或者 Vue 组件的变化，实时将最新的组件更新到浏览器端；
+> Hot Module Replacement，简称 HMR，无需完全刷新整个页面的同时，更新模块；
 
-## webpack的编译构建过程
+![img](https://img2020.cnblogs.com/blog/1735070/202009/1735070-20200910094229881-465690773.png)
+
+1. Webpack Compiler：将 JS 编译成 Bundle；
+
+2. HMR Server：将热更新的文件输出给 HMR Runtime；
+
+3. Bundle Server：提供文件在浏览器的访问；
+
+   > 比如说编译好的 bundle.js，其实在浏览器里面正常访问是以文件目录的形式来访问的，然后使用 BundleServer 可以让我们以类似于服务器的方式来访问，比如说 localhost:8080
+
+4. HMR Runtime：会被注入到浏览器，更新文件的变化；
+
+   > 开发阶段，打包阶段，会注入到浏览器中的 bundle.js 里面，这样浏览器端的 bundle.js 会和服务器建立一个链接，通常是 websocket；这样就能动态更新了；
+
+5. bundle.js：构建输出的文件；
+
+### webpack的编译构建过程
 
 1. 在项目启动后，进行构建打包，控制台会输出构建过程同时会生成 一个 hash 值；
 2. 每次修改代码保存后，会生成 一个 新的 hash 值、新的 json 文件、新的 js 文件；
@@ -16,9 +57,9 @@ Hot Module Replacement，简称 HMR，无需完全刷新整个页面的同时，
    - json 文件：返回结果中，h 代表本次新生成的 hash，用于下次文件热更新的标志； c 代表当前要热更新的文件对应的模块；
    - js 文件：就是本次修改的代码，重新打包编译后的；
 
-## 热更新原理
+### 热更新原理
 
-###  webpack-dev-server启动本地服务
+####  webpack-dev-server启动本地服务
 
 ```javascript
 // node_modules/webpack-dev-server/bin/webpack-dev-server.js
@@ -67,7 +108,7 @@ class Server {
 2. 使用 express 框架启动本地 server , 让浏览器可以请求本地的静态资源；
 3. 本地 server 启动之后，再去启动 websocket 服务，通过 websocket，可以建立本地服务和浏览器的双向通信。这样就可以实现当本地文件发生变化，立马告知浏览器可以热更新代码；
 
-### 修改webpack.config.js的entry配置
+#### 修改webpack.config.js的entry配置
 
 启动本地服务前，调用了 updateCompiler（this.compiler）方法，这个方法有两个关键方法：
 
@@ -359,7 +400,7 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
 
 ![img](https://user-gold-cdn.xitu.io/2019/12/1/16ec13499800dfce?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
 
-## 工作原理图解
+### 工作原理图解
 
 ![img](https://pic1.zhimg.com/80/v2-f7139f8763b996ebfa28486e160f6378_720w.jpg)
 
@@ -378,7 +419,7 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
 7. 第十步：是决定 HMR 成功与否的关键步骤，在该步骤中，HotModulePlugin 将会对新旧模块进行对比，决定是否更新模块，在决定更新模块后，检查模块之间的依赖关系，更新模块的同时更新模块间的依赖引用；
 8. 第十一步：当 HMR 失败后，回退到 live reload 操作，也就是进行浏览器刷新来获取最新打包代码；
 
-## 源码说明
+### 源码说明
 
 1. webpack 对文件系统进行 watch 打包到内存中：
 
@@ -525,7 +566,7 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
    }
    ```
 
-## 热更新流程总结
+### 热更新流程总结
 
 1. Webpack编译期，为需要热更新的 entry 注入热更新代码(EventSource通信)；
 2. 页面首次打开后，服务端与客户端通过 EventSource 建立通信渠道，把下一次的 hash 返回前端；
