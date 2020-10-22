@@ -1,5 +1,6 @@
-1. Webpack 本质上是一种事件流的机制，它的工作流程就是将各个插件串联起来，实现这一核心就是 Tapable；
-2. Webpack 中最核心的负责编译的 Compiler 和 负责创建 bundles 的 Compilation 都是 Tapable 的实例；
+> webpack 的插件架构主要是基于 Tapable 实现的，Tapable 是 webpack 项目组的一个内部库，主要是抽象了一套插件机制，专注于自定义事件的触发和操作；
+
+![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/8a1d41bd086d4cf68afd7c9486979a1b~tplv-k3u1fbpfcp-zoom-1.image)
 
 webpack3及其以前使用的Tapable，提供了包括：
 
