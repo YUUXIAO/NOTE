@@ -632,3 +632,9 @@ const setMPA = () => {
 
 ```
 
+## 深究问题
+
+1. HMR的原理？
+2. Tree shaking原理，为什么需要es module的写法？
+3. webpack5的Module Federation有哪些优势，在与http2.0的结合上有哪些有趣的事情，在微前端上的应用？
+4. 为什么说rollup比webpack更适合打包组件库？
