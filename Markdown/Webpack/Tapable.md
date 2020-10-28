@@ -90,7 +90,7 @@ class SyncHook_MY{
 
 #### SyncBailHook
 
-> 只要监听函数中有一个函数的返回值不为 null，则跳过剩下所有的逻辑；
+> 只要监听函数中有一个函数的返回值不为 undefined，则跳过剩下所有的逻辑；
 
 ```javascript
 const {
@@ -501,3 +501,445 @@ cost3: 2009.970ms
 webpack 3
 */
 ```
+
+#### AsyncSeriesHook
+
+> 不关心 callback() 的参数；
+
+- usage - tap
+
+```javascript
+const {
+    AsyncSeriesHook
+} = require("tapable");
+
+// tap
+let queue1 = new AsyncSeriesHook(['name']);
+console.time('cost1');
+queue1.tap('1', function (name) {
+    console.log(1);
+    return "Wrong";
+});
+queue1.tap('2', function (name) {
+    console.log(2);
+});
+queue1.tap('3', function (name) {
+    console.log(3);
+});
+queue1.callAsync('zfpx', err => {
+    console.log(err);
+    console.timeEnd('cost1');
+});
+// 执行结果
+/* 
+1
+2
+3
+undefined
+cost1: 3.933ms
+*/
+```
+
+- usage - tapAsync
+
+```javascript
+let queue2 = new AsyncSeriesHook(['name']);
+console.time('cost2');
+queue2.tapAsync('1', function (name, cb) {
+    setTimeout(() => {
+        console.log(name, 1);
+        cb();
+    }, 1000);
+});
+queue2.tapAsync('2', function (name, cb) {
+    setTimeout(() => {
+        console.log(name, 2);
+        cb();
+    }, 2000);
+});
+queue2.tapAsync('3', function (name, cb) {
+    setTimeout(() => {
+        console.log(name, 3);
+        cb();
+    }, 3000);
+});
+
+queue2.callAsync('webpack', (err) => {
+    console.log(err);
+    console.log('over');
+    console.timeEnd('cost2');
+}); 
+// 执行结果
+/* 
+webpack 1
+webpack 2
+webpack 3
+undefined
+over
+cost2: 6019.621ms
+*/
+```
+
+- usage - promise
+
+```javascript
+let queue3 = new AsyncSeriesHook(['name']);
+console.time('cost3');
+queue3.tapPromise('1',function(name){
+   return new Promise(function(resolve){
+       setTimeout(function(){
+           console.log(name, 1);
+           resolve();
+       },1000)
+   });
+});
+queue3.tapPromise('2',function(name,callback){
+    return new Promise(function(resolve){
+        setTimeout(function(){
+            console.log(name, 2);
+            resolve();
+        },2000)
+    });
+});
+queue3.tapPromise('3',function(name,callback){
+    return new Promise(function(resolve){
+        setTimeout(function(){
+            console.log(name, 3);
+            resolve();
+        },3000)
+    });
+});
+queue3.promise('webapck').then(err=>{
+    console.log(err);
+    console.timeEnd('cost3');
+});
+
+// 执行结果
+/* 
+webapck 1
+webapck 2
+webapck 3
+undefined
+cost3: 6021.817ms
+*/
+```
+
+原理
+
+```javascript
+class AsyncSeriesHook_MY {
+    constructor() {
+        this.hooks = [];
+    }
+
+    tapAsync(name, fn) {
+        this.hooks.push(fn);
+    }
+
+    callAsync() {
+        var slef = this;
+        var args = Array.from(arguments);
+        let done = args.pop();
+        let idx = 0;
+
+        function next(err) {
+            // 如果next的参数有值，就直接跳跃到 执行callAsync的回调函数
+            if (err) return done(err);
+            let fn = slef.hooks[idx++];
+            fn ? fn(...args, next) : done();
+        }
+        next();
+    }
+}
+```
+
+#### AsyncSeriesBailHook
+
+> callback() 的参数不为 null，就会直接执行 callAsync 等触发函数绑定的回调函数；
+
+- usage - tap
+
+```javascript
+const {
+    AsyncSeriesBailHook
+} = require("tapable");
+
+// tap
+let queue1 = new AsyncSeriesBailHook(['name']);
+console.time('cost1');
+queue1.tap('1', function (name) {
+    console.log(1);
+    return "Wrong";
+});
+queue1.tap('2', function (name) {
+    console.log(2);
+});
+queue1.tap('3', function (name) {
+    console.log(3);
+});
+queue1.callAsync('webpack', err => {
+    console.log(err);
+    console.timeEnd('cost1');
+});
+
+// 执行结果:
+/* 
+1
+null
+cost1: 3.979ms
+*/
+```
+
+- usage - tapAsync
+
+```javascript
+let queue2 = new AsyncSeriesBailHook(['name']);
+console.time('cost2');
+queue2.tapAsync('1', function (name, callback) {
+    setTimeout(function () {
+        console.log(name, 1);
+        callback();
+    }, 1000)
+});
+queue2.tapAsync('2', function (name, callback) {
+    setTimeout(function () {
+        console.log(name, 2);
+        callback('wrong');
+    }, 2000)
+});
+queue2.tapAsync('3', function (name, callback) {
+    setTimeout(function () {
+        console.log(name, 3);
+        callback();
+    }, 3000)
+});
+queue2.callAsync('webpack', err => {
+    console.log(err);
+    console.log('over');
+    console.timeEnd('cost2');
+});
+// 执行结果
+
+/* 
+webpack 1
+webpack 2
+wrong
+over
+cost2: 3014.616ms
+*/
+```
+
+- usage - promise
+
+```javascript
+let queue3 = new AsyncSeriesBailHook(['name']);
+console.time('cost3');
+queue3.tapPromise('1', function (name) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            console.log(name, 1);
+            resolve();
+        }, 1000)
+    });
+});
+queue3.tapPromise('2', function (name, callback) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            console.log(name, 2);
+            reject();
+        }, 2000)
+    });
+});
+queue3.tapPromise('3', function (name, callback) {
+    return new Promise(function (resolve) {
+        setTimeout(function () {
+            console.log(name, 3);
+            resolve();
+        }, 3000)
+    });
+});
+queue3.promise('webpack').then(err => {
+    console.log(err);
+    console.log('over');
+    console.timeEnd('cost3');
+}, err => {
+    console.log(err);
+    console.log('error');
+    console.timeEnd('cost3');
+});
+// 执行结果：
+/* 
+webpack 1
+webpack 2
+undefined
+error
+cost3: 3017.608ms
+*/
+```
+
+#### AsyncSeriesWaterfallHook
+
+> 上一个监听函数的中的 callback(err, data) 的第二个参数,可以作为下一个监听函数的参数；
+
+- usage - tap
+
+```javascript
+const {
+    AsyncSeriesWaterfallHook
+} = require("tapable");
+
+// tap
+let queue1 = new AsyncSeriesWaterfallHook(['name']);
+console.time('cost1');
+queue1.tap('1', function (name) {
+    console.log(name, 1);
+    return 'lily'
+});
+queue1.tap('2', function (data) {
+    console.log(2, data);
+    return 'Tom';
+});
+queue1.tap('3', function (data) {
+    console.log(3, data);
+});
+queue1.callAsync('webpack', err => {
+    console.log(err);
+    console.log('over');
+    console.timeEnd('cost1');
+});
+
+// 执行结果:
+/* 
+webpack 1
+2 'lily'
+3 'Tom'
+null
+over
+cost1: 5.525ms
+*/
+```
+
+- usage - tapAsync
+
+```javascript
+let queue2 = new AsyncSeriesWaterfallHook(['name']);
+console.time('cost2');
+queue2.tapAsync('1', function (name, callback) {
+    setTimeout(function () {
+        console.log('1: ', name);
+        callback(null, 2);
+    }, 1000)
+});
+queue2.tapAsync('2', function (data, callback) {
+    setTimeout(function () {
+        console.log('2: ', data);
+        callback(null, 3);
+    }, 2000)
+});
+queue2.tapAsync('3', function (data, callback) {
+    setTimeout(function () {
+        console.log('3: ', data);
+        callback(null, 3);
+    }, 3000)
+});
+queue2.callAsync('webpack', err => {
+    console.log(err);
+    console.log('over');
+    console.timeEnd('cost2');
+});
+// 执行结果：
+/* 
+1:  webpack
+2:  2
+3:  3
+null
+over
+cost2: 6016.889ms
+*/
+```
+
+- usage - promise
+
+```javascript
+let queue3 = new AsyncSeriesWaterfallHook(['name']);
+console.time('cost3');
+queue3.tapPromise('1', function (name) {
+    return new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            console.log('1:', name);
+            resolve('1');
+        }, 1000)
+    });
+});
+queue3.tapPromise('2', function (data, callback) {
+    return new Promise(function (resolve) {
+        setTimeout(function () {
+            console.log('2:', data);
+            resolve('2');
+        }, 2000)
+    });
+});
+queue3.tapPromise('3', function (data, callback) {
+    return new Promise(function (resolve) {
+        setTimeout(function () {
+            console.log('3:', data);
+            resolve('over');
+        }, 3000)
+    });
+});
+queue3.promise('webpack').then(err => {
+    console.log(err);
+    console.timeEnd('cost3');
+}, err => {
+    console.log(err);
+    console.timeEnd('cost3');
+});
+// 执行结果：
+/* 
+1: webpack
+2: 1
+3: 2
+over
+cost3: 6016.703ms
+*/
+```
+
+原理
+
+```javascript
+class AsyncSeriesWaterfallHook_MY {
+    constructor() {
+        this.hooks = [];
+    }
+
+    tapAsync(name, fn) {
+        this.hooks.push(fn);
+    }
+
+    callAsync() {
+        let self = this;
+        var args = Array.from(arguments);
+
+        let done = args.pop();
+        console.log(args);
+        let idx = 0;
+        let result = null;
+
+        function next(err, data) {
+            if (idx >= self.hooks.length) return done();
+            if (err) {
+                return done(err);
+            }
+            let fn = self.hooks[idx++];
+            if (idx == 1) {
+
+                fn(...args, next);
+            } else {
+                fn(data, next);
+            }
+        }
+        next();
+    }
+}
+```
+
