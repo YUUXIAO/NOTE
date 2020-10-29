@@ -408,6 +408,7 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
 绿色的方框是 webpack 代码控制的区域;
 蓝色方框是 webpack-dev-server 代码控制的区域;
 洋红色的方框是文件系统，文件修改后的变化就发生在这，而青色的方框是应用本身;
+Manifest： 它是webpack维护的一份用于管理构建过程中所有模块及关联关系的数据表，包含了各个模块之间的依赖关系、模块内容等详细信息，是webpack解析和加载模块的重要依据；
 ```
 
 1. 第一步：在 webpack 的 watch 模式下，文件系统的某一个文件发生修改，webpack 监听到文件变化，根据配置文件对模块重新编译打包，并将打包后的代码保存在内存中；
