@@ -562,25 +562,6 @@ const setMPA = () => {
 }
 ```
 
-## 构建流程
-
-1. 初始化参数：从配置文件和 Shell 语句中读取与合并参数，得出最终参数；
-2. 初始化编译：用上一步得到的参数初始化 Compiler 对象，注册插件并传入 Compiler 实例（挂载了众多 webpack 事件 api 供插件使用）；
-3. AST & 依赖图：从入口文件出发，调用 AST 引擎（acorn）生成抽象语法树 AST，根据 AST 构建模块的所有依赖；
-4. 递归编译模块：调用所有配置的 Loader 对模块进行编译；
-5. 输出资源：根据入口和模块之间的依赖关系，组装成一个个包含多个模块的 Chunk ，再把每个 Chunk 转换成一个单独的文件加入到输出列表，这步是可以修改输出内容的最后机会；
-6. 输出完成：在确定好输出内容后，根据配置确定输出的路径和文件名，把文件内容写入到文件系统；
-
-
-
-![img](https://p9-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/71b263000fa94db792cf1e98d67a578a~tplv-k3u1fbpfcp-zoom-1.image)
-
-### 核心概念
-
-- Tapable：一个基于发布订阅的事件流工具，Compiler 和 Compiliation 对象都继承于 Tapable；
-- Compiler： webpack 编译贯穿始终的核心对象，在编译初始化阶段被创建的全局单例，包含完整的配置信息、loaders、plugins 以及各种工具方法；
-- Compiliation：代表一次 webpack 构建和生成编译资源的过程，在watch 模式下每一次文件变更触发的重新编译都会生成新的 Compiliation 对象，包含了当前编译的模块的 module，编译生成的资源，变化的文件，依赖的状态等；
-
 ## webpack 打包精简后的代码示例
 
 1. webpack 将所有模块（可以简单理解为文件）包裹于一个函数中，并传入默认参数，将所有模块放入一个数组中，取名 modules，并通过数组下标来作为 moduleId；
