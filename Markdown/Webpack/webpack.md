@@ -2,42 +2,13 @@
 
 ## 核心概念
 
-### Entry
-
-指定webpack开始构建的入口模块，从该模块开始构建并计算出直接或间接依赖的模块或者库；
-
-### Output
-
-webpack在哪里输出所创建的bundles,以及如何命名这些文件；
-
-### Loaders
-
-由于webpack只能处理javascript，所以我们需要对一些非js文件处理成webpack能够处理的模块，比如sass文件；
-
-### Plugins
-
-插件的应用范围为从打包优化压缩到重新定义环境中的变量，插件功能很强大，可以用于处理各式各样的任务；
-
-webpack插件是一个具有apply属性的JavaScript对象，apply属性会被webpack compiler调用，并且compiler对象可在整个生命周期访问；
-
-### chunk
-
-code split 的产物。我们可以对 一些代码打包成一个单独的 chunk，比如某些公共模块、去重、更好的利用缓存；或者按需加载某些功能模块，优化加载时间；
-
-在 webpack3 及以前使用 CommonsChunkPlugin 将一些公共代码分割成一个 chunk，实现单独加载；
-
-在 webpack4 中 CommonsChunkPlugin 被废弃，使用 SplitChunksPlugin；
-
-### Mode
-
-通过选择development或是production之中的一个，来设置mode参数，可以启用相应webpack配置下的优化；
-
-## 模块化带来的问题
-
-1. 无法保证所有的浏览器都冶容模块化标准；
-2. 依赖的模块太多、划分太细会导致一次发送多个请求向服务端请求模块资源造成效率低下；
-3. 不仅仅 js 需要模块化，其它的 CSS 、HTML、图片等资源也需要模块化；
-4. 因为模块比整个程序有更小的接触面，使得校验、测试、调试更加方便；
+- Entry：指定webpack开始构建的入口模块，从该模块开始构建并计算出直接或间接依赖的模块或者库；
+- Output：webpack在哪里输出所创建的bundles,以及如何命名这些文件；
+- Loader：因为 Webpack 只认识 JavaScript，所以 Loader 就成了翻译官，对其他类型的资源进行转译的预处理工作；本质就是一个函数，在该函数中对接收的到的内容进行转换，返回转换后的结果；
+- Plugin：基于事件流 框架 Tapable，插件可以扩展 webpack的功能，在 webpack 运行的生命周期会广播出许多事件，Plugin 可以监听这些事件，在合适的时机通过 webpack 提供的 api 改变输出的结果；
+- Mode：通过选择development或是production之中的一个，来设置mode参数，可以启用相应webpack配置下的优化；
+- module：除了 js 范畴内的es module、commonJs、AMD等，css @import、url(...)、图片、字体等在webpack中都被视为模块；
+- chunk：code split 的产物：我们可以对 一些代码打包成一个单独的 chunk，比如某些公共模块、去重、更好的利用缓存；或者按需加载某些功能模块，优化加载时间；
 
 ## 为什么选择 webpack
 
@@ -54,88 +25,6 @@ code split 的产物。我们可以对 一些代码打包成一个单独的 chun
 5. css 前缀补齐 / 预处理器；
 6. 使用 eslint 校验代码；
 7. 单元测试；
-
-## 配置组成部分
-
-```javascript
-module.exports = {
-  entry: '',   // 指定入口文件
-  output: '',  // 指定输出目录和输出文件名
-  mode: '',    // 环境
-  module: {
-    rules: [   // loader配置
-      {test: '', use: ''}
-    ]
-  },
-  plugins: [   // 插件配置
-    new xxxPlugin()
-  ]
-}
-```
-
-## Loader
-
-> webpack 原生只支持 js、json 两种模块类型，所以需要 loader 把其它类型的文件转化为有效的模块，并可以添加到依赖图中；
-
-loader 本身是一个函数，接受源文件作为参数，返回转换的结果：
-
-1. 解析es6：babel-loader（配合 .babelrc 使用）；
-2. 解析vue：vue-loader；
-3. 解析css：
-   - css-loader：用于加载 .css 文件，并转换为 commonjs 对象；
-   - style-loader：将样式通过 < style > 标签插入到 head 中；
-4. 解析less：less-loader（将 less 转换为 css）;
-5. 解析图片和字体：
-   - file-loader：用于处理文件（图片、字体）；
-   - url-loader：也可以处理图片和字体，和 file-loader 功能类似，但它还可以设置较小资源自动转 base64（内部使用了 file-loader），使用 options：｛limit：xxx｝;
-
-## Plugin
-
-> 插件用于 bundle 文件的优化、资源管理和环境变量的注入，它作用于整个构建过程；
-
-1. CleanWebpackPlugin：打包前自动清理构建目录；
-
-2. HtmlWebpackPlugin：创建 html 文件去承载输出的 bundle；
-
-3. MiniCssExtractPugin：把css 提取成单独的文件，与 style-loader 功能互斥，不同同时使用；
-
-4. CommonsChunkPlugin：把 chunks 相同的模块代码提取成公共 js；
-
-5. 关于代码压缩：
-
-   - JS 文件的压缩：默认开启了内置的 terser-webpack-plugin ，webpack 在打包时会自动压缩 js 代码；
-
-   - CSS 文件的压缩：使用 optimize-css -assets-webpack-plugin ，同时使用 cssnano（处理器）；
-
-     ```javascript
-      plugins: [
-        new OptimizeCssAssetsPlugin({
-          assetNameRegExp: /\.css$/g,
-          cssProcessor: require('cssnano')
-        })
-      ]
-     ```
-
-   - HTML 文件的压缩：修改 html-webpack-plugin ，设置压缩参数；
-
-     ```javascript
-     plugins: [
-       new HtmlWebpackPlugin({
-         template: path.join(__dirname, 'src/index.html'),
-         filename: 'index.html',
-         chunks: ['main', 'other'], //要包含哪些chunk
-         inject: true, //将chunks自动注入html
-         minify: { // 压缩相关
-           html5: true,
-           collapseWhitespace: true, //压缩空白字符
-           preserveLineBreaks: false,
-           minifyCSS: true,
-           minifyJS: true,
-           removeComments: true
-         }
-       })
-     ]
-     ```
 
 ## 开发环境性能优化
 

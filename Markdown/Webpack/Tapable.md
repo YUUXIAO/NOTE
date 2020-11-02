@@ -39,6 +39,9 @@ const hook = new SyncHook(["arg1", "arg2", "arg3"]);
 
 ### sync* 钩子
 
+- 注册在该钩子下面的插件的执行顺序都是顺序执行；
+- 只能使用 tap 注册，不能使用 tapPromise 和 tapAsync 注册；
+
 #### SyncHook
 
 ```javascript
