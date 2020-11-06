@@ -1,3 +1,5 @@
+
+
 ## 异步更新
 
 Vue官网对数据操作是这么描述的：
@@ -5,6 +7,46 @@ Vue官网对数据操作是这么描述的：
 > Vue 在更新 DOM 时是异步执行的。只要侦听到数据变化，Vue 将开启一个队列，并缓冲在同一事件循环中发生的所有数据变更。如果同一个 watcher 被多次触发，只会被推入到队列中一次。这种在缓冲时去除重复数据对于避免不必要的计算和 DOM 操作是非常重要的。然后，在下一个的事件循环“tick”中，Vue 刷新队列并执行实际 (已去重的) 工作；
 
 Vue 中的 dom 不是实时的，当数据改变后，vue 会把 渲染 watcher 添加到异步队列，异步执行，同步代码执行完成后再统一修改 dom；
+
+## 前置知识
+
+### JS 运行机制
+
+JS 运行机制简单来说可以按以下几个步骤：
+
+1. 所有的同步任务都会在主线程上执行，形成一个执行栈；
+2. 主线程之外还存在一个任务队列，只要异步任务有了运行结果，会把其回调函数作为一个任务添加到任务队列中；
+3. 一旦执行栈中的所有同步任务执行完毕，就会读取任务队列，看看里面有哪些任务，将其添加到执行栈，开始执行；
+4. 主线程不断重复上面第三步，就也是常说的事件循环（Event Loop）;
+
+### 异步任务的类型
+
+主线程的执行过程就是一个 tick，而所有的异步任务都是通过任务队列来一一执行。任务队列中存放的是一个个的任务（task），规定 task 分为两大类，分别是宏任务（macro task）和微任务 （micro task），并且每个 macro task 结束后，都要清空所有的 micro task；
+
+```javascript
+for (macroTask of macroTaskQueue) {
+	handleMacroTask();
+	
+	for (microTask of microTaskQueue) {
+		handleMicroTask(microTask);
+	}
+}
+```
+
+ 常见的创建 macro task 的方法有:
+
+- setTimeout、setInterval、postMessage、MessageChannel(队列优先于setTimeiout执行)
+- 网络请求IO
+- 页面交互：DOM、鼠标、键盘、滚动事件
+- 页面渲染
+
+常见的创建 micro task 的方法:
+
+- Promise.then
+- MutationObserve
+- process.nexttick
+
+在 nextTick 函数要利用这些方法把通过参数 cb 传入的函数处理成异步任务；
 
 ## nextTick 源码分析
 

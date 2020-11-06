@@ -343,22 +343,39 @@ Function.prototype.bind2 = function(content) {
 }
 ```
 
-## 浅拷贝、深拷贝的实现
+## 深拷贝
+
+```javascript
+function deepCopy(obj){
+    //判断是否是简单数据类型，
+    if(typeof obj == "object"){
+        //复杂数据类型
+        var result = obj.constructor == Array ? [] : {};
+        for(let i in obj){
+            result[i] = typeof obj[i] == "object" ? deepCopy(obj[i]) : obj[i];
+        }
+    }else {
+        //简单数据类型 直接 == 赋值
+        var result = obj;
+    }
+    return result;
+}
+```
 
 ## instanceOf
 
-> 1. 在 left 的原型链中层层查找，是否有原型等于 prototype；
->
->
-> 2. 确定边界条件，如果 left === null，即找到头没找到返回 false；
->
->
-> 3. 如果 right === left，即找到返回 true；
-> 4. `left = left.__proto__`，不停的向上查找；
+```javascript
+function instanceOf(left,right) {
 
-
-
-
+    let proto = left.__proto__;
+    let prototype = right.prototype
+    while(true) {
+        if(proto === null) return false
+        if(proto === prototype) return true
+        proto = proto.__proto__;
+    }
+}
+```
 
 ## JSON.stringify函数
 
@@ -453,8 +470,6 @@ function debounce(fn, delay) {
 }
 
 ```
-
-## instanceof 的原理
 
 ## 高阶函数实现AOP（面向切面编程）
 
