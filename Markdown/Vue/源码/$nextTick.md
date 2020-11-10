@@ -1,5 +1,3 @@
-
-
 ## 异步更新
 
 Vue官网对数据操作是这么描述的：
@@ -50,109 +48,142 @@ for (macroTask of macroTaskQueue) {
 
 ## nextTick 源码分析
 
+- 在外层定义的 callbacks 变量用来存储所有需要执行的回调函数，在 nextTick 的外层定义就形成了一个闭包，所以每次调用 $nextTick 的过程就是在向 callbacks 新增回调函数的过程；
+
+### nextTick 函数
+
+1. 在 nextTick 函数中把通过 cb 传入的函数，做一下包装然后 push 到 callbacks 数组中；
+2. ​
+3. 用变量 pending 来保证执行一个事件循环中只执行一次 timerFunc();
+4. 最后执行 if (!cb && typeof Promise !== 'undefined') ,判断参数 cb 不存在且浏览器支持 Promise，则返回一个 Promise 类实例化对象，例如  nextTick().then(() => {})，当 _resolve 函数执行，就会执行 then 的逻辑中；
+
 ```javascript
-import { noop } from 'shared/util'
-import { handleError } from './error'
-import { isIOS, isNative } from './env'
-
-// 存储所有需要执行的回调函数
-const callbacks = []
-// 标志是否正在执行回调函数
-let pending = false
-
-// 对 callbacks 遍历，然后执行相应的回调函数
-function flushCallbacks () {
-  pending = false
-  const copies = callbacks.slice(0)
-  callbacks.length = 0
-  for (let i = 0; i < copies.length; i++) {
-    copies[i]()
-  }
-}
-
-let microTimerFunc
-let macroTimerFunc
-let useMacroTask = false
-
-/* istanbul ignore if */
-if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
-  macroTimerFunc = () => {
-    setImmediate(flushCallbacks)
-  }
-} else if (typeof MessageChannel !== 'undefined' && (
-  isNative(MessageChannel) ||
-  // PhantomJS
-  MessageChannel.toString() === '[object MessageChannelConstructor]'
-)) {
-  const channel = new MessageChannel()
-  const port = channel.port2
-  channel.port1.onmessage = flushCallbacks
-  macroTimerFunc = () => {
-    port.postMessage(1)
-  }
-} else {
-  /* istanbul ignore next */
-  macroTimerFunc = () => {
-    setTimeout(flushCallbacks, 0)
-  }
-}
-
-/* istanbul ignore next, $flow-disable-line */
-if (typeof Promise !== 'undefined' && isNative(Promise)) {
-  const p = Promise.resolve()
-  microTimerFunc = () => {
-    p.then(flushCallbacks)
-    if (isIOS) setTimeout(noop)
-  }
-} else {
-  // fallback to macro
-  microTimerFunc = macroTimerFunc
-}
-
-// 对函数做一层包装,确保函数执行过程中对数据的任意修改，触发变化执行 nextTick 的时候强制走 macroTimerFunc;
-// 比如对于一些 DOM 交互事件，如 v-on 绑定的事件回调函数的处理，会强制走 macro task
-export function withMacroTask (fn: Function): Function {
-  return fn._withTask || (fn._withTask = function () {
-    useMacroTask = true
-    const res = fn.apply(null, arguments)
-    useMacroTask = false
-    return res
-  })
-}
-
-export function nextTick (cb?: Function, ctx?: Object) {
-  let _resolve
-  // 保证在同一个tick 内多次执行 nextTick，不会开启多个异步任务，而是把这些异步任务都压成一个同步任务，在下一个tick执行完毕 
-  callbacks.push(() => {
-    if (cb) {
-      try {
-        cb.call(ctx)
-      } catch (e) {
-        handleError(e, ctx, 'nextTick')
-      }
-    } else if (_resolve) {
-      _resolve(ctx)
-    }
-  })
-  if (!pending) {
-    pending = true
-    if (useMacroTask) {
-      macroTimerFunc()
-    } else {
-      microTimerFunc()
-    }
-  }
-  // 当 nextTick 不传入 cb 参数的时候,提供一个 Promise 化的调用；
-  if (!cb && typeof Promise !== 'undefined') {
-    return new Promise(resolve => {
-      _resolve = resolve
-    })
-  }
+var callbacks = [];
+var pending = false;
+function nextTick(cb, ctx) {
+	var _resolve;
+	callbacks.push(function() {
+		if (cb) {
+			try {
+				cb.call(ctx);
+			} catch (e) {
+				handleError(e, ctx, 'nextTick');
+			}
+		} else if (_resolve) {
+			_resolve(ctx);
+		}
+	});
+	if (!pending) {
+		pending = true;
+		timerFunc();
+	}
+	if (!cb && typeof Promise !== 'undefined') {
+		return new Promise(function(resolve) {
+			_resolve = resolve;
+		})
+	}
 }
 ```
 
-- 在外层定义的 callbacks 变量用来存储所有需要执行的回调函数，在 nextTick 的外层定义就形成了一个闭包，所以每次调用 $nextTick 的过程就是在向 callbacks 新增回调函数的过程；
-- 在 nextTick 是对 setTimeout 进行了多种兼容性的处理，不过 nextTick 优先放入 微任务执行，而 setTimeout 是宏任务，因此 nextTick 一般情况下问题优先于 setTimeout执行；
+### timerFunc 函数
+
+timerFunc 函数就是用各种异步执行的方法调用 flushCallbacks 函数；
+
+#### Promise 创建异步执行函数
+
+```javascript
+var timerFunc;
+if (typeof Promise !== 'undefined' && isNative(Promise)) {
+	var p = Promise.resolve();
+	timerFunc = function() {
+		p.then(flushCallbacks);
+		if (isIOS) {
+			setTimeout(noop);
+		}
+	};
+}
+```
+
+#### MutationObserver 创建异步执行函数
+
+> MutationObserver() 创建并返回一个新的 MutationObserver，它会在指定的 DOM 发生变化时被调用；
+
+1. MutationObserver（）在 IE11浏览器才兼容，所以执行 !isIE排除 IE浏览器；
+2. MutationObserver.toString() === '[object MutationObserverConstructor]' 是对 PhantomJS 浏览器 和 iOS 7.x版本浏览器的支持情况进行判断；
+3. 创建一个新的 MutationObserver 赋值给常量 observer， 并把 flushCallbacks作为回到函数传入，当 observer 指定的 DOM 要监听的属性发生变化时会调用 flushCallbacks 函数；
+4. MutationObserver 是个微任务 （micro task）类型；
+
+
+
+```javascript
+if (!isIE && typeof MutationObserver !== 'undefined' &&
+    (isNative(MutationObserver) ||
+    MutationObserver.toString() === '[object MutationObserverConstructor]')
+) {
+    var counter = 1;
+    var observer = new MutationObserver(flushCallbacks);
+  	// 创建一个文本节点   
+  	var textNode = document.createTextNode(String(counter));
+  	// 调用 MutationObserver 的实例方法 observe 监听 textNode 文本节点的内容
+    observer.observe(textNode, {
+        characterData: true
+    });
+    timerFunc = function() {
+        counter = (counter + 1) % 2;
+      	// 文本节点内容变化，调用flushCallbacks函数
+        textNode.data = String(counter);
+    };
+    isUsingMicroTask = true;
+}
+```
+
+#### setImmediate 创建异步执行函数
+
+> setImmediate  只兼容 IE10 以上浏览器，其他浏览器均不兼容;
+>
+> 是个宏任务 (macro task)，消耗的资源比较小；
+
+```javascript
+if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
+    timerFunc = function() {
+        setImmediate(flushCallbacks);
+    };
+} 
+```
+
+#### setTimeout 创建异步执行函数
+
+> setTimeout 兼容 IE10 以下的浏览器，创建异步任务；
+>
+> 是个宏任务 (macro task)，消耗资源较大;
+
+```javascript
+timerFunc = function() {
+    setTimeout(flushCallbacks, 0);
+}
+```
+
+#### 创建异步执行函数的顺序
+
+- 第一版的中实现 timerFunc 的顺序为 Promise，MutationObserver，setTimeout；
+- 在2.5.0版本中实现 timerFunc 的顺序改为 setImmediate，MessageChannel，setTimeout；在这个版本把创建微任务的方法都移除了，因为微任务优先级太高了；
+- 后面实现 timerFunc 的顺序又改为 Promise，MutationObserver，setImmediate，setTimeout；
+
+### flushCallbacks 函数
+
+```javascript
+var callbacks = [];
+var pending = false;
+function flushCallbacks() {
+  	// 使下个事件循环中能 nextTick 函数中调用 timerFunc 函数
+	pending = false;
+	var copies = callbacks.slice(0);
+	callbacks.length = 0;
+	for (var i = 0; i < copies.length; i++) {
+		copies[i]();
+	}
+}
+```
 
 ## 流程分析
 
