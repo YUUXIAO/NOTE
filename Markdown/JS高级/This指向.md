@@ -127,8 +127,15 @@ document.getElementById('app').addEventListener('click', () => {
 
 ### 隐式绑定
 
+谁调用方法，this指向谁；
+
 ### 显示绑定
+
+call,bind,apply方法；
 
 ### new 绑定
 
 ### 优先级
+
+new>显示绑定>隐式绑定；
+
