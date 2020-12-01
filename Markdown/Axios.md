@@ -282,6 +282,8 @@ Axios.prototype.request = function request(config) {
 
 1. 数组的 shift() 方法用于把数组的第一个元素从其中删除，并返回第一个元素的值；
 2. 每次执行 while 循环，从 chain 数组里按序两项，分别作为 promise.then 方法的第一个和第二个参数；
+3. 第一个请求拦截器的fulfilled函数会接收到promise对象初始化时传入的config对象，而请求拦截器又规定fulfilled函数必须返回一个config对象，所以通过promise实现链式调用时，每个请求拦截器的fulfilled函数都会接收到一个config对象；
+4. 第一个响应拦截器的fulfilled函数会接受到dispatchRequest（也就是我们的请求方法）请求到的数据（也就是response对象）,而响应拦截器又规定用户写的fulfilled函数必须返回一个response对象，所以通过promise实现链式调用时，每个响应拦截器的fulfilled函数都会接收到一个response对象；
 
 任务编排前和任务编排后的对比图：
 
@@ -328,7 +330,16 @@ Axios.prototype.request = function request(config) {
 >
 >  XHR的核心是浏览器端的XMLHttpRequest对象， http核心是node的http/https.request方法；
 
+
+
 为了支持不同的环境，Axios 引入了适配器，在拦截器的部分，有一个 dispatchRequest 方法用于发送 HTTP 请求：
+
+### dispatchRequest 方法
+
+dispatchRequest 方法主要做3件事情 ：
+
+1. 拿到 config 对象，对 config 进行传给 http 请求适配器进行最后处理；
+2. http 
 
 ```javascript
 // lib/core/dispatchRequest.js
@@ -449,6 +460,150 @@ module.exports = function myAdapter(config) {
     //  - 响应转换器将会运行
     //  - 响应拦截器将会运行
   });
+}
+```
+
+## 取消请求
+
+> CancelToken.js 中定义了取消 axios 请求的相关行为代码，但是 CancelToken.source 返回的取消请求的  cancel 方法使用的前提是将CancelToken.source 返回token的，结合到具体请求的 config 中才能正常使用；
+
+### 取消请求示例
+
+```javascript
+// axios用于取消请求的类
+const CancelToken = axios.CancelToken
+// source方法会返回一个对象，对象包含
+// {
+  // token, 添加到请求的config，用于标识请求
+  // cancel, 调用cancel方法取消请求
+// }
+const source = CancelToken.source()
+
+axios.get('/info', {
+  cancelToken: source.token
+}).catch(function(error) {
+  if (axios.isCancel(error)) {
+    console.log('取消请求的错误')
+  } else {
+    // 其他错误
+  }
+})
+
+// 调用source.cancel可以取消axios.get('/info')的请求
+source.cancel('取消请求')
+```
+
+### 源码
+
+```javascript
+var Cancel = require('./Cancel');
+
+function CancelToken(executor) {
+  if (typeof executor !== 'function') {
+    throw new TypeError('executor must be a function.');
+  }
+
+  var resolvePromise;
+
+  // 创建一个Promise
+  // 在调用cancel函数前该promise会一直处于pending状态
+  this.promise = new Promise(function promiseExecutor(resolve) {
+    resolvePromise = resolve;
+  });
+
+  var token = this;
+
+  executor(function cancel(message) {
+    // 判断是否已经取消请求了
+    if (token.reason) {
+      return;
+    }
+
+    // 创建取消请求的信息，并将信息添加到实例的reason属性上
+    token.reason = new Cancel(message);
+  
+    // 结束this.promise的pending状态
+    // 将this.promise状态设置为resolve
+    resolvePromise(token.reason);
+  });
+}
+
+// 判断该请求是否已经被取消的方法
+CancelToken.prototype.throwIfRequested = function throwIfRequested() {
+  if (this.reason) {
+    throw this.reason;
+  }
+};
+
+CancelToken.source = function source() {
+  var cancel;
+  var token = new CancelToken(function executor(c) {
+    cancel = c;
+  });
+  return {
+    token: token,
+    cancel: cancel
+  };
+};
+
+module.exports = CancelToken;
+```
+
+```javascript
+
+// /lib/adapters/xhr.js
+
+request.open()
+
+// ...省略
+
+// 如果配置了cancelToken选项
+if (config.cancelToken) {
+  
+  // 对CancelToken中创建的Promise添加成功的回调
+  // 当调用CancelToken.source暴露的cancel函数时，回调会被触发
+  config.cancelToken.promise.then(function onCanceled(cancel) {
+
+    if (!request) {
+      return;
+    }
+
+    // 取消xhr请求
+    request.abort();
+    
+    // 将axios返回的promise，置为reject态
+    reject(cancel);
+
+    request = null;
+  });
+}
+
+// ...省略
+
+request.send()
+```
+
+### 总结
+
+1. 通过 CancelToken,创建了一个额外的 PromiseA，并将 PromiseA 挂载到 config 中，同时将该 PromiseA 的 resolve 方法暴露出去；
+2. 在调用 send 方法前（发送请求前）添加对 PromiseA 的状态进行监听，当 PromiseA 的状态被修改，我们会在 PromiseA 的 callback 中取消请求，并且将 axios 返回的 PromiseB 的状态置为 reject，达到取消请求的目的；
+
+## 上传和下载进度
+
+> Axios 提供了观察上传和下载进度的功能，仅支持在浏览器环境中；
+
+1. 上传进度回调本质是 XMLHttpRequest 对象的 upload 属性的 progress 事件；
+2. 下载进度回调本质是 XMLHttpRequest 对象的 progress 事件；
+
+```javascript
+// Handle progress if needed
+if (typeof config.onDownloadProgress === 'function') {
+  request.addEventListener('progress', config.onDownloadProgress);
+}
+
+// Not all browsers support upload events
+if (typeof config.onUploadProgress === 'function' && request.upload) {
+  request.upload.addEventListener('progress', config.onUploadProgress);
 }
 ```
 
