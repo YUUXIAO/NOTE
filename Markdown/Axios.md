@@ -465,18 +465,23 @@ module.exports = function myAdapter(config) {
 
 ## 取消请求
 
-> CancelToken.js 中定义了取消 axios 请求的相关行为代码，但是 CancelToken.source 返回的取消请求的  cancel 方法使用的前提是将CancelToken.source 返回token的，结合到具体请求的 config 中才能正常使用；
+> CancelToken.js 中定义了取消 axios 请求的相关行为代码；
 
-### 取消请求示例
+### 流程
+
+1. 取消请求的处理和判断；
+2. 处理参数和默认参数；
+3. 使用对应环境 adapter 发送请求；
+4. 返回后抛出取消请求 message，根据配置 transformData 转换响应数据；
+
+### 调用方式
+
+1. 从 config 传入 axios.CancelToken.source( ).token；
+2. 用 axios.CancelToken.source( ).cancel( ) 执行，cancel 函数不仅是取消了请求，并且使整个请求走入了 rejected；
 
 ```javascript
 // axios用于取消请求的类
 const CancelToken = axios.CancelToken
-// source方法会返回一个对象，对象包含
-// {
-  // token, 添加到请求的config，用于标识请求
-  // cancel, 调用cancel方法取消请求
-// }
 const source = CancelToken.source()
 
 axios.get('/info', {
@@ -493,48 +498,12 @@ axios.get('/info', {
 source.cancel('取消请求')
 ```
 
-### 源码
+### CancelToken.source
+
+1. axios.CancelToken.source().token 返回的是一个 new CancelToken 的实例；
+2. axios.CancelToken.source().cancel 是 new CancelToken 中的方法的一个参数；
 
 ```javascript
-var Cancel = require('./Cancel');
-
-function CancelToken(executor) {
-  if (typeof executor !== 'function') {
-    throw new TypeError('executor must be a function.');
-  }
-
-  var resolvePromise;
-
-  // 创建一个Promise
-  // 在调用cancel函数前该promise会一直处于pending状态
-  this.promise = new Promise(function promiseExecutor(resolve) {
-    resolvePromise = resolve;
-  });
-
-  var token = this;
-
-  executor(function cancel(message) {
-    // 判断是否已经取消请求了
-    if (token.reason) {
-      return;
-    }
-
-    // 创建取消请求的信息，并将信息添加到实例的reason属性上
-    token.reason = new Cancel(message);
-  
-    // 结束this.promise的pending状态
-    // 将this.promise状态设置为resolve
-    resolvePromise(token.reason);
-  });
-}
-
-// 判断该请求是否已经被取消的方法
-CancelToken.prototype.throwIfRequested = function throwIfRequested() {
-  if (this.reason) {
-    throw this.reason;
-  }
-};
-
 CancelToken.source = function source() {
   var cancel;
   var token = new CancelToken(function executor(c) {
@@ -545,48 +514,66 @@ CancelToken.source = function source() {
     cancel: cancel
   };
 };
-
-module.exports = CancelToken;
 ```
 
+### CancelToken 
+
+1. axios.CancelToken.source().token 拿到的实例下挂载了 promise 和 reason 两个属性；
+2. promise 属性是一个处于 pending 状态的 promise 实例；
+3. reason 是执行 cancel 方法后传入的 message；
+4. axios.CancelToken.source().cancel 是一个函数方法，负责判断是否执行，若未执行拿到  axios.CancelToken.source().token.promise 中 executor 的 resolve 参数，作为触发器，触发处于 pending 状态中的 promise 并且传入 message 挂载在 axios.CancelToken.source().token.reason 下；
+5. 若有已经挂载在 reason 下则返回防止反复触发；
+
 ```javascript
+function CancelToken(executor) {
+  if (typeof executor !== "function") {
+    throw new TypeError("executor must be a function.");
+  }
 
-// /lib/adapters/xhr.js
+  var resolvePromise;
+  this.promise = new Promise(function promiseExecutor(resolve) {
+    resolvePromise = resolve;
+  });
 
-request.open()
-
-// ...省略
-
-// 如果配置了cancelToken选项
-if (config.cancelToken) {
-  
-  // 对CancelToken中创建的Promise添加成功的回调
-  // 当调用CancelToken.source暴露的cancel函数时，回调会被触发
-  config.cancelToken.promise.then(function onCanceled(cancel) {
-
-    if (!request) {
+  var token = this;
+  executor(function cancel(message) {
+    if (token.reason) {
       return;
     }
 
-    // 取消xhr请求
-    request.abort();
-    
-    // 将axios返回的promise，置为reject态
-    reject(cancel);
+    token.reason = new Cancel(message);
+    resolvePromise(token.reason);
+  });
+}
+```
 
+### adpater 的处理
+
+pending 状态的 promise 在 cancel 后是怎么进入 axios 总体 promise 的 rejected 中:
+
+```javascript
+// /lib/adapters/xhr.js
+//如果有cancelToken
+if (config.cancelToken) {
+  config.cancelToken.promise.then(function onCanceled(cancel) {
+    if (!request) {
+      return;
+    }
+    //取消请求
+    request.abort();
+    //axios的promise进入rejected
+    reject(cancel);
+    // 清楚request请求对象
     request = null;
   });
 }
-
-// ...省略
-
-request.send()
 ```
 
 ### 总结
 
-1. 通过 CancelToken,创建了一个额外的 PromiseA，并将 PromiseA 挂载到 config 中，同时将该 PromiseA 的 resolve 方法暴露出去；
-2. 在调用 send 方法前（发送请求前）添加对 PromiseA 的状态进行监听，当 PromiseA 的状态被修改，我们会在 PromiseA 的 callback 中取消请求，并且将 axios 返回的 PromiseB 的状态置为 reject，达到取消请求的目的；
+1. axios.CancelToken.source()返回一个对象，tokens 属性 CancelToken 类的实例，cancel 是 tokens 内部 promise 的 resove 触发器；
+2. axios 的 config 接受了 CancelToken 类的实例；
+3. 当 cancel 触发处于 pending 中的 tokens.promise，取消请求，把 axios 的 promise 走向 rejected 状态；
 
 ## 上传和下载进度
 
