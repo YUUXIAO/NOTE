@@ -302,3 +302,47 @@ git diff
 
 ## 分支命名
 
+- master分支
+  - 主分支，用于部署生产环境的分支，确保稳定性；
+  - master分支一般由develop以及hotfix分支合并，任何情况下都不能直接修改代码；
+- develop分支
+  - develop为开发分支，通常情况下，保存最新完成以及bug修复后的代码；
+  - 开发新功能时，feature分支都是基于develop分支下创建的；
+- feature分支
+  - 开发新功能，基本上以develop为基础创建feature分支；
+  - 分支命名：feature/ 开头的为特性分支， 命名规则: feature/user_module、 feature/cart_module；
+- release分支
+  - release 为预上线分支，发布提测阶段，会release分支代码为基准提测；
+- hotfix分支
+  - 分支命名：hotfix/ 开头的为修复分支，它的命名规则与 feature 分支类似；
+  - 线上出现紧急问题时，需要及时修复，以master分支为基线，创建hotfix分支，修复完成后，需要合并到master分支和develop分支；
+
+## 忽略文件 .gitignore
+
+> 这个文件会去忽略一些不需要纳入Git管理、也不希望出现在未跟踪文件列表；
+
+```javascript
+# 此行为注释 会被Git忽略
+
+# 忽略 node_modules/ 目录下所有的文件
+node_modules
+
+
+# 忽略所有.vscode结尾的文件
+.vscode
+
+# 忽略所有.md结尾的文件
+*.md
+
+# 但README.md 除外
+!README.md
+
+# 会忽略 doc/something.txt 但不会忽略doc/images/arch.txt
+doc/*.txt
+
+# 忽略 doc/ 目录下所有扩展名为txt文件
+
+doc/**/*.txt
+
+```
+
