@@ -10,7 +10,7 @@ Vue 中的 dom 不是实时的，当数据改变后，vue 会把 渲染 watcher 
 
 ## 前置知识
 
-### JS 运行机制
+### 事件循环机制
 
 JS 运行机制简单来说可以按以下几个步骤：
 
@@ -21,21 +21,20 @@ JS 运行机制简单来说可以按以下几个步骤：
 
 ### 异步任务的类型
 
-主线程的执行过程就是一个 tick，而所有的异步任务都是通过任务队列来一一执行。任务队列中存放的是一个个的任务（task），规定 task 分为两大类，分别是宏任务（macro task）和微任务 （micro task），并且每个 macro task 结束后，都要清空所有的 micro task；
+主线程的执行过程就是一个 tick，而所有的异步任务都是通过任务队列来一一执行。任务队列中存放的是一个个的任务（task），task 分为两大类：宏任务（macro task）和微任务 （micro task），并且每个 macro task 结束后，都要清空所有的 micro task；
 
 ```javascript
 for (macroTask of macroTaskQueue) {
-	handleMacroTask();
-	
-	for (microTask of microTaskQueue) {
-		handleMicroTask(microTask);
-	}
+  handleMacroTask();
+  for (microTask of microTaskQueue) {
+      handleMicroTask(microTask);
+  }
 }
 ```
 
  常见的创建 macro task 的方法有:
 
-- setTimeout、setInterval、postMessage、MessageChannel(队列优先于setTimeiout执行)
+- setTimeout、setInterval、setImmediate、postMessage、script脚本、MessageChannel(队列优先于setTimeiout执行)
 - 网络请求IO
 - 页面交互：DOM、鼠标、键盘、滚动事件
 - 页面渲染
@@ -50,17 +49,24 @@ for (macroTask of macroTaskQueue) {
 
 ## nextTick 源码分析
 
-- 在外层定义的 callbacks 变量用来存储所有需要执行的回调函数，在 nextTick 的外层定义就形成了一个闭包，所以每次调用 $nextTick 的过程就是在向 callbacks 新增回调函数的过程；
+Vue 用一个 queue 收集依赖的执行，在下次微任务执行的时候统一执行 queue 中的 Watcher 的 run 操作，同时，相同 id 的 watcher 不会重复添加到 queue 中，因此也不会重复执行多次的视图渲染；
 
 ### nextTick 函数
 
 1. 在 nextTick 函数中把通过 cb 传入的函数，做一下包装然后 push 到 callbacks 数组中；
-2. ​
-3. 用变量 pending 来保证执行一个事件循环中只执行一次 timerFunc();
-4. 最后执行 if (!cb && typeof Promise !== 'undefined') ,判断参数 cb 不存在且浏览器支持 Promise，则返回一个 Promise 类实例化对象，例如  nextTick().then(() => {})，当 _resolve 函数执行，就会执行 then 的逻辑中；
+2. 用变量 pending 来保证执行一个事件循环中只执行一次 timerFunc()；
+3. 最后执行 if (!cb && typeof Promise !== 'undefined') ,判断参数 cb 不存在且浏览器支持 Promise，则返回一个 Promise 类实例化对象，例如  nextTick().then(() => {})，当 _resolve 函数执行，就会执行 then 的逻辑中；
 
 ```javascript
-var callbacks = [];
+// 原型上定义的方法
+Vue.prototype.$nextTick = function (fn) {
+  return nextTick(fn, this)
+};
+// 构造函数上定义的方法
+Vue.nextTick = nextTick;
+
+// 实际的定义 
+var callbacks = [];   // callbacks是维护微任务的数组
 var pending = false;
 function nextTick(cb, ctx) {
 	var _resolve;
@@ -77,8 +83,10 @@ function nextTick(cb, ctx) {
 	});
 	if (!pending) {
 		pending = true;
+      	// 将维护的队列推到微任务队列中维护
 		timerFunc();
 	}
+  // nextTick没有传递参数，且浏览器支持Promise,则返回一个promise对象
 	if (!cb && typeof Promise !== 'undefined') {
 		return new Promise(function(resolve) {
 			_resolve = resolve;
@@ -87,11 +95,15 @@ function nextTick(cb, ctx) {
 }
 ```
 
+- 在外层定义的 callbacks 变量用来存储所有需要执行的回调函数，在 nextTick 的外层定义就形成了一个闭包，每次调用 $nextTick 的过程就是在向 callbacks 新增回调函数的过程；
+
 ### timerFunc 函数
 
-timerFunc 函数就是用各种异步执行的方法调用 flushCallbacks 函数；
+> timerFunc 是真正将任务队列推到微任务队列中的函数，实质上就是用各种异步执行的方法调用 flushCallbacks 函数；
 
-#### Promise 创建异步执行函数
+#### Promise 
+
+如果浏览器执行 Promise，默认以 Promise 将执行过程推到任务队列中；
 
 ```javascript
 var timerFunc;
@@ -103,17 +115,19 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 			setTimeout(noop);
 		}
 	};
+   // 使用微任务队列的标志
+   isUsingMicroTask = true;
 }
 ```
 
-#### MutationObserver 创建异步执行函数
+#### MutationObserver 
 
 > MutationObserver() 创建并返回一个新的 MutationObserver，它会在指定的 DOM 发生变化时被调用；
 
-1. MutationObserver（）在 IE11浏览器才兼容，所以执行 !isIE排除 IE浏览器；
-2. MutationObserver.toString() === '[object MutationObserverConstructor]' 是对 PhantomJS 浏览器 和 iOS 7.x版本浏览器的支持情况进行判断；
-3. 创建一个新的 MutationObserver 赋值给常量 observer， 并把 flushCallbacks作为回到函数传入，当 observer 指定的 DOM 要监听的属性发生变化时会调用 flushCallbacks 函数；
-4. MutationObserver 是个微任务 （micro task）类型；
+1. MutationObserver 是个微任务 （micro task）类型；
+2. MutationObserver（）在 IE11浏览器才兼容，所以执行 !isIE排除 IE浏览器；
+3. MutationObserver.toString() === '[object MutationObserverConstructor]' 是对 PhantomJS 浏览器 和 iOS 7.x版本浏览器的支持情况进行判断；
+4. 创建一个新的 MutationObserver 赋值给常量 observer， 并把 flushCallbacks作为回到函数传入，当 observer 指定的 DOM 要监听的属性发生变化时会调用 flushCallbacks 函数；
 
 
 
@@ -173,6 +187,8 @@ timerFunc = function() {
 
 ### flushCallbacks 函数
 
+> flushCallbacks 是异步更新的函数，它会取出 callbacks 数组的每一个任务，执行任务；
+
 ```javascript
 var callbacks = [];
 var pending = false;
@@ -192,3 +208,4 @@ function flushCallbacks() {
 1. 把回调函数放到 callbacks 等待执行；
 2. 将执行任务放到微任务或者宏任务中；
 3. 事件循环到了微任务或者宏任务，执行函数依次执行 callbacks 中的回调；
+
