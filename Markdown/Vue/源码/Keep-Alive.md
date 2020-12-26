@@ -77,7 +77,7 @@ function createComponent(Ctordata,context,children,tag) {
 
 ## 初次渲染
 
-> keep-alive 不会重复渲染相同的组件，只会利用初次渲染保留的缓存去更新节点；
+> 内置的 keep-alive 组件，让子组件在第一次渲染时将 vnode 和真实的 elm 进行了缓存；
 
 ### 流程
 
@@ -152,6 +152,9 @@ function createComponentInstanceForVnode (vnode, parent) {
 ```
 
 ### 内置组件选项
+
+- keep-alive 选项和普通组件的选项基本类似，不同的是 keep-alive 组件没有用 template 而是使用 render 函数；
+- keep-alive 本质上是存缓存和拿缓存的过程，并没有实际的节点渲染，所以使用 render 处理；
 
 ```javascript
 // keepalive组件选项
@@ -245,4 +248,147 @@ var KeepAlive = {
   }
 };
 ```
+
+### 缓存 vnode
+
+keep-alive 在执行组件实例化之后会进行组件的挂载；
+
+#### getFirstComponentChild 函数
+
+> getFirstComponentChild 用于获取 keep-alive 下插槽的内容，也就是需要渲染的子组件；
+
+```javascript
+function getFirstComponentChild (children) {
+  if (Array.isArray(children)) {
+    for (var i = 0; i < children.length; i++) {
+      var c = children[i];
+      // 组件实例存在，则返回，理论上返回第一个组件vnode
+      if (isDef(c) && (isDef(c.componentOptions) || isAsyncPlaceholder(c))) {
+        return c
+      }
+    }
+  }
+}
+```
+
+#### 判断组件满足缓存的匹配条件
+
+> 如果组件不满足缓存的要求，则直接返回组件的 vnode，不做任何处理，此时组件会进入正常的挂载环节；
+
+在 keep-alive 组件的使用过程中，Vue 源码允许使用 exclude、include 来定义匹配组件，include  规定发只有名称匹配的组件才被缓存，exclude 规定了任何名称匹配的组件都不会被缓存；
+
+还可以使用 max 来限制可以缓存多少匹配实例；
+
+- 匹配的规则允许使用数组、字符串、正则的形式；
+
+```javascript
+var include = ref.include;
+var exclude = ref.exclude;
+// 通过判断子组件是否满足缓存匹配
+if (
+    // not included
+    (include && (!name || !matches(include, name))) ||
+    // excluded
+    (exclude && name && matches(exclude, name))
+) {
+    return vnode
+}
+
+// matches
+function matches (pattern, name) {
+  // 允许使用数组['child1', 'child2']
+  if (Array.isArray(pattern)) {
+      return pattern.indexOf(name) > -1
+  } else if (typeof pattern === 'string') {
+      // 允许使用字符串 child1,child2
+      return pattern.split(',').indexOf(name) > -1
+  } else if (isRegExp(pattern)) {
+      // 允许使用正则 /^child{1,2}$/g
+      return pattern.test(name)
+  }
+  /* istanbul ignore next */
+  return false
+}
+```
+
+#### 缓存 vnode
+
+由于是第一次执行 render 函数，选项中的 cache 和 keys 数据都没有值，其中 cache 是一个空对象，它用来缓存 ｛name：vnode｝枚举，keys 用来缓存组件名；
+
+在第一次渲染 keep-alive 时，会将需要渲染的子组件 vnode 进行缓存；
+
+```javascript
+cache[key] = vnode;
+keys.push(key);
+```
+
+#### 打标记
+
+将已经缓存的 vnode 打上标记，并将子组件的 Vnode 返回；
+
+```javascript
+vnode.data.keepAlive = true;
+```
+
+### 真实节点的保存
+
+createComponent 会先执行 keep-alive 组件的初始化流程，也包括了子组件的挂载，通过 componentInstance 拿到了 keep-alive 组件的实例，接下来就是将真实的 dom 保存在 vnode 中；
+
+```javascript
+function createComponent(vnode, insertedVnodeQueue) {
+  ···
+  if (isDef(vnode.componentInstance)) {
+      // 其中一个作用是保留真实dom到vnode中
+      initComponent(vnode, insertedVnodeQueue);
+      // 将真实节点添加到父节点中
+      insert(parentElm, vnode.elm, refElm);
+      if (isTrue(isReactivated)) {
+          reactivateComponent(vnode, insertedVnodeQueue, parentElm, refElm);
+      }
+      return true
+  }
+}
+
+function initComponent() {
+  ···
+  // vnode保留真实节点
+  vnode.elm = vnode.componentInstance.$el;
+  ···
+}
+```
+
+- keep-alive 需要一个 max 来限制缓存组件的数量：原因是 keep-alive 缓存的组件数据除了包括 vnode 这一描述对象外，还保留着真实的 dom 节点，真实节点对象是庞大的，所以大量保存缓存组件是耗费性能的，因此需要严格控制缓存组件数量；
+
+## 抽象组件
+
+> Vue 提供的内置组件都有一个描述组件类型的选项 ｛astract：true｝，它表明了该组件是抽象组件；
+
+1. 抽象组件没有真实的节点，它在组件渲染阶段不会去解析渲染成真实的 dom 节点，而是作为中间数据过渡层处理，在 keep-alive 是对组件缓存的处理；
+2. 在组件初始化的时候父子组件会显式的建立一层关系，这层关系奠定了父子组件之间通信的基础；
+
+```javascript
+Vue.prototype._init = function() {
+    ···
+    var vm = this;
+    initLifecycle(vm)
+}
+
+function initLifecycle (vm) {
+  var options = vm.$options;
+
+  var parent = options.parent;
+  if (parent && !options.abstract) {
+      // 如果有abstract属性，一直往上层寻找，直到不是抽象组件
+    while (parent.$options.abstract && parent.$parent) {
+      parent = parent.$parent;
+    }
+    parent.$children.push(vm);
+  }
+  ···
+}
+```
+
+在子组件注册阶段会父实例挂载到自身选项上的 parent 属性上，在 initLifecycle 过程中，会反向拿到 parent 上的父组件 vnode，并为其 $children 属性添加子组件 vnode，如果在反向查找父组件的过程中，父组件拥有 abstract 属性，即可判定该组件为抽象组件，此时利用 parent 的链条向上寻找，直到组件不是抽象组件为止；
+
+initLifecycle 的处理，让每个组件都能找到上层的父组件以及下层的子组件，使得组件之前形成一个关系树；
 
