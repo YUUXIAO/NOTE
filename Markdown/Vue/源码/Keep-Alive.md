@@ -1,4 +1,7 @@
-在不同组件间进行切换时，经常要求保持组件的状态以避免重复渲染组件造成的性能损耗；
+1. keep-alive 是源码内部定义的组件选项配置，它会先注册为全局组件供开发者全局使用，其中 render 函数定义了它的渲染过程；
+2. 和普通组件一致，当父在创建真实节点的过程中，遇到 keep-alive 的组件会进行组件的初始化和实例化；
+3. 实例化会执行挂载 $mount 的过程，这一步会执行 keep-alive 选项中的 render 函数；
+4. render 函数在初始渲染时，会将渲染的子 Vnode 进行缓存，同时对应的子真实节点也会被缓存起来；
 
 ## 基本用法
 
@@ -25,10 +28,35 @@ var child1 = {
             this.num++
         }
     },
+    mounted() {
+        console.log('child1 mounted')
+    },
+    activated() {
+        console.log('child1 activated')
+    },
+    deactivated() {
+        console.log('child1 deactivated')
+    },
+    destoryed() {
+        console.log('child1 destoryed')
+    }
 }
 var child2 = {
-    template: '<div>child2</div>'
+    template: '<div>child2</div>',
+    mounted() {
+        console.log('child2 mounted')
+    },
+    activated() {
+        console.log('child2 activated')
+    },
+    deactivated() {
+        console.log('child2 deactivated')
+    },
+    destoryed() {
+        console.log('child2 destoryed')
+    }
 }
+
 var vm = new Vue({
     el: '#app',
     components: {
@@ -358,6 +386,161 @@ function initComponent() {
 ```
 
 - keep-alive 需要一个 max 来限制缓存组件的数量：原因是 keep-alive 缓存的组件数据除了包括 vnode 这一描述对象外，还保留着真实的 dom 节点，真实节点对象是庞大的，所以大量保存缓存组件是耗费性能的，因此需要严格控制缓存组件数量；
+
+## 再次渲染
+
+### 重新渲染组件
+
+当数据发生改变时，收集过的依赖会进行派发更新操作；
+
+1. 父组件中负责实例挂载的过程作为依赖会被执行，即执行父组件的 vm._ update(vm._render(), hydrating)；
+2. _ render 的 _ update 分别代表两个过程，_ render 函数会根据数据的变化为组件生成新的 Vnode 节点，而 _ update 会为新的 Vnode 生成真实的节点；
+3. 在生成真实节点的过程中，会利用 vitrual dom 的 diff 算法对前后 vnode 节点进行对比，使之尽可能少的更改真实节点；
+
+patch 是新旧 Vnode 节点对比的过程，而 patchVnode 是其核心：
+
+```javascript
+function patchVnode (oldVnode,vnode,insertedVnodeQueue,ownerArray,index,removeOnly) {
+  ···
+  // 新vnode  执行prepatch钩子
+  if (isDef(data) && isDef(i = data.hook) && isDef(i = i.prepatch)) {
+      i(oldVnode, vnode);
+  }
+  ···
+}
+```
+
+执行 prepatch 钩子时会拿到新旧组件的实例并执行 upadteChildComponent 函数，而 upadteChildComponent 会针对新的组件实例对旧实例进行状态的更新，包括 props，listeners 等，最终会调用 vue 全局提供的 vm.$forceUpdate( ) 方法进行实例的重新渲染；
+
+```javascript
+var componentVNodeHooks = {
+    // 之前分析的init钩子 
+    init: function() {},
+    prepatch: function prepatch (oldVnode, vnode) {
+      // 新组件实例
+      var options = vnode.componentOptions;
+      // 旧组件实例
+      var child = vnode.componentInstance = oldVnode.componentInstance;
+      updateChildComponent(
+        child,
+        options.propsData, // updated props
+        options.listeners, // updated listeners
+        vnode, // new parent vnode
+        options.children // new children
+      );
+    },
+}
+
+function updateChildComponent() {
+    // 更新旧的状态，不分析这个过程
+    ···
+    // 迫使实例重新渲染。
+    vm.$forceUpdate();
+}
+```
+
+$forceUpdate() 是源码对外暴露的一个 api，强制使 Vue 实例重新渲染，本质上是执行实例所收集的依赖；
+
+```javascript
+Vue.prototype.$forceUpdate = function () {
+  var vm = this;
+  if (vm._watcher) {
+    vm._watcher.update();
+  }
+};
+```
+
+### 重用缓存组件
+
+由于 vm.$forceUpdate 会强制 keep-alive 组件重新渲染，因此 keep-alive 组件会再一次执行 render 过程，由于第一次对 vnode 的缓存，keep-alive 在实例的 cache 对象中找到了缓存的组件；
+
+- cache 对象中存储了再次使用的 vnode 对象，所以直接通过 cache[key] 取出缓存的组件实例并赋值给 vnode 的 compoentInstance 属性；
+
+```javascript
+// keepalive组件选项
+var keepAlive = {
+	.....
+    render: function render () {
+      	.....
+        if (cache[key]) {
+          // 直接取出缓存组件
+          vnode.componentInstance = cache[key].componentInstance;
+          // keys命中的组件名移到数组末端
+          remove(keys, key);
+          keys.push(key);
+        } else {
+          // 初次渲染时，将vnode缓存
+         ....
+        }
+        vnode.data.keepAlive = true;
+      }
+      return vnode || (slot && slot[0])
+    }
+}
+```
+
+### 真实节点的替换
+
+_ update 过程会调用 createComponent 递归创建子组件 vnode；
+
+- 此时的 vnode 是缓存取出的子组件 vnode，由于在第一次渲染时对组件进行了标记 vnode.data.keepAlive = true，所以 isReactivated 的值为 true；
+
+```javascript
+function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
+  // vnode为缓存的vnode
+  var i = vnode.data;
+  if (isDef(i)) {
+    // 此时isReactivated为true
+    var isReactivated = isDef(vnode.componentInstance) && i.keepAlive;
+    if (isDef(i = i.hook) && isDef(i = i.init)) {
+      i(vnode, false /* hydrating */);
+    }
+    if (isDef(vnode.componentInstance)) {
+      // 其中一个作用是保留真实dom到vnode中
+      initComponent(vnode, insertedVnodeQueue);
+      insert(parentElm, vnode.elm, refElm);
+      if (isTrue(isReactivated)) {
+        reactivateComponent(vnode, insertedVnodeQueue, parentElm, refElm);
+      }
+      return true
+    }
+  }
+}
+```
+
+i.init 依旧会执行子组件的初始化过程，但是由于有缓存所以执行过程也不完全相同；
+
+- 由于有 keepAlive 的标志，所以子组件不再走挂载流程，只是执行 prepatch 钩子对组件状态进行更新，并且很好的利用了缓存 vnode 之前保留的真实节点进行节点的替换；
+
+```javascript
+var componentVNodeHooks = {
+  init: function init (vnode, hydrating) {
+    if (
+      vnode.componentInstance &&
+      !vnode.componentInstance._isDestroyed &&
+      vnode.data.keepAlive
+    ) {
+      // 当有keepAlive标志时，执行prepatch钩子
+      var mountedNode = vnode; // work around flow
+      componentVNodeHooks.prepatch(mountedNode, mountedNode);
+    } else {
+      var child = vnode.componentInstance = createComponentInstanceForVnode(
+        vnode,
+        activeInstance
+      );
+      child.$mount(hydrating ? vnode.elm : undefined, hydrating);
+    }
+  },
+}
+```
+
+## 生命周期
+
+### deactivated
+
+
+
+### activated
 
 ## 抽象组件
 
