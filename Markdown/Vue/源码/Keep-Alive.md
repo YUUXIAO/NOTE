@@ -536,11 +536,257 @@ var componentVNodeHooks = {
 
 ## 生命周期
 
+从 child1 切换到 child2，再切回 child1 时；
+
+- child1 不会再执行 mounted 钩子，只执行 activated 钩子；
+- child2 不会执行 destoryed 钩子，只会执行 deactivated 钩子； 
+- child2 的 deactivated 钩子比 child1 的 activated 钩子提前执行；
+
 ### deactivated
 
+> patch 过程会对新旧节点的改变进行对比，从而尽可能范围小的去操作真实节点，当完成 diff 算法并对节点进行操作完毕时，接下来的步骤是对旧组件执行销毁移除操作；
 
+当 child1 切换到 child2 时，child1 会执行 deactivated 钩子而不是 destoryed 钩子；
+
+```javascript
+function patch(···) {
+  // 分析过的patchVnode过程
+  // 销毁旧节点
+  if (isDef(parentElm)) {
+    removeVnodes(parentElm, [oldVnode], 0, 0);
+  } else if (isDef(oldVnode.tag)) {
+    invokeDestroyHook(oldVnode);
+  }
+}
+
+function removeVnodes (parentElm, vnodes, startIdx, endIdx) {
+  // startIdx,endIdx都为0
+  for (; startIdx <= endIdx; ++startIdx) {
+    // ch 会拿到需要销毁的组件
+    var ch = vnodes[startIdx];
+    if (isDef(ch)) {
+      if (isDef(ch.tag)) {
+        // 真实节点的移除操作
+        removeAndInvokeRemoveHook(ch);
+        invokeDestroyHook(ch);
+      } else { // Text node
+        removeNode(ch.elm);
+      }
+    }
+  }
+}
+```
+
+- removeAndInvokeRemoveHook 会对旧的节点进行移除操作，会将真实节点从父元素中删除；
+- invokeDestroyHook 是执行销毁组件钩子的核心，如果组件下存在子组件，会递归调用 invokeDestroyHook 执行销毁操作，销毁过程会执行组件内部的 destory 钩子；
+
+```javascript
+function invokeDestroyHook (vnode) {
+  var i, j;
+  var data = vnode.data;
+  if (isDef(data)) {
+    if (isDef(i = data.hook) && isDef(i = i.destroy)) { i(vnode); }
+    // 执行组件内部destroy钩子
+    for (i = 0; i < cbs.destroy.length; ++i) { cbs.destroy[i](vnode); }
+  }
+  // 如果组件存在子组件，则遍历子组件去递归调用invokeDestoryHook执行钩子
+  if (isDef(i = vnode.children)) {
+    for (j = 0; j < vnode.children.length; ++j) {
+      invokeDestroyHook(vnode.children[j]);
+    }
+  }
+}
+```
+
+destory 钩子的逻辑：
+
+- 当组件是 keep-alive 缓存过的组件，即已经用 keepAlive 标记过，则不会执行实例的销毁；
+- $destory 过程会做一系列的组件销毁操作，其中 beforeDestory，destory 钩子也是在此过程中调用；
+
+```javascript
+var componentVNodeHooks = {
+  destroy: function destroy (vnode) {
+    // 组件实例
+    var componentInstance = vnode.componentInstance;
+    // 如果实例还未被销毁
+    if (!componentInstance._isDestroyed) {
+      // 不是keep-alive组件则执行销毁操作
+      if (!vnode.data.keepAlive) {
+        componentInstance.$destroy();
+      } else {
+        // 如果是已经缓存的组件
+        deactivateChildComponent(componentInstance, true /* direct */);
+      }
+    }
+  }
+}
+```
+
+deactivateChildComponent 的处理过程；
+
+- _directInactive 是用来标记这个被打上停用标签的组件是否是最顶层的组件；
+- _inactive 是停用的标志，同样子组件也需要递归调用 deactivateChildComponent ，打上停用的标记；
+- 最终会执行用户定义的 deactivated 钩子；
+
+```javascript
+function deactivateChildComponent (vm, direct) {
+  if (direct) {
+    vm._directInactive = true;
+    if (isInInactiveTree(vm)) {
+      return
+    }
+  }
+  if (!vm._inactive) {
+    // 已经被停用
+    vm._inactive = true;
+    // 对子组件同样会执行停用处理
+    for (var i = 0; i < vm.$children.length; i++) {
+      deactivateChildComponent(vm.$children[i]);
+    }
+    // 最终调用deactivated钩子
+    callHook(vm, 'deactivated');
+  }
+}
+```
 
 ### activated
+
+同样是 patch 过程，在对旧节点移除并执行销毁或者停用的钩子后，对新的节点也会执行相应的钩子，这也是停用的钩子比启用的钩子先执行的原因；
+
+```javascript
+function patch(···) {
+  // 销毁旧节点
+  {
+    if (isDef(parentElm)) {
+      removeVnodes(parentElm, [oldVnode], 0, 0);
+    } else if (isDef(oldVnode.tag)) {
+      invokeDestroyHook(oldVnode);
+    }
+  }
+  // 执行组件内部的insert钩子
+  invokeInsertHook(vnode, insertedVnodeQueue, isInitialPatch);
+}
+
+function invokeInsertHook (vnode, queue, initial) {
+  // 当节点已经被插入时，会延迟执行insert钩子
+  if (isTrue(initial) && isDef(vnode.parent)) {
+    vnode.parent.data.pendingInsert = queue;
+  } else {
+    for (var i = 0; i < queue.length; ++i) {
+      queue[i].data.hook.insert(queue[i]);
+    }
+  }
+}
+```
+
+组件内部的 insert 钩子逻辑：
+
+- 当第一次实例化组件时，由于实例的 _ isMounted 不存在，所以会调用 mounted 钩子；
+- 当再次切为 child1 时，由于 child1 只是停用而没有被销毁，不会再调用 mounted 钩子，此时会执行 queueActivatedComponent activateChildComponent 函数对组件进行状态处理；
+
+```javascript
+// 组件内部自带钩子
+var componentVNodeHooks = {
+  insert: function insert (vnode) {
+    var context = vnode.context;
+    var componentInstance = vnode.componentInstance;
+    // 实例已经被挂载
+    if (!componentInstance._isMounted) {
+      componentInstance._isMounted = true;
+      callHook(componentInstance, 'mounted');
+    }
+    if (vnode.data.keepAlive) {
+      if (context._isMounted) {
+        queueActivatedComponent(componentInstance);
+      } else {
+        activateChildComponent(componentInstance, true /* direct */);
+      }
+    }
+  },
+}
+```
+
+activateChildComponent 将 _inactive 标记为已启用，并且对子组件递归调用 activateChildComponent 做状态处理；
+
+```javascript
+function activateChildComponent (vm, direct) {
+  if (direct) {
+    vm._directInactive = false;
+    if (isInInactiveTree(vm)) {
+      return
+    }
+  } else if (vm._directInactive) {
+    return
+  }
+  if (vm._inactive || vm._inactive === null) {
+    vm._inactive = false;
+    for (var i = 0; i < vm.$children.length; i++) {
+      activateChildComponent(vm.$children[i]);
+    }
+    callHook(vm, 'activated');
+  }
+}
+```
+
+## 缓存优化
+
+### FIFO
+
+先进先出策略，通过记录数据使用的时间，当缓存大小即将溢出时，优先清除离当前时间最远的数据；
+
+### LRU
+
+最近最少使用，LRU 策略遵循的是，如果数据最近被访问过，那么将来被访问的几率会更高，如果以一个数组云记录数据，当有一数据被访问时，该数据会被移动到数组的末尾，表明最近被使用过，当缓存溢出时，会删除数组的头部数据，即将最不频繁使用的数据移除；
+
+### LFU
+
+计数最少策略，用次数云标记数据使用频率，次数最少的会在缓存溢出时被淘汰；
+
+keep-alive 在处理缓存时的利用了 LRU 的缓存策略；
+
+```javascript
+var keepAlive = {
+  render: function() {
+    ···
+    if (cache[key]) {
+      vnode.componentInstance = cache[key].componentInstance;
+      remove(keys, key);
+      keys.push(key);
+    } else {
+      cache[key] = vnode;
+      keys.push(key);
+      if (this.max && keys.length > parseInt(this.max)) {
+        pruneCacheEntry(cache, keys[0], keys, this._vnode);
+      }
+    }
+  }
+}
+
+function remove (arr, item) {
+  if (arr.length) {
+    var index = arr.indexOf(item);
+    if (index > -1) {
+      return arr.splice(index, 1)
+    }
+  }
+}
+```
+
+删除缓存时会把 keys[0] 代表的组件删除，因为最近被访问到的元素会位于数组的尾部，所以头部的数据是最远访问的，会优先删除头部的元素；
+
+并且会再次调用 remove 方法，将 keys 的首个元素删除；
+
+```javascript
+function pruneCacheEntry (cache,key,keys,current) {
+  var cached$$1 = cache[key];
+  // 销毁实例
+  if (cached$$1 && (!current || cached$$1.tag !== current.tag)) {
+    cached$$1.componentInstance.$destroy();
+  }
+  cache[key] = null;
+  remove(keys, key);
+}
+```
 
 ## 抽象组件
 
