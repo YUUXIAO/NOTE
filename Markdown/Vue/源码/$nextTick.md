@@ -159,7 +159,7 @@ function flushSchedulerQueue () {
   let watcher, id
   // 排序
   queue.sort((a, b) => a.id - b.id)					
-  // 不要将length进行缓存
+  // 不将length进行缓存，因为在执行处理现有 watcher 对象期间，可能有更多的watcher对象被push进queue
   for (index = 0; index < queue.length; index++) {	 
     watcher = queue[index]
     // 如果watcher有before则执行
@@ -186,15 +186,13 @@ function flushSchedulerQueue () {
 
 ```
 
-## nextTick 源码分析
-
-Vue 用一个 queue 收集依赖的执行，在下次微任务执行的时候统一执行 queue 中的 Watcher 的 run 操作，同时，相同 id 的 watcher 不会重复添加到 queue 中，因此也不会重复执行多次的视图渲染；
+## nextTick原理
 
 ### nextTick 函数
 
-1. 在 nextTick 函数中把通过 cb 传入的函数，做一下包装然后 push 到 callbacks 数组中；
+1. 在 nextTick 函数中把通过 cb 传入的函数，用 try-catch 包装然后 push 到 callbacks 数组中，这么做是为了防止回调函数如果执行错误不会相互影响；
 2. 通过 callbacks 数组来模拟事件队列，事件队列里的事件，通过 nextTickHandler 方法来执行调用，何时执行是 timerFunc 来决定；
-3. 用变量 pending 来保证执行一个事件循环中只执行一次 timerFunc()；
+3. 检查 pending 状态，它是一个标记位，初始值是 false，在执行 timerFunc 前置为 true，因此下次调用 nextTick 不会进入 timerFunc 方法，这个方法会在下一个 macro/micro tick 时  flushCallbacks 异步去执行 callbacks 队列中的任务，flushCallbacks 方法一开始会把 pending 置为 false，所以下一次调用 nextTick 时又能开启新一轮的 timerFunc ,这样就形成了 vue 中的 event loop；
 4. 最后执行 if (!cb && typeof Promise !== 'undefined') ,判断参数 cb 不存在且浏览器支持 Promise，则返回一个 Promise 类实例化对象，例如  nextTick().then(() => {})，当 _resolve 函数执行，就会执行 then 的逻辑中；
 
 ```javascript
@@ -358,9 +356,9 @@ timerFunc = function() {
 - 在2.5.0版本中实现 timerFunc 的顺序改为 setImmediate，MessageChannel，setTimeout；在这个版本把创建微任务的方法都移除了，因为微任务优先级太高了；
 - 后面实现 timerFunc 的顺序又改为 Promise，MutationObserver，setImmediate，setTimeout；
 
-### flushCallbacks 函数
+### flushCallbacks
 
-> flushCallbacks 是异步更新的函数，它会取出 callbacks 数组的每一个任务，执行任务；
+> flushCallbacks 是异步更新的函数，它会挨个同步的去执行 callbacks 中的回调函数；
 
 ```javascript
 var callbacks = [];
@@ -382,3 +380,39 @@ function flushCallbacks() {
 2. 将执行任务放到微任务或者宏任务中；
 3. 事件循环到了微任务或者宏任务，执行函数依次执行 callbacks 中的回调；
 
+
+## 举例
+
+```javascript
+<div id="app">
+  <span id='name' ref='name'>{{ name }}</span>
+  <button @click='change'>change name</button>
+</div>
+
+<script>
+methods: {
+  change() {
+    const $name = this.$refs.name
+    this.$nextTick(() => console.log('setter前：' + $name.innerHTML))
+    this.name = ' name改喽 '
+    console.log('同步方式：' + this.$refs.name.innerHTML)
+    setTimeout(() => this.console("setTimeout方式：" + this.$refs.name.innerHTML))
+    this.$nextTick(() => console.log('setter后：' + $name.innerHTML))
+    this.$nextTick().then(() => console.log('Promise方式：' + $name.innerHTML))
+  }
+}
+</script>
+
+// 同步方式：SHERlocked93 
+// setter前：SHERlocked93 
+// setter后：name改喽 
+// Promise方式：name改喽 
+// setTimeout方式：name改喽
+```
+
+1. 同步方式：当把 data 中的 name 修改后，会触发 name 的 setter 中的 dep.notify 通知依赖本 data 的 render watcher 去 update，update 会把 flushSchedulerQueue 函数传递给 nextTick，render watcher 在 flushSchedulerQueue 函数中运行时 watcher.run 再走 diff --> patch 的过程重新渲染视图，这个过程会重新依赖收集，这个过程是异步的；当修改了 name 之后打印，这时异步的改动还没有 patch 到视图上；
+2. setter 前：nextTick 在被调用时把回调挨个 push 进 callbacks 数组，之后执行也是 for 循环挨个执行，在修改 name 后，触发把 render watcher 填入 schedulerQueue 队列并把他的执行函数 flushSchedulerQueue 传递给 nextTick，此时 callbacks 队列中已经有了 setter前函数，按照先入先出的执行 callbacks 回调时先执行 setter前函数，这时还没有执行 render watcher 的 watcher.run 方法，所以打印的还是原来的内容；
+3. setter 后：setter 后时已经执行完 watcher.run 方法，这时 render watcher 已经把改动 patch 到视图上；
+4. Promise 方式：相当于 Promise.then 方式执行此函数，此时 Dom 已经修改；
+5. setTimeout 方式：最后执行 macro task 任务，此时 Dom 已经修改；
+6. 在执行 setter 前函数时，同步代码已经执行完毕，异步的任务还未执行，所有 $nextTick 函数也执行完毕，所有回调都被 push 进了 callbacks 队列等待执行，此时 callbacks 队列是：[ setter前函数，flushSchedulerQueue，setter后函数，Promise方式函数 ]，它是一个 micro task 队列，执行完毕后执行 macro task 任务 setTimeout；
