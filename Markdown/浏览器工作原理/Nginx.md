@@ -38,3 +38,117 @@ Nginx  根据接收到的请求的端口、域名和 url，将请求转发给不
    - 基于端口的，不同的端口；
    - 基于域名的，不同域名；
 3. 反向代理，负载均衡：当网站的访问量达到一定程度，单台服务器不能满足用户的请求时，需要用多台服务器集群可以使用 Nginx   做反向代理，并且多台服务器可以平均分担负载，不会因为某台服务器负载高宕机而某台服务器闲置的情况；
+
+## 负载均衡
+
+> 负载均衡是用来在多个计算机（计算机集群）、网络连接、CPU、磁盘驱动或其它资源中分配负载，以达到最优化资源使用、最大化吞吐率、最小化响应时间，同时避免过载的目的；
+
+Nginx 实现负载均衡有几种方案：
+
+### 轮询
+
+> 轮询即 Round Robin，根据 Nginx 配置文件中的顺序，依次把客户端的  Web 请求分发到不同的后端服务器；
+
+```javascript
+upstream backserver {
+  server 192.168.0.14;
+  server 192.168.0.15;
+}
+```
+
+### weight
+
+> 基于权重的负载均衡即 Weight Load Balancing，在这种方式下，可以配置 Nginx 把请求更多的分发到高配置的后端服务器上，把相对较少的请求分发到低配服务器；
+
+```javascript
+upstream backserver {
+  server 192.168.0.14 weight=3;
+  server 192.168.0.15 weight=7;
+}
+```
+
+### ip_hash
+
+轮询和权重的负载均衡方案中，同一客户端连续的 web 请求可能会被分发到不同的后端服务器进行处理，如果涉及到会话 session 会话会比较复杂；
+
+基于 IP 地址哈希的负载均衡方案，这样同一客户端连续的 web 请求都会被分发到同一服务器进行处理；
+
+```javascript
+upstream backserver {
+    ip_hash;
+    server 192.168.0.14:88;
+    server 192.168.0.15:80;
+}
+```
+
+### fair
+
+> 按后端服务器的响应时间来分配请求，响应时间短的优先分配；
+
+```javascript
+upstream backserver {
+    server server1;
+    server server2;
+    fair;
+}
+```
+
+### url_hash
+
+> 按访问 url 的 hash 结果来分配请求，使每个 url 定向到同一个（对应）的后端服务器，后端服务器为缓存时比较有效；
+
+```javascript
+upstream backserver {
+    server squid1:3128;
+    server squid2:3128;
+    hash $request_uri;
+    hash_method crc32;
+}
+```
+
+在需要使用负载均衡的server中增加
+
+```javascript
+proxy_pass http://backserver/; 
+upstream backserver{ 
+  ip_hash; 
+  server 127.0.0.1:9090 down; (down 表示单前的server暂时不参与负载) 
+  server 127.0.0.1:8080 weight=2; (weight 默认为1.weight越大，负载的权重就越大) 
+  server 127.0.0.1:6060; 
+  server 127.0.0.1:7070 backup; (其它所有的非backup机器down或者忙的时候，请求backup机器) 
+} 
+```
+
+- max_fails ：允许请求失败的次数，默认为1，当超过最大次数时，返回proxy_next_upstream 模块定义的错误；
+- fail_timeout：max_fails 次失败后，暂停的时间；
+
+```
+#user  nobody;
+
+worker_processes  4;
+events {
+# 最大并发数
+worker_connections  1024;
+}
+http{
+    # 待选服务器列表
+    upstream myproject{
+        # ip_hash指令，将同一用户引入同一服务器。
+        ip_hash;
+        server 125.219.42.4 fail_timeout=60s;
+        server 172.31.2.183;
+    }
+
+    server{
+        # 监听端口
+        listen 80;
+        # 根目录下
+        location / {
+        # 选择哪个服务器列表
+            proxy_pass http://myproject;
+        }
+
+    }
+}
+```
+
