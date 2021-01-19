@@ -67,7 +67,6 @@ Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
   const prevVnode = vm._vnode
   // ...
   if (!prevVnode) {
-    // initial render
     // 第一次渲染
     vm.$el = vm.__patch__(
       vm.$el, vnode, hydrating, false /* removeOnly */,
@@ -75,7 +74,6 @@ Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
       vm.$options._refElm
     )
   } else {
-    // updates
     // 更新视图
     vm.$el = vm.__patch__(prevVnode, vnode)
   }
@@ -83,7 +81,9 @@ Vue.prototype._update = function (vnode: VNode, hydrating?: boolean) {
 }
 ```
 
-## Virtual DOM Diff
+## Diff 算法
+
+> diff 算法的目的就是为了减少 DOM 操作的性能开销，尽可能的复用 DOM 元素，所以需要判断出是否有节点需要移动，应该如何移动以及找出那些需要被添加或删除的节点；
 
 vm._ patch _ 函数就是 Virtual DOM Diff 的核心，是它最后把真实 DOM 插入页面中的；
 

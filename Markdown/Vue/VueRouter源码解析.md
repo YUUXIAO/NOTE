@@ -168,11 +168,15 @@ export function install (Vue) {
 
 ```
 
-
-
 ## VueRouter 实例
 
-在实例化VueRouter的过程中，核心是创建一个路由匹配对象 ，并且根据mode来采取不同的路由方式 
+实例化VueRouter的过程中，核心是创建一个路由匹配对象 ，并根据mode来采取不同的路由方式；
+
+Vue-router 有三个模式：hash，history，abstract：
+
+- hash：使用 URL hash 值来作路由，支持所有浏览器，包括不支持 HTML5 History Api 的浏览器；
+- history：依赖 HTML5 History API 和服务器配置；
+- abstract：支持所有 Javascript 运行环境，如 Node.js 服务器端，如果发现没有浏览器的 API，路由会自动强制进行这个模式；
 
 ```javascript
 constructor (options: RouterOptions = {}) {
@@ -591,7 +595,7 @@ export function createRoute (
 
 ## history
 
-history一共有三个模式：hash，history，abstract,这三个类都继承History类。
+history 有三个模式：hash，history，abstract,这三个类都继承History类；
 
 ### base
 

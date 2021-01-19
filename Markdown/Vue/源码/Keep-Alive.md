@@ -1,3 +1,5 @@
+> <keep-alive> 是 Vue 源码中实现的一个全局抽象组件，通过自定义 render 函数并且利用了插槽来实现数据缓存和更新；
+
 1. keep-alive 是源码内部定义的组件选项配置，它会先注册为全局组件供开发者全局使用，其中 render 函数定义了它的渲染过程；
 2. 和普通组件一致，当父在创建真实节点的过程中，遇到 keep-alive 的组件会进行组件的初始化和实例化；
 3. 实例化会执行挂载 $mount 的过程，这一步会执行 keep-alive 选项中的 render 函数；
@@ -807,7 +809,7 @@ function initLifecycle (vm) {
 
   var parent = options.parent;
   if (parent && !options.abstract) {
-      // 如果有abstract属性，一直往上层寻找，直到不是抽象组件
+    // while 循环查找第一个非抽象的父组件
     while (parent.$options.abstract && parent.$parent) {
       parent = parent.$parent;
     }
