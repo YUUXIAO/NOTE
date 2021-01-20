@@ -439,6 +439,7 @@ function mergeOptions (
   for (key in parent) {
     mergeField(key)
   }
+  // 循环子options时，仅合并父options中不存在的项，来提高合并效率
   for (key in child) {
     if (!hasOwn(parent, key)) {
       mergeField(key)
@@ -525,8 +526,11 @@ function initRender (vm: Component) {
 
 首先判断在 new Vue 中的 options 中是否传入 el，如果没有传入就不会触发实际的渲染，需要自己手动调用 $mount；
 
+整个覆盖后的 $mount 方法就是将 template 转为 render 函数挂载至 vm 的 options，然后调用原有的 mount；
+
 ```javascript
 // ......
+// 先将原有的$mount保留到变量mount中，
 const mount = Vue.prototype.$mount
 Vue.prototype.$mount = function (
   el?: string | Element,
@@ -550,8 +554,66 @@ Vue.prototype.$mount = function (
   }
   return mount.call(this, el, hydrating)
 }
-
 ```
 
+原有的 $mount 方法主要是调用了生命周期中的 mountComponet；
 
+```javascript
+function mountComponent (
+  vm: Component,
+  el: ?Element,
+  hydrating?: boolean
+): Component {
+  vm.$el = el
+  callHook(vm, 'beforeMount')
 
+  let updateComponent = () => {
+  	vm._update(vm._render(), hydrating)
+  }
+
+  new Watcher(vm, updateComponent, noop, {
+    before () {
+      if (vm._isMounted) {
+        callHook(vm, 'beforeUpdate')
+      }
+    }
+  }, true /* isRenderWatcher */)
+  hydrating = false
+
+  if (vm.$vnode == null) {
+    vm._isMounted = true
+    callHook(vm, 'mounted')
+  }
+  return vm
+}
+```
+
+Watcher 的构造函数：
+
+```javascript
+constructor (vm, expOrFn, cb, options, isRenderWatcher) {
+  this.vm = vm
+  vm._watcher = this
+  vm._watchers.push(this)
+  this.getter = expOrFn
+  this.value = this.get()
+}
+
+get () {
+  pushTarget(this)
+  let value
+  const vm = this.vm
+  value = this.getter.call(vm, vm)
+  popTarget()
+  this.cleanupDeps()
+  return value
+}
+```
+
+1. 在 Watcher 的构造函数中，本次传入的 updateComponent 作为 Watcher 的 getter；
+2. 在 get 方法调用时，又通过 pushTarget 方法将当前 Watcher 赋值给 Dep.target；
+3. 调用 getter，相当于调用 vm._ update ，先调用 vm._ render，这时 vm._ render 此时会将已经准备好的 render 函数调用；
+4. render 函数用到了 this.aaa，这时会调用 aaa 的 get 方法从而触发了 dep.depend（）；
+5. dep.depend（）会调用 Watcher 的 addDep，这时 Watcher 记录当前的 dep 实例；
+6. 继续调用 dep.addSub（this），dep 又记录了当前 Watcher 实例，将当前的 Watcher 存入 dep.subs 中；
+7. 当 aaa 发生改变时，会触发 Observer 中的 set 方法，从而触发 dep,notify （）方法来进行 update 操作；
