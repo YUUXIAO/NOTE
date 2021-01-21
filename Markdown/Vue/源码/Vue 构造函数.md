@@ -1,3 +1,8 @@
+## new Vue过程
+
+1. 调用 _init 合并配置，初始化生命周期，初始化事件中心，初始化渲染，初始化 data、props、computed、watcher 等；
+2. 通过 Object.defineProperty 设置 setter 与 getter 函数，用来实现响应式以及依赖收集；
+
 ## 构造函数变化过程
 
 1. 通过 instance 对 Vue.prototype 进行属性和方法的挂载；
