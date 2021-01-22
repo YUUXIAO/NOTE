@@ -1,4 +1,4 @@
-> <keep-alive> 是 Vue 源码中实现的一个全局抽象组件，通过自定义 render 函数并且利用了插槽来实现数据缓存和更新；
+> keep-alive 是一个全局抽象组件，通过自定义 render 函数并且利用了插槽来实现数据缓存和更新；
 
 1. keep-alive 是源码内部定义的组件选项配置，它会先注册为全局组件供开发者全局使用，其中 render 函数定义了它的渲染过程；
 2. 和普通组件一致，当父在创建真实节点的过程中，遇到 keep-alive 的组件会进行组件的初始化和实例化；
@@ -105,6 +105,14 @@ function createComponent(Ctordata,context,children,tag) {
 }
 ```
 
+## 原理
+
+1. 获取 keep-alive 包裹着的第一个子组件对象及组件名；
+2. 根据设定的 include/exclude 进行条件匹配决定是否缓存，如果不匹配就直接返回组件 vnode；
+3. 根据组件 ID 和 tag 生成缓存 key，并在缓存对象中查找是否已经缓存过该组件实例，如果存在直接取出缓存并更新该 key 在 this.keys 的位置；
+4. 在 this.cache 对象中存储该组件实例并保存 key 值，之后检查缓存的实例个数是否超过 max 的设置值，超过就根据 LRU 置换策略删除最久未使用的实例；
+5. 最后组件实例的 keep-alive 属性设置为 true；
+
 ## 初次渲染
 
 > 内置的 keep-alive 组件，让子组件在第一次渲染时将 vnode 和真实的 elm 进行了缓存；
@@ -187,16 +195,15 @@ function createComponentInstanceForVnode (vnode, parent) {
 - keep-alive 本质上是存缓存和拿缓存的过程，并没有实际的节点渲染，所以使用 render 处理；
 
 ```javascript
-// keepalive组件选项
 var KeepAlive = {
   name: 'keep-alive',
-  // 抽象组件的标志
+  // 抽象组件属性 ,它在组件实例建立父子关系的时候会被忽略,发生在 initLifecycle 的过程中
   abstract: true,
   // keep-alive允许使用的props
   props: {
-    include: patternTypes,
-    exclude: patternTypes,
-    max: [String, Number]
+    include: patternTypes,	// 被缓存组件
+    exclude: patternTypes,  // 不被缓存组件
+    max: [String, Number]	// 指定缓存大小
   },
 
   created: function created () {
@@ -208,14 +215,14 @@ var KeepAlive = {
 
   destroyed: function destroyed () {
     for (var key in this.cache) {
+      // 删除所有缓存
       pruneCacheEntry(this.cache, key, this.keys);
     }
   },
 
   mounted: function mounted () {
+    // 监听缓存/不缓存组件
     var this$1 = this;
-    // 动态include和exclude
-    // 对include exclue的监听
     this.$watch('include', function (val) {
       pruneCache(this$1, function (name) { return matches(val, name); });
     });
@@ -223,17 +230,16 @@ var KeepAlive = {
       pruneCache(this$1, function (name) { return !matches(val, name); });
     });
   },
+  
   // keep-alive的渲染函数
   render: function render () {
-    // 拿到keep-alive下插槽的值
+    // 拿到keep-alive下插槽的值，获取第一个子元素的 vnode
     var slot = this.$slots.default;
-    // 第一个vnode节点
     var vnode = getFirstComponentChild(slot);
     // 拿到第一个组件实例
     var componentOptions = vnode && vnode.componentOptions;
     // keep-alive的第一个子组件实例存在
     if (componentOptions) {
-      // check pattern
       //拿到第一个vnode节点的name
       var name = getComponentName(componentOptions);
       var ref = this;
@@ -241,9 +247,7 @@ var KeepAlive = {
       var exclude = ref.exclude;
       // 通过判断子组件是否满足缓存匹配
       if (
-        // not included
         (include && (!name || !matches(include, name))) ||
-        // excluded
         (exclude && name && matches(exclude, name))
       ) {
         return vnode
@@ -252,25 +256,25 @@ var KeepAlive = {
       var ref$1 = this;
       var cache = ref$1.cache;
       var keys = ref$1.keys;
+      // 获取键，优先获取组件的name字段，否则是组件的tag
       var key = vnode.key == null
         ? componentOptions.Ctor.cid + (componentOptions.tag ? ("::" + (componentOptions.tag)) : '')
         : vnode.key;
-        // 再次命中缓存
+      // 命中缓存,直接从缓存拿vnode的组件实例,并且重新调整了 key 的顺序放在了最后一个
       if (cache[key]) {
         vnode.componentInstance = cache[key].componentInstance;
-        // make current key freshest
         remove(keys, key);
         keys.push(key);
       } else {
-      // 初次渲染时，将vnode缓存
+        // 不命中缓存,把 vnode 设置进缓存
         cache[key] = vnode;
         keys.push(key);
-        // prune oldest entry
+        // 如果配置了 max 并且缓存的长度超过了 this.max，还要从缓存中删除第一个
         if (this.max && keys.length > parseInt(this.max)) {
           pruneCacheEntry(cache, keys[0], keys, this._vnode);
         }
       }
-      // 为缓存组件打上标志
+      // keepAlive标记位
       vnode.data.keepAlive = true;
     }
     // 将渲染的vnode返回
