@@ -44,55 +44,219 @@ export default Vue
 
 #### initMixin
 
-在传入的 Vue 对象的原型上挂载了 _init 方法；
+> initMixin 方法主要的作用是在 Vue.prototype上定义 _init 方法；
 
 ```javascript
 // src/core/instance/init.js
-Vue.prototype._init = function (options?: Object) {}
+export function initMixin (Vue) {
+  Vue.prototype._init = function (options) {
+    const vm = this
+    // 合并配置
+    if (options && options._isComponent) {
+      initInternalComponent(vm, options)
+    } else {
+      vm.$options = mergeOptions(
+        resolveConstructorOptions(vm.constructor),
+        options || {},
+        vm
+      )
+    }
+
+    // 2.render代理
+    if (process.env.NODE_ENV !== 'production') {
+      initProxy(vm)
+    } else {
+      vm._renderProxy = vm
+    }
+
+    // 初始化生命周期、初始化事件中心、初始化inject，初始化state、初始化provide、调用生命周期
+    vm._self = vm
+    initLifecycle(vm)
+    initEvents(vm)
+    initRender(vm)
+    callHook(vm, 'beforeCreate')
+    initInjections(vm)
+    initState(vm)
+    initProvide(vm)
+    callHook(vm, 'created')
+
+    // 挂载
+    if (vm.$options.el) {
+      vm.$mount(vm.$options.el)
+    }
+  }
+}
 ```
 
 #### stateMixin
 
+> stateMixin 方法主要是处理跟实例相关的属性和方法，它会在 Vue.prototype 上定义实例会使用到的属性和方法；
+
 ```javascript
 // src/core/instance/state.js
-// Object.defineProperty(Vue.prototype, '$data', dataDef)
-// 这里$data只提供了get方法，set方法再非生产环境时会给予警告
-Vue.prototype.$data = undefined;
+import { set, del } from '../observer/index'
 
-// Object.defineProperty(Vue.prototype, '$props', propsDef)
-// 这里$props只提供了get方法，set方法再非生产环境时会给予警告
-Vue.prototype.$props = undefined;
+export function stateMixin (Vue) {
+  // 定义$data, $props, 这里只提供了get方法，set方法再非生产环境时会给予警告
+  const dataDef = {}
+  dataDef.get = function () { return this._data }
+  const propsDef = {}
+  propsDef.get = function () { return this._props }
+  Object.defineProperty(Vue.prototype, '$data', dataDef)
+  Object.defineProperty(Vue.prototype, '$props', propsDef)
 
-Vue.prototype.$set = set
-Vue.prototype.$delete = del
-
-Vue.prototype.$watch = function() {}
+  // 定义$set, $delete, $watch
+  Vue.prototype.$set = set
+  Vue.prototype.$delete = del
+  // $watch方法实现的核心是通过一个 watcher 实例来监听
+  Vue.prototype.$watch = function (
+    expOrFn: string | Function,
+    cb: any,
+    options?: Object
+  ): Function {
+    const vm: Component = this
+    if (isPlainObject(cb)) {
+      return createWatcher(vm, expOrFn, cb, options)
+    }
+    options = options || {}
+    options.user = true
+    const watcher = new Watcher(vm, expOrFn, cb, options)
+    if (options.immediate) {
+      try {
+        cb.call(vm, watcher.value)
+      } catch (error) {
+        handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
+      }
+    }
+    return function  () {
+      watcher.teardownunwatchFn()
+    }
+  }
+}
 ```
 
 #### eventsMixin
 
+> eventsMixin 方法主要是在 Vue.prototype 上定义下面四个实例方法；
+
 ```javascript
 // src/core/instance/events.js
-Vue.prototype.$on = function() {}
-Vue.prototype.$once = function() {}
-Vue.prototype.$off = function() {}
-Vue.prototype.$emit = function() {}
+// 定义$on
+Vue.prototype.$on = function (event: string | Array<string>, fn: Function): Component {
+  const vm: Component = this
+  if (Array.isArray(event)) {
+    for (let i = 0, l = event.length; i < l; i++) {
+      vm.$on(event[i], fn)
+    }
+  } else {
+    (vm._events[event] || (vm._events[event] = [])).push(fn)
+    if (hookRE.test(event)) {
+      vm._hasHookEvent = true
+    }
+  }
+  return vm
+}
+
+// 定义$once
+Vue.prototype.$once = function (event: string, fn: Function): Component {
+  const vm: Component = this
+  function on () {
+    vm.$off(event, on)
+    fn.apply(vm, arguments)
+  }
+  on.fn = fn
+  vm.$on(event, on)
+  return vm
+}
+
+// 定义$off
+Vue.prototype.$off = function (event?: string | Array<string>, fn?: Function): Component {
+  const vm: Component = this
+  // 没有提供任何参数时，移除全部事件监听
+  if (!arguments.length) {
+    vm._events = Object.create(null)
+    return vm
+  }
+  
+  // 只提供event参数时，只移除此event对应的监听器
+  if (Array.isArray(event)) {
+    for (let i = 0, l = event.length; i < l; i++) {
+      vm.$off(event[i], fn)
+    }
+    return vm
+  }
+  
+  // 传递了未监听的event
+  const cbs = vm._events[event]
+  if (!cbs) {
+    return vm
+  }
+  // 没有传递fn
+  if (!fn) {
+    vm._events[event] = null
+    return vm
+  }
+  // 同时提供event参数和fn回调，则只移除此event对应的fn这个监听器
+  let cb
+  let i = cbs.length
+  while (i--) {
+    cb = cbs[i]
+    if (cb === fn || cb.fn === fn) {
+      cbs.splice(i, 1)
+      break
+    }
+  }
+  return vm
+}
+
+// 定义$emit
+Vue.prototype.$emit = function (event: string): Component {
+  const vm: Component = this
+  // ......
+  let cbs = vm._events[event]
+  if (cbs) {
+    cbs = cbs.length > 1 ? toArray(cbs) : cbs
+    const args = toArray(arguments, 1)
+    const info = `event handler for "${event}"`
+    for (let i = 0, l = cbs.length; i < l; i++) {
+      // invokeWithErrorHandling 方法使用try/catch把函数调用并执行的地方包裹起来，当函数调用出错时，执行Vue的handleError()方法
+      invokeWithErrorHandling(cbs[i], vm, args, vm, info)
+    }
+  }
+  return vm
+}
+
 ```
 
 #### lifecycleMixin
 
+> lifecycleMixin 方法主要是定义实例方法和生命周期；
+
+- _ update 方法会在组件渲染时调用；
+- $forceUpdate 方法是一个强制 Vue 实例重新渲染的方法，它的内部调用了 _update 方法，也就是强制组件重新编译挂载；
+- $destory 方法是组件销毁方法，会处理父子组件的关系，事件监听和触发生命周期等操作；
+
 ```javascript
 // src/core/instance/lifecycle.js
-Vue.prototype._update = function() {}
-Vue.prototype.$forceUpdate = function () {}
-Vue.prototype.$destroy = function () {}
+export function lifecycleMixin (Vue) {
+  // 私有方法
+  Vue.prototype._update = function () {}
+  // 实例方法
+  Vue.prototype.$forceUpdate = function () {
+    if (this._watcher) {
+      this._watcher.update()
+    }
+  }
+  Vue.prototype.$destroy = function () {}
+}
 ```
 
 #### renderMixin
 
+> renderMixin 方法主要是在 Vue.prototype 上定义各种私有方法和 $nextTick 方法；
+
 ```javascript
 // src/core/instance/render.js
-// installRenderHelpers 
 Vue.prototype._o = markOnce
 Vue.prototype._n = toNumber
 Vue.prototype._s = toString
@@ -110,6 +274,7 @@ Vue.prototype._u = resolveScopedSlots
 Vue.prototype._g = bindObjectListeners
 
 Vue.prototype.$nextTick = function() {}
+// _render 方法会把模板编译成 VNode
 Vue.prototype._render = function() {}
 ```
 
@@ -279,18 +444,17 @@ Vue.prototype._init = function (options?: Object) {
 
   // a flag to avoid this being observed
   vm._isVue = true
-  // 合并选项
+  // 合并配置，区分component配置和constructor配置
   if (options && options._isComponent) {
     initInternalComponent(vm, options)
   } else {
-    // 将options进行合并
     vm.$options = mergeOptions(
       resolveConstructorOptions(vm.constructor),
       options || {},
       vm
     )
   }
-  // 数据代理，可以通过 this.xxx 访问数据
+  // render的Prxoy代理,开发环境为 new Proxy() 实例，生产环境为自身
   if (process.env.NODE_ENV !== 'production') {
     initProxy(vm)
   } else {
