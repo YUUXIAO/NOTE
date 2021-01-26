@@ -456,6 +456,7 @@ Vue.prototype._init = function (options?: Object) {
   }
   // render的Prxoy代理,开发环境为 new Proxy() 实例，生产环境为自身
   if (process.env.NODE_ENV !== 'production') {
+    // 对vm实例进行一层代理
     initProxy(vm)
   } else {
     vm._renderProxy = vm
@@ -481,6 +482,142 @@ Vue.prototype._init = function (options?: Object) {
   if (vm.$options.el) {
     vm.$mount(vm.$options.el)
   }
+}
+```
+
+### initProxy
+
+- 当浏览器支持 Proxy 时，vm._renderProxy 会代理 vm 实例，并且代理过程也会随着参数的不同呈现不同的效果；
+- 当浏览器不支持Proxy 时，直接将 vm 赋值给 vm._renderProxy；
+
+```javascript
+var initProxy = function initProxy (vm) {
+    // 判断浏览器是否支持原生的 proxy
+    if (hasProxy) {
+        var options = vm.$options;
+        var handlers = options.render && options.render._withStripped
+            ? getHandler
+            : hasHandler;
+        // 代理vm实例到vm属性_renderProxy
+        vm._renderProxy = new Proxy(vm, handlers);
+    } else {
+        vm._renderProxy = vm;
+    }
+};
+```
+
+#### 支持proxy情况 
+
+##### getHandler
+
+> getHandler 方法主要是针对读取代理对象某个属性时进行的操作，当访问的属性不是 String 类型或者属性值在被代理的对象上不存在时，抛出错误提示，否则就返回属性值；
+
+```javascript
+const getHandler = {
+  get (target, key) {
+    if (typeof key === 'string' && !(key in target)) {
+      warnNonPresent(target, key)
+    }
+    return target[key]
+  }
+}
+```
+
+##### hasHandler 
+
+> hasHandler 方法可以在开发者错误的调用vm属性时，提供提示作用；
+
+- allowedGlobals 定义了 javascript 保留的关键字，这些关键字是不允许作为用户变量存在的；
+- warnReservedPrefix: 警告不能以$ _开头的变量；
+- warnNonPresent: 警告模板出现的变量在vue实例中未定义；
+
+```javascript
+var hasHandler = {
+    has: function has (target, key) {
+        var has = key in target;
+        // isAllowed用来判断模板上出现的变量是否合法。
+        var isAllowed = allowedGlobals(key) ||
+            (typeof key === 'string' && key.charAt(0) === '_' && !(key in target.$data));
+        // _和$开头的变量不允许出现在定义的数据中，因为它是vue内部保留属性的开头
+        // warnReservedPrefix: 警告不能以$ _开头的变量
+        // warnNonPresent: 警告模板出现的变量在vue实例中未定义
+        if (!has && !isAllowed) {
+            if (key in target.$data) { warnReservedPrefix(target, key); }
+            else { warnNonPresent(target, key); }
+        }
+        return has || !isAllowed
+    }
+};
+
+// 模板中允许出现的非vue实例定义的变量
+var allowedGlobals = makeMap(
+    'Infinity,undefined,NaN,isFinite,isNaN,' +
+    'parseFloat,parseInt,decodeURI,decodeURIComponent,encodeURI,encodeURIComponent,' +
+    'Math,Number,Date,Array,Object,Boolean,String,RegExp,Map,Set,JSON,Intl,' +
+    'require' // for Webpack/Browserify
+);
+
+// 模板使用未定义的变量
+var warnNonPresent = function (target, key) {
+    warn(
+    "Property or method \"" + key + "\" is not defined on the instance but " +
+    'referenced during render. Make sure that this property is reactive, ' +
+    'either in the data option, or for class-based components, by ' +
+    'initializing the property. ' +
+    'See: https://vuejs.org/v2/guide/reactivity.html#Declaring-Reactive-Properties.',
+    target
+    );
+};
+
+// 使用$,_开头的变量
+var warnReservedPrefix = function (target, key) {
+    warn(
+    "Property \"" + key + "\" must be accessed with \"$data." + key + "\" because " +
+    'properties starting with "$" or "_" are not proxied in the Vue instance to ' +
+    'prevent conflicts with Vue internals' +
+    'See: https://vuejs.org/v2/api/#data',
+    target
+    );
+};
+```
+
+#### 不支持proxy情况
+
+- 在没有经过代理的情况下，使用 $,_ 开头的变量变成了 js 语言层面的错误，表示该变量没有被声明；
+
+在初始化数据阶段，Vue 已经为数据进行了一层筛选的代理；
+
+```javascript
+function initData(vm) {
+  vm._data = typeof data === 'function' ? getData(data, vm) : data || {}
+  if (!isReserved(key)) {
+      // 数据代理，用户可直接通过vm实例返回data数据
+      proxy(vm, "_data", key);
+  }
+}
+
+// isReserved会过滤以 $,_ 开头的变量
+function isReserved (str) {
+  var c = (str + '').charCodeAt(0);
+  // 首字符是$, _的字符串
+  return c === 0x24 || c === 0x5F
+}
+```
+
+##### proxy
+
+> proxy 方法的实现是基于 Object.defineProperty 来实现的；
+
+```javascript
+function proxy (target, sourceKey, key) {
+    sharedPropertyDefinition.get = function proxyGetter () {
+        // 当访问this[key]时，会代理访问this._data[key]的值
+        return this[sourceKey][key]
+    };
+    sharedPropertyDefinition.set = function proxySetter (val) {
+        this[sourceKey][key] = val;
+    };
+    Object.defineProperty(target, key, sharedPropertyDefinition);
 }
 ```
 
