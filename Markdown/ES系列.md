@@ -2,7 +2,7 @@
 
 ### matchAll
 
-> matchAll 方法返回一个包含所有匹配正则表达式的结果的迭代器；
+> matchAll 是基于 String 原型上的一个新方法，允许我们匹配一个字符串和一个正则表达式，返回的是所有匹配结果的迭代器；
 
 - 使用 for...of 遍历或使用操作符 ...  和 Array.from 将其转换成数组；
 
@@ -32,17 +32,17 @@ console.log([...data.matchAll(reg)]);
 - @babel/preset-env 已经包含了 @babel/plugin-syntax-dynamic-import，如果要使用 import( ) 语法，配置 @babel/preset-env 即可；
 
 ```javascript
-//menu.js
+// menu.js
 export default {
     menu: 'menu'
 }
 
-//index.js
+// index.js
 if(true) {
-    let menu = import('./menu');
-    console.log(menu); //Promise {<pending>
-    menu.then(data => console.log(data));
-  //Module {default: {menu: "menu"}, __esModule: true, Symbol(Symbol.toStringTag): "Module"}
+  let menu = import('./menu');
+  console.log(menu);	 // Promise {<pending>
+  menu.then(data => console.log(data));
+  // Module {default: {menu: "menu"}, __esModule: true, Symbol(Symbol.toStringTag): "Module"}
 }
 ```
 
@@ -51,6 +51,7 @@ if(true) {
 1. 能够在函数、分支等非顶层作用域使用，可以按需加载和懒加载；
 2. 模块标识支持变量传入，可以动态计算模块标识；
 3. 使用不仅限于 module，普通 script 中也能使用；
+4. 减少导入加载时间，很多模块并不需要首屏渲染
 
 #### 应用场景
 
@@ -252,7 +253,7 @@ let value2 = someValue ?? defaultValue;   // 0
 
 ```javascript
 const user = {
-    age: 18
+  age: 18
 }
 const u1 = user.children.name 
 // 不然会报错：TypeError: Cannot read property 'name' of undefined 或 TypeError: Cannot read property 'name' of null
