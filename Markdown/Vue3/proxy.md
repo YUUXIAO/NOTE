@@ -68,6 +68,48 @@ console.log(Reflect.ownKeys(man)); // [ 'name', 'city', 'sex' ]
 4. Reflect.has(target, propertyKey)：判断一个对象是否存在某个属性，和 in 运算符的功能完全相同；
 5. Reflect.ownKeys(target)：返回一个包含所有自身属性（不包含继承属性）的数组；
 
+## 原理
+
+Proxy 响应式的原理其实就是在第二个参数 handler 中，拦截各种取值、赋值操作，依托 track 和 trigger 两个函数进行依赖收集和派发更新；
+
+### track
+
+> track 用来在读取时收集依赖；
+
+1. 全局会存一个 targetMap，用来建立数据-->依赖的映射，是一个 weakMap 数据结构；
+2. targetMap 通过 target 可以获取到 depsMap，它用来存放这个数据对应的所有响应式依赖；
+3. depsMap 的每项都是一个 Set 数据结构，存放着对应 key 的更新函数；
+
+```javascript
+// target：原始对象
+// type：是本次收集的类型，也就是收集依赖时用来标志是什么类型的操作，比如 get
+// key：是指本次访问的是数据中的哪个 key
+function track(target: object, type: TrackOpTypes, key: unknown) {
+  const depsMap = targetMap.get(target);
+  // 收集依赖时 通过 key 建立一个 set
+  let dep = new Set()
+  targetMap.set(ITERATE_KEY, dep)
+  // effect可以理解为更新函数 存放在 dep 里
+  dep.add(effect)    
+}
+```
+
+### trigger
+
+> trigger 用来在更新时触发依赖；
+
+```javascript
+export function trigger(
+  target: object,
+  type: TriggerOpTypes,
+  key?: unknown,
+) {
+  // 简化来说就是通过 key 找到所有更新函数 依次执行
+  const dep = targetMap.get(target)
+  dep.get(key).forEach(effect => effect())
+}
+```
+
 ## 使用场景
 
 ### 增强型数组
@@ -294,12 +336,30 @@ user.email = "阿三"; // The user must have a valid email
 user.age = 100; // A user's age must be between 20 and 80
 ```
 
-## 优势
+## 对比Object.defineProperty 
 
-1. 可直接监听数组类型的数据变化；
+- Object.defineProperty 方法需要根据具体的 key 对数据进行拦截，所以对于对象上的新增属性无能为力；
+- Proxy 不关心具体的 key，它去拦截的是修改对象上的任意 key 和读取对象的任意 key，所以不管是已有 key 还是新增 key，都可以监听到；
+
+1. Proxy 可直接监听数组类型的数据变化；
+
 2. 监听的目标是对象本身，不需要像 Object.defineProperty 一样遍历每个属性，有一定的性能提升；
-3. 可拦截 apply、ownkeys、has 等13种方法，Object.defineProperty 不行；
-4. 可以直接实现对象属性的新增/删除；
+
+3. Proxy 可拦截 apply、ownkeys、has 等13种方法，可以拦截更多的操作符，Object.defineProperty 不行；
+
+4. Proxy 可以直接实现对象属性的新增/删除；
+
+5. Vue3 对于响应式数据，不再像 Vue2 中那样递归对所有的子数据进行响应式定义了，而是再获取到深层数据的时候再去利用 reactive 进一步定义响应式，这对于大量数据的初始化场景来说收益会非常大；
+
+   ```javascript
+   function get(target: object, key: string | symbol, receiver: object) {
+     const res = Reflect.get(target, key, receiver)
+     // 惰性定义
+     return isObject(res)
+       ? reactive(res)
+       : res
+   }
+   ```
 
 
 ## 相关问题

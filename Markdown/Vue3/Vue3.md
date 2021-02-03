@@ -4,7 +4,9 @@
 
 #### ref
 
-> ref 用来包装原始值类型，返回的是一个包含 .value 属性的对象；
+> ref 用来包装原始值类型（确切的说是基本数据类型 int 或 string），返回的是一个包含 .value 属性的对象；
+
+- isRef 就是判断一下是不是ref生成的响应式数据对象；
 
 ```javascript
 setup(props, context) {
@@ -25,7 +27,7 @@ setup(props, context) {
 
 #### reactive
 
-> 与 Vue2 中的 Vue.observable() 是一个概念，返回一个响应式对象；
+> reactive( ) 函数接受一个普通对象 返回一个响应式数据对象；
 
 它用来返回一个响应式对象，本身就是对象，所以不需要包装，使用它的属性时不需要加 .value 来获取；
 
@@ -38,11 +40,13 @@ obj.count++
 
 #### toRefs
 
-> 可以理解是因为要使用解构，toRefs 所采取的解决方案；
+> toRefs 可以将reactive创建出的对象展开为基础类型；
 
 因为 props 是响应式的，不能使用 ES6 解构，它会消除 prop 的响应性；
 
 为了方便对它进行包装，toRefs 可以成批量包装 props 对象；
+
+可以理解是因为要使用解构，toRefs 所采取的解决方案；
 
 ```javascript
 const { name } = toRefs(props);
@@ -199,6 +203,48 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
 }
 ```
 
+## build
+
+### tree-shaking
+
+> tree-sharking 即在构建工具构建后消除程序中无用的代码，来减少包的体积；
+
+```javascript
+// utils
+const obj = {
+  method1() {},
+  method2() {}
+};
+export function method1() {}
+export function method2() {}
+export default obj;
+
+// 调用
+import util from '@/utils';
+import { method1 } from '@/utils';
+method1();
+util.method1();
+
+// 经过webpack打包压缩之后
+function a(){}a();
+a={method1:function(){},method2:function(){}};a.method1();
+```
+
+因为 Vue3 用的是基于函数形式的 API，能更好的 tree-shaking；
+
+```javascript
+import {
+  defineComponent,
+  reactive,
+  ref,
+  watchEffect,
+  watch,
+  onMounted,
+  toRefs,
+  toRef
+} from 'vue';
+```
+
 ## TS
 
 ### defineComponent
@@ -223,4 +269,22 @@ export default defineComponent({
 ### PropType
 
 > props 定义的类型，如果是一个复杂对象，我们就要用 PropType 来进行强转声明；
+
+```javascript
+interface IObj {
+  id: number;
+  name: string;
+}
+
+obj: {
+  type: Object as PropType<IObj>,
+  default: (): IObj => ({ id: 1, name: '张三' })
+},
+  
+// 联合类型
+type: {
+  type: String as PropType<'success' | 'error' | 'warning'>,
+  default: 'warning'
+},
+```
 
