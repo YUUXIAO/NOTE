@@ -24,6 +24,53 @@
 4. 在init方法中调用了history对象的transitionTo方法，然后去通过match获取当前路由匹配的数据并创建了一个新的路由对象route，接下来拿着这个route对象去执行confirmTransition方法去执行钩子队列中的事件，最后通过updateRoute更新存储当前路由数据的对象current，指向我们刚才创建的路由对象route。
 
 
+# 路由模式
+
+vue-router 有 3 种路由模式：hash、history、abstract；
+
+1. hash: 使用 URL hash 值来作路由，支持所有浏览器，包括不支持 HTML5 History Api 的浏览器；
+2. history : 依赖 HTML5 History API 和服务器配置；
+3. abstract : 支持所有 JavaScript 运行环境，如 Node.js 服务器端，如果发现没有浏览器的 API，路由会自动强制进入这个模式；
+
+```javascript
+switch (mode) {
+  case 'history':
+	this.history = new HTML5History(this, options.base)
+	break
+  case 'hash':
+	this.history = new HashHistory(this, options.base, this.fallback)
+	break
+  case 'abstract':
+	this.history = new AbstractHistory(this, options.base)
+	break
+  default:
+	if (process.env.NODE_ENV !== 'production') {
+	  assert(false, `invalid mode: ${mode}`)
+	}
+}
+```
+
+## hash模式
+
+> location.hash 的值就是 URL 中 # 后面的内容；
+
+hash 路由模式的实现主要是基于下面几个特性：
+
+1. URL 中 hash 值是客户端的一种状态，当向服务器发出请求时，hash 部分不会被发送；
+2.  hash 值的改变，都会在浏览器的访问历史中增加一个记录，因此能通过浏览器的回退、前进按钮控制 hash 的切换；
+3. 可以通过 a 标签，并设置 href 属性，当用户点击标签后，URL 的  hash 值会发生改变，或者使用  JavaScript 来对 loaction.hash 进行赋值，改变 URL 的 hash 值；
+4. 可以使用 hashchange 事件来监听 hash 值的变化，对页面进行跳转；
+
+## history模式
+
+> HTML5 提供了 History API 来实现 URL 的变化；
+
+history 路由模式的实现主要基于存在下面几个特性：
+
+1. history.pushState() 和 history.replaceState() 两个  API 来操作实现 URL 的变化；
+2. 可以使用 popstate 事件来监听 URL 的变化，对页面进行跳转（渲染）；
+3. history.pushState() 或 history.replaceState() 不会触发 popstate 事件，需要手动触发页面跳转（渲染）；
+
 # 应用初始化
 
 构建一个Vue应用时，会使用Vue.use以插件的形式安装VueRouter,同时在Vue实例上挂载router实例
@@ -170,13 +217,8 @@ export function install (Vue) {
 
 ## VueRouter 实例
 
-实例化VueRouter的过程中，核心是创建一个路由匹配对象 ，并根据mode来采取不同的路由方式；
-
-Vue-router 有三个模式：hash，history，abstract：
-
-- hash：使用 URL hash 值来作路由，支持所有浏览器，包括不支持 HTML5 History Api 的浏览器；
-- history：依赖 HTML5 History API 和服务器配置；
-- abstract：支持所有 Javascript 运行环境，如 Node.js 服务器端，如果发现没有浏览器的 API，路由会自动强制进行这个模式；
+> 实例化VueRouter的核心是创建一个路由匹配对象 ，并根据mode来采取不同的路由方式；
+>
 
 ```javascript
 constructor (options: RouterOptions = {}) {

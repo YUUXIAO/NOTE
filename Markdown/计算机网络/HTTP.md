@@ -198,13 +198,17 @@ http2 增加了两个特性解决上面的问题：
 
 - 400 Bad request：表示请求报文存在语法错误；
 - 401 Unauthorized：表示发送的请求需要有通过 HTTP 认证的认证信息；
-- 403 Not found：表示对请求资源 的访问被服务器拒绝；
-- 404 Not found：表示在服务器上没有找到请求的资源；
-- 405 Method Not Allowed：服务器禁止使用该方法，客户端可以通过 options 方法来查看服务器允许的方法；
+- 403 Not found：表示用户通过了身份验证，但不具有访问资源所需的权限；
+- 404 Not found：表示在服务器上没有找到请求的资源或不可用；
+- 405 Method Not Allowed：表示用户已经通过身份验证，但是所用的 HTTP 方法不在他的权限之内，客户端可以通过 options 方法来查看服务器允许的方法；
+- 410 Gone：表示所请求的资源已经从这个地址转移，不再可用；
+- 415 Unsupported Media Type：表示客户端要求的返回格式不支持，比如API 只能返回 JSON 格式，但是客户端要求返回 XML 格式；
+- 422 Unprocessable Entity：表示客户端上传的附件无法处理，导致请求失败；
+- 429 Too Many Requests：表示客户端的请求次数超过限额；
 
 ### 5xx 服务器错误
 
-- 500 Internal sever error：表示服务器端在执行请求时发生了错误；
+- 500 Internal sever error：表示客户端请求有效，服务器端在执行请求时发生了错误；
 - 502 Bad Gateway：服务器是正常的，访问的时候出了问题，具体啥错误也不知道；
 - 503 Service unavailable：表示服务器暂时处于超负载或正在停机维护，无法处理请求；
 
