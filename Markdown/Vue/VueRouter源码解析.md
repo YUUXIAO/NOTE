@@ -1,10 +1,33 @@
+# 前端路由
 
+1. 前端路由的出现就是为了解决单页面网站，通过切换浏览器地址路径来匹配对应的页面组件；
+2. 前端路由会根据浏览器地址栏 pathname 的变化去匹配相应的页面组件，然后将其通过创建 DOM 节点的形式，塞入根节点，达到无刷新页面切换的效果，所以在创建页面组件的时候每个组件都有自己的生命周期；
 
+## 哈希模式
 
+> location.hash 的值就是 URL 中 # 后面的内容；
+
+hash 值的改变，都会在浏览器的访问历史中增加一个记录，因此能通过浏览器的回退、前进按钮控制 hash 的切换；
+
+浏览器提供了原生监听事件 hashchange，它可以监听到如下的变化：
+
+1. 点击 a 标签，改变了浏览器地址；
+2. 浏览器的前进后退行为；
+3. 通过 window.location 方法，改变浏览器地址；
+
+## history模式
+
+> HTML5 提供了 History API 来实现 URL 的变化；
+
+history 路由模式的实现主要基于存在下面几个特性：
+
+1. history.pushState() 和 history.replaceState() 两个  API 来操作实现 URL 的变化；
+2. 使用 popstate 事件来监听 URL 的变化，对页面进行跳转（渲染）；
+3. history.pushState() 或 history.replaceState() 不会触发 popstate 事件，需要手动触发页面跳转（渲染）；
+4. a 标签的点击事件也不会触发 popstate 事件；
+5. 只有做出浏览器动作时才会触发 popstate 事件，比如点击浏览器回退按钮或在 js 代码中调用 history.back（）或 history.forward（）方法；
 
 # VueRouter源码解析
-
-
 
 前端路由的本质就是监听URL的变化，然后匹配路由规则，显示出对应的页面，无须刷新。
 
@@ -52,24 +75,17 @@ switch (mode) {
 
 ## hash模式
 
-> location.hash 的值就是 URL 中 # 后面的内容；
+> 
 
 hash 路由模式的实现主要是基于下面几个特性：
 
 1. URL 中 hash 值是客户端的一种状态，当向服务器发出请求时，hash 部分不会被发送；
-2.  hash 值的改变，都会在浏览器的访问历史中增加一个记录，因此能通过浏览器的回退、前进按钮控制 hash 的切换；
+2. hash 值的改变，都会在浏览器的访问历史中增加一个记录，因此能通过浏览器的回退、前进按钮控制 hash 的切换；
 3. 可以通过 a 标签，并设置 href 属性，当用户点击标签后，URL 的  hash 值会发生改变，或者使用  JavaScript 来对 loaction.hash 进行赋值，改变 URL 的 hash 值；
 4. 可以使用 hashchange 事件来监听 hash 值的变化，对页面进行跳转；
 
-## history模式
 
-> HTML5 提供了 History API 来实现 URL 的变化；
-
-history 路由模式的实现主要基于存在下面几个特性：
-
-1. history.pushState() 和 history.replaceState() 两个  API 来操作实现 URL 的变化；
-2. 可以使用 popstate 事件来监听 URL 的变化，对页面进行跳转（渲染）；
-3. history.pushState() 或 history.replaceState() 不会触发 popstate 事件，需要手动触发页面跳转（渲染）；
+1. ​
 
 # 应用初始化
 

@@ -130,8 +130,8 @@ Promise.race = function(promises) {
 ### Promise.prototype.finally
 
 1.  如果返回一个 promise 会等待这个 promise 也执行完毕；
-2. 如果返回的是成功的 promise，会采用上一次的结果；
-3. 如果返回的是失败的 promise，会用这个失败的结果，传到 catch 中
+2.  如果返回的是成功的 promise，会采用上一次的结果；
+3.  如果返回的是失败的 promise，会用这个失败的结果，传到 catch 中
 
 ```javascript
 Promise.prototype.finally = function(callback) {
@@ -205,6 +205,71 @@ Promise.prototype.finally = function(callback) {
 1. Promise 一旦新建就会立即执行，无法中途取消；
 2. 如果不设置回调函数，Promise 内部的错误就无法反映到外部；
 3. 当处于pending状态时，无法得知当前处于哪一个状态，是刚刚开始还是刚刚结束；
+
+## 应用
+
+### 加载图片
+
+```javascript
+function loadImg(url){
+  return new Promise((resolve, reject) => {
+    var imgDom = document.createElement("img");
+    imgDom.src = url;
+    //图片加载成功回调
+    imgDom.onload = ()=>{
+      resolve(imgDom);
+    }
+    //图片加载失败回调
+    imgDom.onerroe = (error)=>{
+      reject(error)
+    }
+    document.body.appendChild(imgDom);
+  })
+}
+const url = "https://xxx.com/test.jpg";
+loadImg(url).then(res=>{
+  console.log(res.width);
+}, error=>{
+  console.log(error)
+})
+```
+
+### 原生XHR请求
+
+```javascript
+function promiseGet(url) {
+    return new Promise((resolve, reject)=>{
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.send();
+      xhr.onreadystatechange = function () {
+        // 0：请求未初始化，还没有调用 open()
+        // 1：请求已经建立，但是还没有发送，还没有调用 send()
+        // 2：请求已发送，正在处理中（现在可以从响应中获取内容头）
+        // 3：请求在处理中
+        // 4 响应已完成;  
+        if(xhr.readyState === 4){
+          if(xhr.status===200){
+            resolve(xhr.response);
+          }
+        }
+      }
+      xhr.onerror = ()=>{
+        reject(xhr.response);
+      }
+      xhr.upload.onprogress = function (e) {
+       const percent = (e.loaded / e.total) * 100;
+       console.log("percent: " + percent)
+      }
+    })
+}
+const url = "https://xxx.com/test.jpg";
+promiseGet(url).then(res=>{
+  console.log(res);
+}).catch(error=>{
+  console.log("error...", error)
+})
+```
 
 ## 手写Promise
 
