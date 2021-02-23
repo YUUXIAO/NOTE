@@ -171,7 +171,7 @@ let difference = a.filter((v) => b.indexOf(v) === -1).concat(b.filter((v) => a.i
 
 ```
 
-## new 方法
+## new方法
 
 > new 运算符创建一个用户定义的对象类型的实例或具有构造函数的内置对象类型之一；
 
@@ -189,15 +189,13 @@ function createNew() {
     let obj = {}  
     // 取出第一个参数，就是要传入的构造函数。因为shift会修改原数组，所以arguments会除去第一个参数
     let constructor = [].shift.call(arguments)  
-    
     // 将 obj 的原型指向构造函数，这样 obj 就可以访问到构造函数原型中的属性
     obj.__proto__ = constructor.prototype  
 
-  	// 使用 apply，改变构造函数 this 的指向到新建的对象，这样 obj 就可以访问到构造函数中的属性
+  	// 使用 apply 改变构造函数 this 的指向到新建的对象，这样 obj 就可以访问到构造函数中的属性
     let result = constructor.apply(obj, arguments)  
 
     // 如果返回值是一个对象就返回该对象，否则返回构造函数的一个实例对象
-    // 构造函数有返回且返回的是个指定对象情况
     return typeof result === 'object' ? result : obj  
 }
 
