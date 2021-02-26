@@ -3,11 +3,34 @@
 - 把 template 模板描述成 VNode，然后一系列操作之后通过 VNode 形成真实 DOM 进行挂载；
 - 更新的时候对比新旧 VNode ，只更新有变化的一部分，提高视图更新速度；
 
+> Virtual DOM 其实是一棵以 JS 对象（Vnode 节点）作为基础的树，用对象属性来描述节点，实际上它只是一层对真实 DOM 的抽象；
+
+```javascript
+<ul id='list'>
+  <li class='item'>Item 1</li>
+  <li class='item'>Item 2</li>
+  <li class='item'>Item 3</li>
+</ul>
+
+var element = {
+    tagName: 'ul', // 节点标签名
+    props: { // DOM的属性，用一个对象存储键值对
+        id: 'list'
+    },
+    children: [ // 该节点的子节点
+      {tagName: 'li', props: {class: 'item'}, children: ["Item 1"]},
+      {tagName: 'li', props: {class: 'item'}, children: ["Item 2"]},
+      {tagName: 'li', props: {class: 'item'}, children: ["Item 3"]},
+    ]
+}
+```
+
 ## 使用虚拟DOM的目的
 
 1. 组件高度抽象化；
 2. 可以更好的实现 SSR，同构渲染等；
-3. 框架跨平台；
+3. 具备跨平台的优势：由于 Virtual DOM 是以 JavaScript 对象为基础而不依赖真实平台环境，所以使它具有了跨平台的能力，比如说浏览器平台、Weex、Node 等；
+4. 提升渲染性能：Virtual DOM的优势不在于单次的操作，而是在大量、频繁的数据更新下，能够对视图进行合理、高效的更新；
 
 
 ## VNode

@@ -1,19 +1,3 @@
-nextTick 是一个异步方法，与 JS 的事件循环联系紧密，主要使用了宏任务和微任务定义了一个异步方法，多次调用 nextTick 会将方法存入队列，通过异步方法清空当前队列；
-
-## 异步更新
-
-Vue官网对数据操作是这么描述的：
-
-> Vue 在更新 DOM 时是异步执行的。只要侦听到数据变化，Vue 将开启一个队列，并缓冲在同一事件循环中发生的所有数据变更。如果同一个 watcher 被多次触发，只会被推入到队列中一次。这种在缓冲时去除重复数据对于避免不必要的计算和 DOM 操作是非常重要的。然后，在下一个的事件循环“tick”中，Vue 刷新队列并执行实际 (已去重的) 工作；
-
-Vue 中的 dom 不是实时的，当数据改变后，vue 会把 渲染 watcher 添加到异步队列，异步执行，同步代码执行完成后再统一修改 dom；
-
-- 把传入的 cb 回调函数用 try-catch 包裹后放在一个匿名函数中推入 callbacks 数组中，这么做是防止单个 cb 如果执行错误不至于让整个JS 线程挂掉，每个 cb 都包裹是防止这些回调函数如果执行错误不会相互影响；
-
-### 事件循环机制
-
-JS 运行机制简单来说可以按以下几个步骤：
-
 1. 所有的同步任务都会在主线程上执行，形成一个执行栈；
 2. 主线程之外还存在一个任务队列，只要异步任务有了运行结果，会把其回调函数作为一个任务添加到任务队列中；
 3. 一旦执行栈中的所有同步任务执行完毕，就会读取任务队列，看看里面有哪些任务，将其添加到执行栈，开始执行；
@@ -190,17 +174,30 @@ function flushSchedulerQueue () {
 
 ## nextTick原理
 
+### 数据频繁变化只更新一次
+
+1. 检测到数据变化；
+2. 开启一个队列；
+3. 在同一事件循环中缓冲所有的数据改变；
+4. 如果同一个 watcher（watcher Id 相同）被多次触发，只会被推入队列一次；
+
+不优化：每一个数据变化都会执行: setter->Dep->Watcher->update->run；
+
+优化后：执行顺序 update  -> queueWatcher -> 维护观察者队列（重复id的Watcher处理） -> waiting标志位处理 -> 处理$nextTick（在为微任务或者宏任务中异步更新DOM）；
+
 ### nextTick 函数
 
-1. 在 nextTick 函数中把通过 cb 传入的函数，用 try-catch 包装然后 push 到 callbacks 数组中，这么做是为了防止回调函数如果执行错误不会相互影响；
+1. 把传入的 cb 回调函数用 try-catch 包裹后放在一个匿名函数中推入 callbacks 数组中，这么做是防止单个 cb 如果执行错误不至于让整个JS 线程挂掉，每个 cb 都包裹是防止这些回调函数如果执行错误不会相互影响；
 2. 通过 callbacks 数组来模拟事件队列，事件队列里的事件，通过 nextTickHandler 方法来执行调用，何时执行是 timerFunc 来决定；
 3. 检查 pending 状态，它是一个标记位，初始值是 false，在执行 timerFunc 前置为 true，因此下次调用 nextTick 不会进入 timerFunc 方法，这个方法会在下一个 macro/micro tick 时  flushCallbacks 异步去执行 callbacks 队列中的任务，flushCallbacks 方法一开始会把 pending 置为 false，所以下一次调用 nextTick 时又能开启新一轮的 timerFunc ,这样就形成了 vue 中的 event loop；
 4. 最后执行 if (!cb && typeof Promise !== 'undefined') ,判断参数 cb 不存在且浏览器支持 Promise，则返回一个 Promise 类实例化对象，例如  nextTick().then(() => {})，当 _resolve 函数执行，就会执行 then 的逻辑中；
+5. 在外层定义的 callbacks 变量用来存储所有需要执行的回调函数，在 nextTick 的外层定义就形成了一个闭包，每次调用 $nextTick 的过程就是在向 callbacks 新增回调函数的过程；
+6. 由于宏任务耗费时间是大于微任务的，所以在浏览器支持的情况下，优先使用微任务；
 
 ```javascript
 export const nextTick = (function () {
   const callbacks = []
-  let pending = false
+  let pending = false； // 用来标志是否正在执行回调函数
   let timerFunc
 
   function nextTickHandler () {
@@ -268,8 +265,6 @@ export const nextTick = (function () {
 
 ```
 
-- 在外层定义的 callbacks 变量用来存储所有需要执行的回调函数，在 nextTick 的外层定义就形成了一个闭包，每次调用 $nextTick 的过程就是在向 callbacks 新增回调函数的过程；
-
 ### timerFunc 
 
 > timerFunc 是真正将任务队列推到微任务队列中的函数，实质上就是用各种异步执行的方法调用 flushCallbacks 函数；
@@ -295,10 +290,10 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 
 #### MutationObserver 
 
-> MutationObserver() 创建并返回一个新的 MutationObserver，它会在指定的 DOM 发生变化时被调用；
+> MutationObserver() 是一个用于监视DOM变动的接口，可以监听一个 DOM 对象上发生的子节点删除、属性修改和文本内容修改等，创建并返回一个新的 MutationObserver；
 
 1. MutationObserver 是个微任务 （micro task）类型；
-2. MutationObserver（）在 IE11浏览器才兼容，所以执行 !isIE排除 IE浏览器；
+2. MutationObserver（）在 IE11浏览器才兼容，所以排除 IE浏览器；
 3. MutationObserver.toString() === '[object MutationObserverConstructor]' 是对 PhantomJS 浏览器 和 iOS 7.x版本浏览器的支持情况进行判断；
 4. 创建一个新的 MutationObserver 赋值给常量 observer， 并把 flushCallbacks作为回到函数传入，当 observer 指定的 DOM 要监听的属性发生变化时会调用 flushCallbacks 函数；
 
@@ -326,7 +321,7 @@ if (!isIE && typeof MutationObserver !== 'undefined' &&
 }
 ```
 
-#### setImmediate 创建异步执行函数
+#### setImmediate
 
 > setImmediate  只兼容 IE10 以上浏览器，其他浏览器均不兼容;
 >
@@ -340,7 +335,7 @@ if (typeof setImmediate !== 'undefined' && isNative(setImmediate)) {
 } 
 ```
 
-#### setTimeout 创建异步执行函数
+#### setTimeout 
 
 > setTimeout 兼容 IE10 以下的浏览器，创建异步任务；
 >
@@ -355,12 +350,14 @@ timerFunc = function() {
 #### 创建异步执行函数的顺序
 
 - 第一版的中实现 timerFunc 的顺序为 Promise，MutationObserver，setTimeout；
-- 在2.5.0版本中实现 timerFunc 的顺序改为 setImmediate，MessageChannel，setTimeout；在这个版本把创建微任务的方法都移除了，因为微任务优先级太高了；
+- 在2.5.0版本中实现 timerFunc 的顺序改为 setImmediate，MessageChannel，setTimeout，在这个版本把创建微任务的方法都移除了，因为微任务优先级太高了；
 - 后面实现 timerFunc 的顺序又改为 Promise，MutationObserver，setImmediate，setTimeout；
 
 ### flushCallbacks
 
-> flushCallbacks 是异步更新的函数，它会挨个同步的去执行 callbacks 中的回调函数；
+> flushCallbacks 是异步更新的函数，对callbacks进行遍历，然后执行相应的回调函数；
+
+拷贝 callbacks 数组的原因：有的 cb 执行过程中又会往callbacks中加入内容，比如 nextTick 的回调函数里还有 $nextTick，后者的应该放到下一轮的nextTick 中执行，所以拷贝一份当前的，遍历执行完当前的即可，避免无休止的执行下去；
 
 ```javascript
 var callbacks = [];
