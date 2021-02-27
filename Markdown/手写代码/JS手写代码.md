@@ -1,9 +1,3 @@
-
-
-<https://juejin.im/post/6844903809206976520>
-
-<https://www.cnblogs.com/chenwenhao/p/11294541.html>
-
 ## 数组
 
 ### 数组扁平化
@@ -43,7 +37,6 @@ function flat(arr) {
 
 // 迭代+扩展运算符
 while (array.some(Array.isArray)) {
-  debugger;
   array = [].concat(...array);
 }
 ```
@@ -258,8 +251,6 @@ class Promise{
 }
 ```
 
-
-
 ## call 函数
 
 > call 是函数对象的原型方法，它的作用是绑定 this 参数，并执行函数；
@@ -319,7 +310,7 @@ Function.prototype.myapply = function (context) {
 
 ## bind 函数
 
-> 会创建一个新函数。当这个新函数被调用时，bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数。
+> 会创建一个新函数：当这个新函数被调用时，bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数。
 
 ```javascript
 Function.prototype.bind2 = function(content) {
@@ -344,15 +335,16 @@ Function.prototype.bind2 = function(content) {
 ## 深拷贝
 
 ```javascript
-function deepCopy(obj){
+function deepCopy(target){
+  // 对于传入参数处理
+  if (typeof target !== 'object' || target === null) {
+    return target;
+  }
   //判断是否是简单数据类型，
-  if(typeof obj == "object"){
-    var result = obj.constructor == Array ? [] : {};
-    for(let i in obj){
-      result[i] = typeof obj[i] == "object" ? deepCopy(obj[i]) : obj[i];
-    }
-  }else {
-    var result = obj;
+  var result = target.constructor == Array ? [] : {};
+  
+  for(let i in target){
+    result[i] = typeof target[i] == "object" ? deepCopy(target[i]) : target[i];
   }
   return result;
 }
@@ -360,16 +352,66 @@ function deepCopy(obj){
 
 ## instanceOf
 
+> instanceOf 用于检测构造函数的 prototype 属性是否出现在某个实例对象的原型链上；
+
 ```javascript
 function instanceOf(left,right) {
     let proto = left.__proto__;	// 取left的隐式原型
     let prototype = right.prototype；// 取right的显示原型
     while(true) {
-      	// Object.prototype.__proto__ === null
         if(proto === null) return false
         if(proto === prototype) return true
         proto = proto.__proto__;
     }
+}
+```
+
+## JSONP
+
+> script 标签不遵循同源协议，可以用来进行跨域请求，兼容性好但仅限于GET请求；
+
+```javascript
+const jsonp = ({ url, params, callbackName }) => {
+  const generateUrl = () => {
+    let dataSrc = '';
+    for (let key in params) {
+      if (Object.prototype.hasOwnProperty.call(params, key)) {
+        dataSrc += `${key}=${params[key]}&`;
+      }
+    }
+    dataSrc += `callback=${callbackName}`;
+    return `${url}?${dataSrc}`;
+  }
+  return new Promise((resolve, reject) => {
+    const scriptEle = document.createElement('script');
+    scriptEle.src = generateUrl();
+    document.body.appendChild(scriptEle);
+    window[callbackName] = data => {
+      resolve(data);
+      document.removeChild(scriptEle);
+    }
+  })
+}
+```
+
+## AJAX
+
+```javascript
+const getJSON = function(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Mscrosoft.XMLHttp');
+    xhr.open('GET', url, false);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.onreadystatechange = function() {
+      if (xhr.readyState !== 4) return;
+      if (xhr.status === 200 || xhr.status === 304) {
+        resolve(xhr.responseText);
+      } else {
+        reject(new Error(xhr.responseText));
+      }
+    }
+    xhr.send();
+  })
 }
 ```
 
@@ -439,11 +481,11 @@ function throttle(fn, delay) {
 
 ## 防抖函数
 
-> 在事件被触发n秒后再执行回调，如果在这n秒内又被触发，则重新计时。
->
-> 每次事件触发都会删除原有定时器，建立新的定时器。通俗意思就是反复触发函数，只认最后一次，从最后一次开始计时。
+> 在事件被触发n秒后再执行回调，如果n秒内又被触发，则重新计时；
 
-**应用场景：**
+每次事件触发都会删除原有定时器，建立新的定时器，只认最后一次，从最后一次开始计时；
+
+应用场景：
 
 1. search搜索，用户不断输入值时，用防抖来节约Ajax请求,也就是输入框事件。
 2. window触发resize时，不断的调整浏览器窗口大小会不断的触发这个事件，用防抖来让其只触发一次
@@ -556,7 +598,44 @@ console.log(iterator.next()); // "{ value: 3, done: false }"
 console.log(iterator.next()); // "{ value: undefined, done: true }"
 ```
 
-## Object.create 的基本实现原理
+## Object.create
+
+## Object.assign
+
+> Object.assign() 方法用于将所有可枚举属性的值从一个或多个源对象复制到目标对象；它将返回目标对象，这个操作是浅拷贝；
+
+```javascript
+Object.defineProperty(Object, 'assign', {
+  value: function(target, ...args) {
+    if (target == null) {
+      return new TypeError('Cannot convert undefined or null to object');
+    }
+    
+    // 目标对象需要统一是引用数据类型，若不是会自动转换
+    const to = Object(target);
+
+    for (let i = 0; i < args.length; i++) {
+      // 每一个源对象
+      const nextSource = args[i];
+      if (nextSource !== null) {
+        // 使用for...in和hasOwnProperty双重判断，确保只拿到本身的属性、方法（不包含继承的）
+        for (const nextKey in nextSource) {
+          if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
+            to[nextKey] = nextSource[nextKey];
+          }
+        }
+      }
+    }
+    return to;
+  },
+  // 不可枚举
+  enumerable: false,
+  writable: true,
+  configurable: true,
+})
+```
+
+
 
 ## 实现一个基本的 Event Bus
 
