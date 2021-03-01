@@ -50,6 +50,10 @@ export function readonly<T extends object>(
 
 ## createReactiveObject
 
+> createReactiveObject 方法保存了代理的数据和原始数据，返回了 new Proxy 代理后的对象；
+
+rawToReactive 和 reactiveToRaw 是两个弱引用的 Map 结构，这两个 Map 用来保存原始数据和可响应数据，toProxy  和 toRaw 传入的是这两个 Map；
+
 ```typescript
 function createReactiveObject(
   target: any,
