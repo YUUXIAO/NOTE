@@ -678,78 +678,60 @@ function indexOf(arr, item){
 
 ## 图片懒加载
 
-```javascript
-页可见区域宽： document.body.clientWidth;
-网页可见区域高： document.body.clientHeight;
-网页可见区域宽： document.body.offsetWidth (包括边线的宽);
-网页可见区域高： document.body.offsetHeight (包括边线的宽);
-网页正文全文宽： document.body.scrollWidth;
-网页正文全文高： document.body.scrollHeight;
-网页被卷去的高： document.body.scrollTop;
-网页被卷去的左： document.body.scrollLeft;
-网页正文部分上： window.screenTop;
-网页正文部分左： window.screenLeft;
-屏幕分辨率的高： window.screen.height;
-屏幕分辨率的宽： window.screen.width;
-屏幕可用工作区高度： window.screen.availHeight;
-```
-
-#### 原理思路
-
-1. 拿到所有图片 Dom
-2. 判断当前图片是否到了可视区范围内
-3. 到了可视区的高度以后，就将img的data-src属性设置给src
-4. 绑定window的scroll事件
+1. 拿到所有图片 Dom；
+2. 判断当前图片是否到了可视区范围内；
+3. 到了可视区的高度以后，就将img的data-src属性设置给src；
+4. 绑定window的scroll事件；
 
 #### 第一种方式
 
-思路：scrollTop + clientHeight 和offsetTop的比较 ，如果前者大于后者说明图片进入可视区域
+> scrollTop + clientHeight 和offsetTop的比较 ，如果前者大于后者说明图片进入可视区域；
+>
 
 ```javascript
-let Img = document.getElementsByTagName("img"),
-            len = Img.length,
-            count = 0; 
-function lazyLoad () {
-    let viewH = document.body.clientHeight, //可见区域高度
-        scrollTop = document.body.scrollTop; //滚动条距离顶部高度
-    for(let i = count; i < len; i++) {
-        if(Img[i].offsetTop < scrollTop + viewH ){
-            if(Img[i].getAttribute('src') === 'default.png'){
-                Img[i].src = Img[i].getAttribute('data-src')
-                count++;
-            }
-        }
+function lazyload() {
+  const imgs = document.getElementsByTagName('img');
+  const len = imgs.length;
+  // 视口的高度
+  const viewHeight = document.documentElement.clientHeight;
+  // 滚动条高度
+  const scrollHeight = document.documentElement.scrollTop || document.body.scrollTop;
+  for (let i = 0; i < len; i++) {
+    const offsetHeight = imgs[i].offsetTop;
+    if (offsetHeight < viewHeight + scrollHeight) {
+      const src = imgs[i].dataset.src;
+      imgs[i].src = src;
     }
+  }
 }
-window.addEventListener('scroll', throttle(lazyLoad,1000))；
 
-lazyLoad();  
-
+// 可以使用节流优化一下
+window.addEventListener('scroll', lazyload);
 ```
 
 #### 第二种方式
 
-思路：使用 `element.getBoundingClientRect()` API 直接得到 top 值
+> 使用 element.getBoundingClientRect() API 直接得到 top 值；
+>
 
 ```javascript
-let Img = document.getElementsByTagName("img"),
-            len = Img.length,
-            count = 0; 
-function lazyLoad () {
-  let viewH = document.body.clientHeight, //可见区域高度
-      scrollTop = document.body.scrollTop; //滚动条距离顶部高度
-  for(let i = count; i < len; i++) {
-      if(Img[i].getBoundingClientRect().top < scrollTop + viewH ){
-          if(Img[i].getAttribute('src') === 'default.png'){
-              Img[i].src = Img[i].getAttribute('data-src')
-              count++;
-          }
-      }
+function lazyload() {
+  const imgs = document.getElementsByTagName('img');
+  const len = imgs.length;
+  // 视口的高度
+  const viewHeight = document.documentElement.clientHeight;
+  // 滚动条高度
+  const scrollHeight = document.documentElement.scrollTop || document.body.scrollTop;
+  for (let i = 0; i < len; i++) {
+    if (imgs[i].getBoundingClientRect().top < viewHeight + scrollHeight) {
+      const src = imgs[i].dataset.src;
+      imgs[i].src = src;
+    }
   }
 }
-window.addEventListener('scroll', throttle(lazyLoad,1000))
 
-lazyLoad();  // 首次加载 
+// 可以使用节流优化一下
+window.addEventListener('scroll', lazyload);
 ```
 
 ## rem 基本设置
@@ -881,3 +863,70 @@ global.localStorage = new Proxy(instance, {
 
 ```
 
+## VirtualDom转换为DOM
+
+```javascript
+function render(vnode, container) {
+  container.appendChild(_render(vnode));
+}
+
+function _render(vnode) {
+  // 如果是数字类型转化为字符串
+  if (typeof vnode === 'number') {
+    vnode = String(vnode);
+  }
+  // 判断文本节点
+  if (typeof vnode === 'string') {
+    return document.createTextNode(vnode);
+  }
+  // 普通DOM
+  const dom = document.createElement(vnode.tag);
+  if (vnode.attrs) {
+    // 遍历属性
+    Object.keys(vnode.attrs).forEach(key => {
+      const value = vnode.attrs[key];
+      dom.setAttribute(key, value);
+    })
+  }
+  // 子数组进行递归操作
+  vnode.children.forEach(child => render(child, dom));
+  return dom;
+}
+```
+
+## 渲染几万条数据不卡页面
+
+1. 合理使用 createDocumentFragment 和 requestAnimationFrame；
+2. 将操作切分为一小段一小段执行；
+
+```javascript
+setTimeout(() => {
+  // 插入十万条数据
+  const total = 100000;
+  // 一次插入的数据
+  const once = 20;
+  // 插入数据需要的次数
+  const loopCount = Math.ceil(total / once);
+  let countOfRender = 0;
+  const ul = document.querySelector('ul');
+  // 添加数据的方法
+  function add() {
+    const fragment = document.createDocumentFragment();
+    for(let i = 0; i < once; i++) {
+      const li = document.createElement('li');
+      li.innerText = Math.floor(Math.random() * total);
+      fragment.appendChild(li);
+    }
+    ul.appendChild(fragment);
+    countOfRender += 1;
+    loop();
+  }
+  function loop() {
+    if(countOfRender < loopCount) {
+      window.requestAnimationFrame(add);
+    }
+  }
+  loop();
+}, 0)
+
+```
