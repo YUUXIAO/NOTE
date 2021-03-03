@@ -164,6 +164,21 @@ let difference = a.filter((v) => b.indexOf(v) === -1).concat(b.filter((v) => a.i
 
 ```
 
+### push & pop
+
+```javascript
+// push 方法
+Array.prototype.push2 = function(...rest){
+  this.splice(this.length, 0, ...rest)
+  return this.length;
+}
+
+// pop 方法
+Array.prototype.pop2 = function(){
+  return this.splice(this.length - 1, 1)[0];
+}
+```
+
 ## new方法
 
 > new 运算符创建一个用户定义的对象类型的实例或具有构造函数的内置对象类型之一；
@@ -546,7 +561,9 @@ func
 
 ## 斐波那契数列
 
-> 斐波那契数列从第三项开始，每一项都等于前两项之和。指的是这样一个数列：0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144 …
+> 斐波那契数列从第三项开始，每一项都等于前两项之和；
+
+例如：0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144 …
 
 ```javascript
 // 递归
@@ -568,7 +585,63 @@ function fib(n) {
   }
   return c;
 }
-console.log(fib(10)); // 34
+```
+
+## 栈结构
+
+```javascript
+const Stack = (() => {
+  const wm = new WeakMap()
+  class Stack {
+    constructor() {
+      wm.set(this, [])
+      this.top = 0
+    }
+
+    push(...nums) {
+      let list = wm.get(this)
+      nums.forEach(item => {
+        list[this.top++] = item
+      })
+    }
+
+    pop() {
+      let list = wm.get(this)
+      let last = list[--this.top]
+      list.length = this.top
+      return last
+    }
+
+    peek() {
+      let list = wm.get(this)
+      return list[this.top - 1]
+    }
+
+    clear() {
+      let list = wm.get(this)
+      list.length = 0
+    }
+
+    size() {
+      return this.top
+    }
+
+    output() {
+      return wm.get(this)
+    }
+
+    isEmpty() {
+      return wm.get(this).length === 0
+    }
+  }
+  return Stack
+})()
+
+let s = new Stack()
+
+s.push(1, 2, 3, 4, 5)
+console.log(s.output()) // [ 1, 2, 3, 4, 5 ]
+
 ```
 
 ## 迭代器next
@@ -736,7 +809,49 @@ window.addEventListener('scroll', lazyload);
 
 ## rem 基本设置
 
+## 二分查找 
+
+```javascript
+const bsearch = (array,target)=>{
+  let l = 0;
+  let r= array.length-1;
+
+  let mid;
+  while(l<=r){
+    mid = Math.ceil((l+r)/2)
+    if(array[mid] === target) return mid;
+    if(array[mid] >target){
+      r = mid-1
+    }else{
+      l = mid
+    }
+  }
+  return -1
+}
+```
+
 ## 实现 AJAX
+
+```javascript
+function ajax() {
+  return new Promise((resolve, reject) => {
+    const xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Mscrosoft.XMLHttp');
+    xhr.open('get', url, false);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState !== 4) return;
+      if (xhr.status === 200 || xhr.status === 304) {
+        resolve(xhr.responseText);
+      } else {
+        reject(new Error(xhr.responseText));
+      }
+    }
+    xhr.send();
+  })
+}
+```
+
+
 
 ## 字符串转二进制
 
