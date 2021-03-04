@@ -673,6 +673,26 @@ console.log(iterator.next()); // "{ value: undefined, done: true }"
 
 ## Object.create
 
+```javascript
+let obj1 = {id: 1};
+Object._create = (o) => {
+    let Fn = function() {}; // 临时的构造函数
+    Fn.prototype = o;
+    return new Fn;
+}
+
+let obj2 = Object._create(obj1);
+console.log(obj2.__proto__ === obj1); // true
+console.log(obj2.id); // 1
+
+// 原生的Object.create
+let obj3 = Object.create(obj1);
+console.log(obj3.__proto__ === obj1); // true
+console.log(obj3.id); // 1
+```
+
+
+
 ## Object.assign
 
 > Object.assign() 方法用于将所有可枚举属性的值从一个或多个源对象复制到目标对象；它将返回目标对象，这个操作是浅拷贝；
@@ -1045,3 +1065,63 @@ setTimeout(() => {
 }, 0)
 
 ```
+## 计时器实现任务调度
+
+```javascript
+class Cron {
+  constructor() {
+    this.map = new Map()
+    this.timer = null
+    this.interval = 60 * 60 * 1000
+    this._initCron()
+    this._runCron()
+  }
+  
+  // 添加任务
+  addSub (time, fn) {
+    if (this.map.has(time)) {
+      this.map.get(time).push(fn)
+    }
+  }
+  
+  // 执行任务
+  _run (time) {
+    if (this.map.has(time)) {
+      this.map.get(time).forEach(fn => fn())
+    }
+  }
+  
+  // 初始化任务器
+  _initCron() {
+    for (let i = 0; i <= 23; i++) {
+      this.map.set(i, [])
+    }
+  }
+  
+  // 重置
+  resetCron () {
+    for (let i = 0; i <= 23; i++) {
+      this.map.set(0, [])
+    }
+  }
+  
+  // 每小时执行任务
+  _runCron () {
+    this.timer = setInterval(() => {
+      const hour = (new Date()).getHours()
+      this._run(hour)
+    }, this.interval)
+  }
+  
+  // 停止任务器
+  stopCron () {
+    clearInterval(this.timer)
+  }
+  runCron () {
+    this._runCron()
+  }
+}
+
+const cron = new Cron()
+```
+
