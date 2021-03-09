@@ -185,7 +185,7 @@ Array.prototype.pop2 = function(){
 
 ```javascript
 /*
-* 1. 它创建了一个全新的对象
+* 1. 创建了一个全新的对象
 * 2. 它会被执行[[Prototype]]（也就是__proto__）链接
 * 3. 它使this指向新创建的对象 
 * 4. 通过new创建的每个对象将最终被[[Prototype]]链接到这个函数的prototype对象上
@@ -197,10 +197,10 @@ function createNew() {
     let obj = {}  
     // 取出第一个参数，就是要传入的构造函数。因为shift会修改原数组，所以arguments会除去第一个参数
     let constructor = [].shift.call(arguments)  
-    // 将 obj 的原型指向构造函数，这样 obj 就可以访问到构造函数原型中的属性
+    // 将 obj 的原型指向构造函数
     obj.__proto__ = constructor.prototype  
 
-  	// 使用 apply 改变构造函数 this 的指向到新建的对象，这样 obj 就可以访问到构造函数中的属性
+  	// 使用 apply 改变构造函数 this 的指向到新建的对象
     let result = constructor.apply(obj, arguments)  
 
     // 如果返回值是一个对象就返回该对象，否则返回构造函数的一个实例对象
@@ -351,13 +351,12 @@ Function.prototype.bind2 = function(content) {
 
 ```javascript
 function deepCopy(target){
-  // 对于传入参数处理
+  // 基础类型判断，直接返回
   if (typeof target !== 'object' || target === null) {
     return target;
   }
-  //判断是否是简单数据类型，
+  // 引用类型
   var result = target.constructor == Array ? [] : {};
-  
   for(let i in target){
     result[i] = typeof target[i] == "object" ? deepCopy(target[i]) : target[i];
   }
@@ -871,7 +870,28 @@ function ajax() {
 }
 ```
 
+## 事件处理程序
 
+IE 添加和删除事件处理程序的写法有点小区别；
+
+```javascript
+var EventUtil = {
+    addHandler: function (el, type, handler) {
+        if (el.addEventListener) {
+            el.addEventListener(type, handler, false);
+        } else {
+            el.attachEvent('on' + type, handler);
+        }
+    },
+    removeHandler: function (el, type, handler) {
+        if (el.removeEventListener) {
+            el.removeEventListerner(type, handler, false);
+        } else {
+            el.detachEvent('on' + type, handler);
+        }
+    }
+};
+```
 
 ## 字符串转二进制
 

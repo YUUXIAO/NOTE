@@ -1,10 +1,13 @@
 ## 概述
 
-> symbol是ES6新引入的一种基础数据类型，该类型具有静态属性和静态方法，因为作为构造函数来它是不完整的，所以它不支持“new Symbol()”语法。
+> symbol是ES6新引入的一种基础数据类型，该类型具有静态属性和静态方法，因为作为构造函数来它是不完整的，所以它不支持“new Symbol()”语法；
 >
-> 每个从Symbol()返回的symbol值都是唯一的。一个symbol值能作为对象属性的标志符。这是该数据类型仅有的目的。
 
-####  Symbol()
+每个从 Symbol() 返回的symbol值都是唯一的；
+
+一个 symbol 值能作为对象属性的标志符，这是该数据类型仅有的目的；
+
+###  Symbol()
 
 ```javascript
 let sym1 = Symbol("foo");
@@ -15,9 +18,12 @@ sym1 === sym2; // false
 let sym = new Symbol(); // TypeError
 ```
 
-#### Symbol.for()
+### Symbol.for()
 
-> 它接受一个字符串作为参数，然后全局环境中搜索是否有以该参数注册的Symbol值。如果有，就返回这个Symbol值。没有就创建并返回一个以该字符串作为名称的Symbol值。
+它接受一个字符串作为参数，然后全局环境中搜索是否有以该参数注册的Symbol值；
+
+1. 如果有，就返回这个Symbol值；
+2. 没有就创建并返回一个以该字符串作为名称的 Symbol 值；
 
 ```javascript
 let sym1 = Symbol.for("foo");
@@ -26,9 +32,12 @@ let sym2 = Symbol.for("foo");
 sym1 === sym2; // true
 ```
 
-#### Symbol.keyFor()
+### Symbol.keyFor()
 
-> 在全局注册表中搜索查找改symbol，如果有返回该symbol的key值，形式为string。如果没有返回undefined。
+在全局注册表中搜索查找改symbol；
+
+1. 如果有返回该symbol的key值，形式为string；
+2. 如果没有返回undefined；
 
 ```javascript
 let sym= Symbol.for("foo");
@@ -38,7 +47,9 @@ console.log(Symbol.keyFor(sym)); // foo
 
 ## 应用场景
 
-#### 当做对象属性key来使用
+### 作为对象属性key
+
+symbol 不会被常规的方法，除了 Object.getOwnPropertySymbols 外的方法遍历到，可以用来模拟私有变量；
 
 ```javascript
 let s_name= Symbol("name");
@@ -68,7 +79,7 @@ Object.getOwnPropertySymbols(obj); // [Symbol(name)]
 Reflect.ownKeys(obj); // ["age", "title", Symbol(name)]
 ```
 
-#### 使用Symbol来替代常量使用
+### 使用Symbol来替代常量使用
 
 ```javascript
 const NAME = Symbol();
