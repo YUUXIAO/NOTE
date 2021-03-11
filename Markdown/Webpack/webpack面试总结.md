@@ -87,6 +87,7 @@ module.export = {
 代码分割的意义：
 
 - 复用的代码抽离到公共模块中，解决代码冗余；
+
 - 公共模块再按照使用的页面多少进一步拆分，用来减少文件体积，可以优化首屏加载速度；
 
 拆分原则：
@@ -95,3 +96,32 @@ module.export = {
 2. 业务代码中的公共业务模块提取打包到一个模块；
 3. 首屏相关模块单独打包；
 
+
+### splitChunks
+
+> 将一个大bundle文件拆包，拆包的方案可以在cacheGroups里配置；
+
+```javascript
+// splitChunks默认配置
+optimization: {
+    splitChunks: {
+      chunks: 'all',  // 无论同步引入还是异步引入
+      cacheGroups: {
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,  // 匹配node_modules目录下的文件
+          priority: -10   // 优先级配置项
+        },
+        default: {
+          minChunks: 2,  // 至少引用了2次
+          priority: -20,   // 优先级配置项
+          reuseExistingChunk: true
+        }
+      }
+    }
+  }
+```
+
+在默认设置中：
+
+1. 将 node_mudules 文件夹中的模块打包进叫 vendors 的 bundle 中；
+2. 所有引用超过两次的模块分配到 default bundle 中 ，可以通过 priority 来设置优先级；

@@ -350,16 +350,19 @@ Function.prototype.bind2 = function(content) {
 ## 深拷贝
 
 ```javascript
-function deepCopy(target){
+function deepCopy(target,map=new Map()){
   // 基础类型判断，直接返回
   if (typeof target !== 'object' || target === null) {
     return target;
   }
   // 引用类型
   var result = target.constructor == Array ? [] : {};
+  // 处理循环引用 
+  if(map.get(target)) return map.get(target);
   for(let i in target){
-    result[i] = typeof target[i] == "object" ? deepCopy(target[i]) : target[i];
+    result[i] = typeof target[i] == "object" ? deepCopy(target[i],map) : target[i];
   }
+  map.set(target, result);
   return result;
 }
 ```

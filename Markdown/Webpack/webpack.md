@@ -10,21 +10,14 @@
 - module：除了 js 范畴内的es module、commonJs、AMD等，css @import、url(...)、图片、字体等在webpack中都被视为模块；
 - chunk：code split 的产物：我们可以对 一些代码打包成一个单独的 chunk，比如某些公共模块、去重、更好的利用缓存；或者按需加载某些功能模块，优化加载时间；
 
-## 为什么选择 webpack
-
-1. 社区生态丰富；
-2. 配置灵活和插件化拓展；
-3. 官方更新迭代速度快；
-
 ## 特点
 
-1. 开发时，启动本地服务；
-2. 解决 js 、css 的依赖问题（比如引入顺序问题）；
-3. 具备代码编译能力：将 ES6、vue / react、 jsx 语法编译为浏览器可识别的代码；
-4. 合并、压缩、优化打包后的体积；
-5. css 前缀补齐 / 预处理器；
-6. 使用 eslint 校验代码；
-7. 单元测试；
+1. 对 CommonJS、AMD、ES6 的语法做了兼容；
+2. 对 js、css 、图片等资源都支持打包；
+3. 串联模块加载器以及插件机制，让其具有更好的灵活性和拓展性；
+4. 可以将代码切割成不同的 chunk，实现按需加载，降低了初始化时间；
+5. 支持 sourcemap，易于调试；
+6. 具有强大的 plugin 接口，大多是内部插件，使用起来灵活；
 
 ## 开发环境性能优化
 
@@ -142,7 +135,7 @@ DCE：永远不会被用到的代码，比如引入了一个方法但是没调�
 
 > 将一个大bundle文件拆包，拆包的方案可以在cacheGroups里配置；
 
-- splitChunks
+splitChunks
 
 ```javascript
 // splitChunks默认配置
@@ -174,7 +167,7 @@ optimization: {
 
 > 将第三方库和业务基础包单独打成一个文件，只在第一次打，或者需要更新依赖的时候打，此后每次就可以只打自己的源代码，加快了构建速度；
 
-方法：使用 DLLPlugin 进行分包，DllReferencePlugin 对 manifest.json 引用；
+使用 DLLPlugin 进行分包，DllReferencePlugin 对 manifest.json 引用；
 
 分包需要单独的配置文件：
 
@@ -194,7 +187,8 @@ module.exports={
   },
   plugins: [
     new webpack.DllPlugin({
-      name: '[name]', // manifest.json中的name，要与ouput.library名一致
+      // manifest.json中的name，要与ouput.library名一致
+      name: '[name]', 
       path: path.join(__dirname, 'build/lib/manifest.json'),
     })
   ]
@@ -227,7 +221,8 @@ new webpack.DllReferencePlugin({
 new addAssetHtmlWebpackPlugin([
   {
     filepath: path.resolve(__dirname, './build/lib/*.dll.js'),
-    outputPath: 'static', // 将*.dll.js拷贝后的输出路径，相对于html文件
+    // 将*.dll.js拷贝后的输出路径，相对于html文件
+    outputPath: 'static', 
     publicPath: 'static' 
   }
 ])
@@ -245,7 +240,7 @@ new addAssetHtmlWebpackPlugin([
 
 > 使用 thread-loader 开启多进程打包，加快打包速度；
 
-- 启动进程需要大概  600ms ，进程间通信也有花销，项目小的话开启多进程得不偿失，所以只有当项目比较大，打包耗时较长的时候才适合使用多进程。
+启动进程需要大概  600ms ，进程间通信也有花销，项目小的话开启多进程得不偿失，所以只有当项目比较大，打包耗时较长的时候才适合使用多进程。
 
 ```javascript
 module: {
@@ -408,8 +403,6 @@ plugins:[
 ]
 ```
 
-
-
 ## 多页面打包通用配置
 
 多页面打包需要多个入口文件，多个 HtmlWebpackPlugin 产生多个 html；
@@ -502,9 +495,3 @@ const setMPA = () => {
 
 ```
 
-## 深究问题
-
-1. HMR的原理？
-2. Tree shaking原理，为什么需要es module的写法？
-3. webpack5的Module Federation有哪些优势，在与http2.0的结合上有哪些有趣的事情，在微前端上的应用？
-4. 为什么说rollup比webpack更适合打包组件库？
