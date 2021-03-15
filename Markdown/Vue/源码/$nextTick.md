@@ -1,37 +1,7 @@
-1. 所有的同步任务都会在主线程上执行，形成一个执行栈；
-2. 主线程之外还存在一个任务队列，只要异步任务有了运行结果，会把其回调函数作为一个任务添加到任务队列中；
-3. 一旦执行栈中的所有同步任务执行完毕，就会读取任务队列，看看里面有哪些任务，将其添加到执行栈，开始执行；
-4. 主线程不断重复上面第三步，就也是常说的事件循环（Event Loop）;
+> 在 nextTick 函数要利用异步方法（宏任务、微任务）把通过参数 cb 传入的函数处理成异步任务；
+>
 
-### 异步任务的类型
-
-主线程的执行过程就是一个 tick，而所有的异步任务都是通过任务队列来一一执行。任务队列中存放的是一个个的任务（task），task 分为两大类：宏任务（macro task）和微任务 （micro task），并且每个 macro task 结束后，都要清空所有的 micro task；
-
-```javascript
-for (macroTask of macroTaskQueue) {
-  handleMacroTask();
-  for (microTask of microTaskQueue) {
-      handleMicroTask(microTask);
-  }
-}
-```
-
- 常见的创建 macro task 的方法有:
-
-- setTimeout、setInterval、setImmediate、postMessage、script脚本、MessageChannel(队列优先于setTimeiout执行)
-- 网络请求IO
-- 页面交互：DOM、鼠标、键盘、滚动事件
-- 页面渲染
-
-常见的创建 micro task 的方法:
-
-- Promise.then
-- MutationObserve
-- process.nexttick
-
-在 nextTick 函数要利用这些方法把通过参数 cb 传入的函数处理成异步任务；
-
-### update 
+## update 
 
 Vue 在依赖收集的响应式化方法 defineReactive 中的 setter 访问器中进行派发更新 dep.notify 方法，这个方法会挨个通知在 dep 的 subs 中收集的订阅自己的 watchers 执行 update；
 
@@ -63,7 +33,7 @@ update() {
 }
 ```
 
-### queueWatcher
+## queueWatcher
 
 如果不是 computed watcher 也非 sync 会把调用 update 的当前 watcher 推送到调度者队列中，下一个 tick 时调用；
 
@@ -128,7 +98,7 @@ export function queueWatcher (watcher: Watcher) {
 }
 ```
 
-### flushSchedulerQueue 
+## flushSchedulerQueue 
 
 > flushSchedulerQueue 函数其实就是 watcher 的视图更新；
 
