@@ -2,7 +2,7 @@
 
 > loader就像一个翻译官，将源文件经过转换后生成目标文件并交由下一流程处理；
 
-本质上loader即是一个函数，接收参数并对其进行处理，而后返回处理结果（须为buffer或string）；
+本质上 loader 即是一个函数，接收参数并对其进行处理，而后返回处理结果（须为buffer或string）；
 
 ### 使用方法
 
@@ -62,7 +62,7 @@ module.exports = function (source) {
 
 ## Plugin
 
-> 在webpack编译整个生命周期的特定节点执行特定功能
+> 在webpack编译整个生命周期的特定节点执行特定功能；
 
 ### 实现要点
 

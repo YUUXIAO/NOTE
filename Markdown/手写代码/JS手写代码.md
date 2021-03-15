@@ -193,27 +193,12 @@ Array.prototype.pop2 = function(){
 */
 
 function createNew() {
-    // 1.创建一个空对象
     let obj = {}  
-    // 取出第一个参数，就是要传入的构造函数。因为shift会修改原数组，所以arguments会除去第一个参数
     let constructor = [].shift.call(arguments)  
-    // 将 obj 的原型指向构造函数
     obj.__proto__ = constructor.prototype  
-
-  	// 使用 apply 改变构造函数 this 的指向到新建的对象
     let result = constructor.apply(obj, arguments)  
-
-    // 如果返回值是一个对象就返回该对象，否则返回构造函数的一个实例对象
     return typeof result === 'object' ? result : obj  
 }
-
-function People(name,age) {
-    this.name = name
-    this.age = age
-}
-
-let peo = createNew(People,'Bob',22)
-console.log(peo.name)
 ```
 
 ##  Promise（简易版）
@@ -468,15 +453,11 @@ jsonStringify([1, "false", false]) // "[1,"false",false]"
 jsonStringify({b: undefined}) // "{"b":"undefined"}"
 ```
 
-
-
 ## 节流函数
 
 > 规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发多次函数，只有一次生效；
 
-**应用场景：**
-
-1. 鼠标点击事件，比如mousedown只触发一次
+1. 鼠标点击事件，比如mousedown只触发一次；
 2. 监听滚动事件，比如是否滑到底部自动加载更多；
 
 ```javascript
@@ -485,7 +466,6 @@ function throttle(fn, delay) {
   return function () {
     let context = this;
     let args = arguments;
-
     if (!timer) {
       timer = setTimeout(() => {
         fn.apply(context, args);
@@ -500,23 +480,16 @@ function throttle(fn, delay) {
 
 > 在事件被触发n秒后再执行回调，如果n秒内又被触发，则重新计时；
 
-每次事件触发都会删除原有定时器，建立新的定时器，只认最后一次，从最后一次开始计时；
-
-应用场景：
-
 1. search搜索，用户不断输入值时，用防抖来节约Ajax请求,也就是输入框事件。
 2. window触发resize时，不断的调整浏览器窗口大小会不断的触发这个事件，用防抖来让其只触发一次
 
 ```javascript
+// 每次事件触发都会删除原有定时器，建立新的定时器，只认最后一次，从最后一次开始计时；
 function debounce(fn, delay) {
-  // 持久化一个定时器 timer
   let timer = null;
-  // 闭包函数可以访问 timer
   return function() {
-    // 通过 'this' 和 'arguments'， 获得函数的作用域和参数
     let context = this;
     let args = arguments;
-    // 如果事件被触发，清除 timer 并重新开始计时
     if(timer) clearTimeout(timer)
     timer = setTimeout(function() {
       fn.apply(context, args);
@@ -676,13 +649,13 @@ console.log(iterator.next()); // "{ value: undefined, done: true }"
 ## Object.create
 
 ```javascript
-let obj1 = {id: 1};
 Object._create = (o) => {
     let Fn = function() {}; // 临时的构造函数
     Fn.prototype = o;
     return new Fn;
 }
 
+let obj1 = {id: 1};
 let obj2 = Object._create(obj1);
 console.log(obj2.__proto__ === obj1); // true
 console.log(obj2.id); // 1
@@ -692,8 +665,6 @@ let obj3 = Object.create(obj1);
 console.log(obj3.__proto__ === obj1); // true
 console.log(obj3.id); // 1
 ```
-
-
 
 ## Object.assign
 
