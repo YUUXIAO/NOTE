@@ -183,7 +183,7 @@ function flushSchedulerQueue () {
 
 不优化：每一个数据变化都会执行: setter->Dep->Watcher->update->run；
 
-优化后：执行顺序 update  -> queueWatcher -> 维护观察者队列（重复id的Watcher处理） -> waiting标志位处理 -> 处理$nextTick（在为微任务或者宏任务中异步更新DOM）；
+优化后：执行顺序 update  -> queueWatcher -> 维护观察者队列（重复id的Watcher处理） -> waiting标志位处理 -> 处理$nextTick（在微任务或者宏任务中异步更新DOM）；
 
 ### nextTick 函数
 
