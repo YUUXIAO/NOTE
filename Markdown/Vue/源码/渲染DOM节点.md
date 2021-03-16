@@ -76,10 +76,10 @@ function cloneVNode (vnode) {
 
 ### 挂载流程
 
-- 调用 Vue 实例上 $mount 方法，这个方法的核心是 mountComponent 函数；
-- 如果传递的是 template 模板，模板会先经过编译器的解析，并最终根据不同的平台生成对应的代码，此时对应的是用 with 语句封装好的 render 函数；
-- 如果传递的是 render 函数，则跳过模板编译过程，直接进入下一阶段；
-- 拿到 render 函数，调用 vm._render 方法将 render 函数转化为 Virtual DOM ,最终通过 vm._update 方法将 Virtual DOM 渲染为真实的 DOM 节点；
+1. 调用 Vue 实例上 $mount 方法，这个方法的核心是 mountComponent 函数；
+2. 如果传递的是 template 模板，模板会先经过编译器的解析，并最终根据不同的平台生成对应的代码，此时对应的是用 with 语句封装好的 render 函数；
+3. 如果传递的是 render 函数，则跳过模板编译过程，直接进入下一阶段；
+4. 拿到 render 函数，调用 vm._render 方法将 render 函数转化为 Virtual DOM ,最终通过 vm._update 方法将 Virtual DOM 渲染为真实的 DOM 节点；
 
 ```javascript
 Vue.prototype.$mount = function(el, hydrating) {

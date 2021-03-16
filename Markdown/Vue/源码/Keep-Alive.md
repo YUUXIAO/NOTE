@@ -192,8 +192,8 @@ function createComponentInstanceForVnode (vnode, parent) {
 
 ### 内置组件选项
 
-- keep-alive 选项和普通组件的选项基本类似，不同的是 keep-alive 组件没有用 template 而是使用 render 函数；
-- keep-alive 本质上是存缓存和拿缓存的过程，并没有实际的节点渲染，所以使用 render 处理；
+1. keep-alive 选项和普通组件的选项基本类似，不同的是 keep-alive 组件没有用 template 而是使用 render 函数；
+2. keep-alive 本质上是存缓存和拿缓存的过程，并没有实际的节点渲染，所以使用 render 处理；
 
 ```javascript
 var KeepAlive = {
@@ -369,6 +369,8 @@ vnode.data.keepAlive = true;
 
 createComponent 会先执行 keep-alive 组件的初始化流程，也包括了子组件的挂载，通过 componentInstance 拿到了 keep-alive 组件的实例，接下来就是将真实的 dom 保存在 vnode 中；
 
+keep-alive 需要一个 max 来限制缓存组件的数量：因为 keep-alive 缓存的组件数据除了包括 vnode 这一描述对象外，还保留着真实的 dom 节点，所以大量保存缓存组件是耗费性能的，需要严格控制缓存组件数量；
+
 ```javascript
 function createComponent(vnode, insertedVnodeQueue) {
   ···
@@ -392,13 +394,9 @@ function initComponent() {
 }
 ```
 
-- keep-alive 需要一个 max 来限制缓存组件的数量：原因是 keep-alive 缓存的组件数据除了包括 vnode 这一描述对象外，还保留着真实的 dom 节点，真实节点对象是庞大的，所以大量保存缓存组件是耗费性能的，因此需要严格控制缓存组件数量；
-
 ## 再次渲染
 
 当再次渲染组件的时候，直接从缓存中拿到对应的 vnode 和 DOM 去渲染，并不需要再次去组件初始化、render 和 patch 等一系列流程，性能更好；
-
-
 
 ### 重新渲染组件
 

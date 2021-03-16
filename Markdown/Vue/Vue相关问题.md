@@ -14,9 +14,9 @@
 5. React 跨平台的实现原理；
 6. 说一说 redux，以及比 flux 先进的原因；
 
-## SPA单页面
+## SPA
 
-> SPA 仅在 web 页面初始化时加载相应的 HTML，Javascript 和 css，一旦页面加载完成，SPA 不会因为用户的操作而进行页面的重新加载或跳转，主要是利用路由机制实现 HTML 内容的变换，避免页面的重新加载；
+SPA 仅在 web 页面初始化时加载相应的 HTML，Javascript 和 css，一旦页面加载完成，SPA 不会因为用户的操作而进行页面的重新加载或跳转，主要是利用路由机制实现 HTML 内容的变换，避免页面的重新加载；
 
 ### 优点
 
@@ -32,11 +32,11 @@
 
 ## MVVM模式
 
-- Model 表示数据模型层；
-- view 表示视图层；
-- ViewModel 是 View 和 Model 层的桥梁，数据绑定到 viewModel 层并自动渲染到页面中，视图变化通知 viewModel 层更新数据；
+1. Model 表示数据模型层；
+2. view 表示视图层；
+3. ViewModel 是 View 和 Model 层的桥梁，数据绑定到 viewModel 层并自动渲染到页面中，视图变化通知 viewModel 层更新数据；
 
-## 为什么Vue采用异步渲染
+## Vue采用异步渲染
 
 Vue 是组件级更新，如果不采用异步更新，那么每次更新数据都会对当前组件进行重新渲染，所以为了性能，Vue 会在本轮数据更新后，再异步更新视图，核心的思想是 nextTick；
 

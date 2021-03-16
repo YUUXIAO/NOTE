@@ -251,13 +251,10 @@ class Promise{
 }
 ```
 
-## call 函数
+## call函数
 
-> call 是函数对象的原型方法，它的作用是绑定 this 参数，并执行函数；
+> call 方法接收的是多个参数；
 >
-> ```
-> function.call(thisArg, arg1, arg2, ...)；
-> ```
 
 ```javascript
 /*
@@ -282,7 +279,7 @@ Function.prototype.myCall = function (context){
 }
 ```
 
-## apply 函数
+## apply函数
 
 > apply 方法接收的是一个包含多个参数的数组；
 
@@ -310,7 +307,7 @@ Function.prototype.myapply = function (context) {
 
 ## bind 函数
 
-> 会创建一个新函数：当这个新函数被调用时，bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数。
+> bind() 的第一个参数将作为它运行时的 this，之后的一序列参数将会在传递的实参前传入作为它的参数，返回一个新函数；
 
 ```javascript
 Function.prototype.bind2 = function(content) {
@@ -453,9 +450,9 @@ jsonStringify([1, "false", false]) // "[1,"false",false]"
 jsonStringify({b: undefined}) // "{"b":"undefined"}"
 ```
 
-## 节流函数
+## 节流
 
-> 规定在一个单位时间内，只能触发一次函数。如果这个单位时间内触发多次函数，只有一次生效；
+> 规定在一个单位时间内，只能触发一次函数，如果这个单位时间内触发多次函数，只有一次生效；
 
 1. 鼠标点击事件，比如mousedown只触发一次；
 2. 监听滚动事件，比如是否滑到底部自动加载更多；
@@ -476,7 +473,7 @@ function throttle(fn, delay) {
 }
 ```
 
-## 防抖函数
+## 防抖
 
 > 在事件被触发n秒后再执行回调，如果n秒内又被触发，则重新计时；
 

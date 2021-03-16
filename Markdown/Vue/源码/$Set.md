@@ -9,7 +9,7 @@
 5. 新增的属性值在原对象中已经存在，则手动访问新的属性值，这一过程会触发依赖收集；
 6. 目标对象是响应数据且 key 为新增属性：设置 key 为响应式并手动触发其属性值的更新手动定义新属性的 getter，setter 方法，并通过 notify 触发依赖更新；
 
-```javascript
+```typescript
 export function set(target: Array<any> | Object, key: any, val: any): any {
   // 1.类型判断
   // 如果 set 函数的第一个参数是 undefined 或 null 或者是原始类型值，那么在非生产环境下会打印警告信息

@@ -7,7 +7,7 @@
 
 1. 通过 instance 对 Vue.prototype 进行属性和方法的挂载；
 2. 通过 core 对 Vue 进行静态属性和方法的挂载；
-3. 通过 runtime 添加了对 platform === 'web'的情况下特有的配置、组件和指令；
+3. 通过 runtime 添加了对 platform === 'web' 的情况下特有的配置、组件和指令；
 4. 通过 entry 来为 $mount 方法增加编译 template 的能力；
 
 ### instance

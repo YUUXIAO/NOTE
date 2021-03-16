@@ -3,7 +3,7 @@
 
 ## update 
 
-Vue 在依赖收集的响应式化方法 defineReactive 中的 setter 访问器中进行派发更新 dep.notify 方法，这个方法会挨个通知在 dep 的 subs 中收集的订阅自己的 watchers 执行 update；
+Vue 在依赖收集的响应式化方法 defineReactive 中的 setter 访问器中进行派发更新 dep.notify 方法，这个方法会通知在 dep 的 subs 中收集的订阅自己的 watchers 执行 update；
 
 ```javascript
 /* Subscriber接口，当依赖发生改变的时候进行回调 */
@@ -42,7 +42,7 @@ update() {
 
 export function queueWatcher (watcher: Watcher) {
   const id = watcher.id
-   // 检验id是否存在，已经存在则直接跳过，不存在则标记哈希表has，用于下次检验
+   // 检验id是否存在，已经存在则直接跳过，不存在则标记哈希表hash，用于下次检验
   if (has[id] == null) {    
     has[id] = true
     // 如果没有正在flush，直接push到队列中
@@ -151,13 +151,11 @@ function flushSchedulerQueue () {
 3. 在同一事件循环中缓冲所有的数据改变；
 4. 如果同一个 watcher（watcher Id 相同）被多次触发，只会被推入队列一次；
 
-不优化：每一个数据变化都会执行: setter->Dep->Watcher->update->run；
-
-优化后：执行顺序 update  -> queueWatcher -> 维护观察者队列（重复id的Watcher处理） -> waiting标志位处理 -> 处理$nextTick（在微任务或者宏任务中异步更新DOM）；
+执行顺序 update  -> queueWatcher -> 维护观察者队列（重复id的Watcher处理） -> waiting标志位处理 -> 处理$nextTick（在微任务或者宏任务中异步更新DOM）；
 
 ### nextTick 函数
 
-1. 把传入的 cb 回调函数用 try-catch 包裹后放在一个匿名函数中推入 callbacks 数组中，这么做是防止单个 cb 如果执行错误不至于让整个JS 线程挂掉，每个 cb 都包裹是防止这些回调函数如果执行错误不会相互影响；
+1. 把传入的 cb 回调函数用 try-catch 包裹后放在一个匿名函数中推入 callbacks 数组中，每个 cb 都包裹是防止这些回调函数如果执行错误不会相互影响；
 2. 通过 callbacks 数组来模拟事件队列，事件队列里的事件，通过 nextTickHandler 方法来执行调用，何时执行是 timerFunc 来决定；
 3. 检查 pending 状态，它是一个标记位，初始值是 false，在执行 timerFunc 前置为 true，因此下次调用 nextTick 不会进入 timerFunc 方法，这个方法会在下一个 macro/micro tick 时  flushCallbacks 异步去执行 callbacks 队列中的任务，flushCallbacks 方法一开始会把 pending 置为 false，所以下一次调用 nextTick 时又能开启新一轮的 timerFunc ,这样就形成了 vue 中的 event loop；
 4. 最后执行 if (!cb && typeof Promise !== 'undefined') ,判断参数 cb 不存在且浏览器支持 Promise，则返回一个 Promise 类实例化对象，例如  nextTick().then(() => {})，当 _resolve 函数执行，就会执行 then 的逻辑中；
@@ -320,7 +318,7 @@ timerFunc = function() {
 #### 创建异步执行函数的顺序
 
 - 第一版的中实现 timerFunc 的顺序为 Promise，MutationObserver，setTimeout；
-- 在2.5.0版本中实现 timerFunc 的顺序改为 setImmediate，MessageChannel，setTimeout，在这个版本把创建微任务的方法都移除了，因为微任务优先级太高了；
+- 在 2.5.0 版本中实现 timerFunc 的顺序改为 setImmediate，MessageChannel，setTimeout，在这个版本把创建微任务的方法都移除了，因为微任务优先级太高了；
 - 后面实现 timerFunc 的顺序又改为 Promise，MutationObserver，setImmediate，setTimeout；
 
 ### flushCallbacks

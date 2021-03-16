@@ -293,7 +293,7 @@ Transfer-Encoding: chunked
 
 ### 域名分片
 
-我们可以在一个域名下分出多个二级域名出来，而它们最终指向同一个服务器，这样子的话可以并发处理的任务队列更多；
+我们可以在一个域名下分出多个二级域名出来，它们最终指向同一个服务器，这样子可以并发处理的任务队列更多；
 
 ```
 例如 TianTian.com，可以分出很多二级域名：Day1.TianTian.com，Day2.TianTian.com , Day3.TianTian.com 
@@ -301,7 +301,7 @@ Transfer-Encoding: chunked
 
 ## keep-alive
 
-> Keep-Alive 能在多次 HTTP 之前重用同一个 TCP 连接，从而减少创建/关闭多个 TCP 连接的开销（包括响应时间、CPU 资源、减少拥堵等）；
+> Keep-Alive 能在多次 HTTP 之前重用同一个 TCP 连接，从而减少创建/关闭多个 TCP 连接的开销；
 
 1. HTTP 协议采用 “请求-应答” 模式，当非 KeepAlive 模式时，每个请求/应答客户端和服务器都要新建一个连接，完成之后立即断开连接；
 2. 当使用 KeepAlive 模式（持久连接、连接复用）时，Keep-Alive 功能使客户端到服务端连接持续有效，当出现对服务器的后继请求时，Keep-Alive 功能避免了建立或者重新建立连接；
