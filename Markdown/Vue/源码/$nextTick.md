@@ -35,11 +35,12 @@ update() {
 
 ## queueWatcher
 
+> queueWatcher 方法会将数据收集的依赖依次推到 queue 数组中，数组会在下一个事件循环 tick 中根据缓冲结果进行视图更新；
+
 如果不是 computed watcher 也非 sync 会把调用 update 的当前 watcher 推送到调度者队列中，下一个 tick 时调用；
 
 ```javascript
 // 将一个观察者对象push进观察者队列，在队列中已经存在相同的id则该watcher将被跳过，除非它是在队列正被flush时推送
-
 export function queueWatcher (watcher: Watcher) {
   const id = watcher.id
    // 检验id是否存在，已经存在则直接跳过，不存在则标记哈希表hash，用于下次检验
@@ -61,7 +62,6 @@ function resetSchedulerState () {
   has = {}
   waiting = false
 }
-
 ```
 
 初始设定 this.deep = this.user = this.lazy = this.sync = false；就是当触发 update 更新的时候，会去执行 queueWatcher 方法；
@@ -69,31 +69,28 @@ function resetSchedulerState () {
 - waiting 变量是用来标记 flushSchedulerQueue  是否已经传递给 nextick 的标记位，如果已经传递则只 push 到队列中不传递 flushSchedulerQueue  给 nextTick，等到 resetSchedulerState 重置调度者状态的时候 waiting 会置回 false 允许  flushSchedulerQueue 被传递给下一个 tick 的回调，保证了 flushSchedulerQueue 回调只允许被转入 callbacks 一次；
 
 ```javascript
-const queue: Array<Watcher> = []
-let has: { [key: number]: ?true } = {}
-let waiting = false
-let flushing = false
-...
-export function queueWatcher (watcher: Watcher) {
-  const id = watcher.id
+/**
+ * 将观察者推入观察者队列
+ * 具有重复ID的watcher将被跳过
+ * 在刷新队列时推送
+ */
+function queueWatcher (watcher) {
+  var id = watcher.id;
+  // 保证同一个watcher只执行一次
   if (has[id] == null) {
-    has[id] = true
+    has[id] = true;
+    // 如果还没有开始清空队列，将任务watcher添加到队列中
     if (!flushing) {
-      queue.push(watcher)
+      queue.push(watcher);
     } else {
-      // if already flushing, splice the watcher based on its id
-      // if already past its id, it will be run next immediately.
-      let i = queue.length - 1
+      var i = queue.length - 1;
       while (i > index && queue[i].id > watcher.id) {
-        i--
+        i--;
       }
-      queue.splice(i + 1, 0, watcher)
+      queue.splice(i + 1, 0, watcher);
     }
-    // queue the flush
-    if (!waiting) {
-      waiting = true
-      nextTick(flushSchedulerQueue)
-    }
+    ···
+    nextTick(flushSchedulerQueue);
   }
 }
 ```
@@ -102,20 +99,23 @@ export function queueWatcher (watcher: Watcher) {
 
 > flushSchedulerQueue 函数其实就是 watcher 的视图更新；
 
-- flushSchedulerQueue 函数依次执行 queue 中的 watcher 的 run 方法；
-- sort 方法把队列中的 watcher 按 id 从小到大排序：
-  1. 组件更新的顺序是从父组件到子组件的顺序，因为父组件总是比子组件先创建；
-  2. 一个组件的 user watchers （侦听器 watcher）比 render watcher 先运行，因为 user watchers 比 render watcher 更早创建；
-  3. 如果一个组件在父组件 watcher 运行时间被销毁，它的 watcher 执行将被跳过；
+1. 对 queue 中的 watcher 进行排序；
+   - sort 方法把队列中的 watcher 按 id 从小到大排序；
+   - 组件更新的顺序是从父组件到子组件的顺序，需要保证父的渲染 watcher 优先于子的渲染 watcher 更新；
+   - 一个组件的 user watchers 比 render watcher 先运行，因为 user watchers 比 render watcher 更早创建；
+   - 如果一个组件在父组件 watcher 运行时间被销毁，它的 watcher 执行将被跳过；
+2. 遍历 watcher ，如果当前 watcher 有 before 配置，则执行 before 方法，对应前而的渲染 watcher ；
+   - 在渲染 watcher 实例化时，传递了 before 函数，即在下个 tick 更新视图前，会调用 beforeUpdate 生命周期钩子；
+3. 依次执行 queue 中的 watcher 的 run 方法；
 
 ```javascript
 // nextTick的回调函数，在下一个tick时flush掉两个队列同时运行watchers
 function flushSchedulerQueue () {
   flushing = true
   let watcher, id
-  // 排序
+  // 对queue的watcher进行排序
   queue.sort((a, b) => a.id - b.id)					
-  // 不将length进行缓存，因为在执行处理现有 watcher 对象期间，可能有更多的watcher对象被push进queue
+  // 循环执行queue.length，为了确保由于渲染时添加新的依赖导致queue的长度不断改变
   for (index = 0; index < queue.length; index++) {	 
     watcher = queue[index]
     // 如果watcher有before则执行
