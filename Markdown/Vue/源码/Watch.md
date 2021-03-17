@@ -58,6 +58,9 @@ function createWatcher (vm,expOrFn,handler,options) {
 
 无论是选项的形式还是 api 的形式，最终都会调用实例的 $watch 方法，其中 expOrFn 是监听的字符串，handler 是监听的回调函数，options 是相关配置；
 
+1. $watch 的核心是创建一个 user watcher，options.user 是当前用户定义 watcher 的标志；
+2. 如果有 immediate 属性，立即执行回调函数；
+
 ```javascript
 Vue.prototype.$watch = function (expOrFn,cb,options) {
     var vm = this;
@@ -81,10 +84,6 @@ Vue.prototype.$watch = function (expOrFn,cb,options) {
   };
 }
 ```
-
-$watch 的核心是创建一个 user watcher，options.user 是当前用户定义 watcher 的标志；
-
-如果有 immediate 属性，则立即执行回调函数；
 
 实例化 watcher 时会执行一次 getter 求值，这时 user watcher 会作为依赖被数据收集；
 
