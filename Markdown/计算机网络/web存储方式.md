@@ -37,9 +37,9 @@ Max-Age 用于设置在 Cookie 失效之前需要经过的秒数；
 > Set-Cookie: id=a3fWa; Max-Age=604800;
 > ```
 
-- 当 Expires 属性缺省或者值为 Session，表示是会话性 Cookie；
-- 会话性 Cookie 的时候，值保存在客户端内存中，决不会写入磁盘，并在用户关闭浏览器时失效；
-- 与会话性 Cookie 相对的是持久性 Cookie，持久性 Cookies 会保存在用户的硬盘中，直至过期或者清除 Cookie。
+1. 当 Expires 属性缺省或者值为 Session，表示是会话性 Cookie；
+2. 会话性 Cookie 的时候，值保存在客户端内存中，决不会写入磁盘，并在用户关闭浏览器时失效；
+3. 与会话性 Cookie 相对的是持久性 Cookie，持久性 Cookies 会保存在用户的硬盘中，直至过期或者清除 Cookie；
 
 #### Domain
 
@@ -47,8 +47,8 @@ Max-Age 用于设置在 Cookie 失效之前需要经过的秒数；
 
 1. 在 Set-Cookie 中省略 domain 参数，那么domain默认为当前域名；
 
-1. domain 参数可以设置父域名以及自身，但不能设置其它域名和子域名，否则 cookie 不起作用；
-2. cookie 的作用域是 domain 本身以及 domain 下的所有子域名；
+2. domain 参数可以设置父域名以及自身，但不能设置其它域名和子域名，否则 cookie 不起作用；
+3. cookie 的作用域是 domain 本身以及 domain 下的所有子域名；
 
 #### Path
 
