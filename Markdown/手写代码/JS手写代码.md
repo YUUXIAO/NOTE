@@ -272,7 +272,7 @@ Function.prototype.myCall = function (context){
   context.fn = this;
   
   let args = [...arguments].slice(1);
-  let result = context.fn(args);
+  let result = context.fn(...args);
   
   delete context.fn;
   return result
@@ -796,8 +796,6 @@ function lazyload() {
 // 可以使用节流优化一下
 window.addEventListener('scroll', lazyload);
 ```
-
-## rem 基本设置
 
 ## 二分查找 
 
