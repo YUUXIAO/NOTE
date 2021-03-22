@@ -25,6 +25,8 @@ setInterval(function(){
 
 ## 长轮询
 
+> 发送请求给服务端，直到服务端觉得可以返回数据了再返回响应，否则这个请求一直挂起；
+
 ### 基本思路
 
 1. 首先由客户端向服务器发起请求，当服务器收到客户端发来的请求后，服务端不会直接进行响应，而是先将这个请求挂起，然后判断服务器端数据是否有更新；
@@ -66,7 +68,26 @@ SSE 的优势很明显，它不需要建立或者保持大量的客户端发往�
 
 > Websocket 是 html5 定义的一个新协议，与传统的 http 协议不同，该协议允许由服务器主动向客户端推送信息；
 
-WebSocket 是一个全双工的协议，也就是通信双方是平等的，可以相互发送消息；
+1. webSockets 的目标是在一个单独的持久连接上提供全双工、双向通信；
+2. 在 JS 创建了Web Socket之后，会有一个HTTP请求发送到浏览器以发起连接；
+3. 在取得服务器响应后，建立的连接会将 HTTP 升级从 HTTP 协议交换为WebSocket 协议，后面的数据交互都复用这个TCP通道；
 
-使用 WebSocket 协议的缺点是在服务器端的配置比较复杂；
+```javascript
+const ws = new WebSocket('ws://localhost:8080');
+ws.onopen = function () {
+    ws.send('123')
+    console.log('open')
+}
+ws.onmessage = function () {
+    console.log('onmessage')
+}
+ws.onerror = function () {
+    console.log('onerror')
+}
+ws.onclose = function () {
+    console.log('onclose')
+}
+```
+
+
 
