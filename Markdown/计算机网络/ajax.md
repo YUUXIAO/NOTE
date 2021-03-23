@@ -33,7 +33,7 @@ status为响应状态码（http状态），和 readystate 不同；
 
 ## 取消异步
 
-> ajax也可以取消事件监听,将异步改为同步，调用abort()；
+> ajax也可以取消事件监听,将异步改为同步，调用 abort()；
 
 ## progress进度
 
