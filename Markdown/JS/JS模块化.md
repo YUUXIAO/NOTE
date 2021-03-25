@@ -394,7 +394,7 @@ define(function (require) {
 
 1. AMD 依赖前置，提前执行：js 可以方便知道依赖模块是谁，立即加载；
 
-1. CMD就近依赖，延迟执行：要使用把模块应为字符串解析一遍才知道依赖了哪些模块（牺牲性能带来开发的遍历性，实际上解析模块用的时间短到可以忽略）；
+2. CMD就近依赖，延迟执行：要使用把模块应为字符串解析一遍才知道依赖了哪些模块（牺牲性能带来开发的遍历性，实际上解析模块用的时间短到可以忽略）；
 
 ## UMD
 
@@ -517,15 +517,15 @@ export { import1 as name1, import2 as name2, …, nameN } from …;
 
 1.  import 是ES6标准中的模块化解决方案，require 是 node 中遵循CommonJS 规范的模块化解决方案；
 
-2. import 语句导入同一个模块如果加载多次只执行一次，require 语句导入次数和实际执行次数相同；
+2.  import 语句导入同一个模块如果加载多次只执行一次，require 语句导入次数和实际执行次数相同；
 
-3. import 必须用在当前模块的顶层，如果在局部作用域内，会报错，es6这样的设计可以提高编译器效率，但没法实现运行时加载；require 可以用在代码的任何地方；
+3.  import 必须用在当前模块的顶层，如果在局部作用域内，会报错，es6这样的设计可以提高编译器效率，但没法实现运行时加载；require 可以用在代码的任何地方；
 
-4. require 支持动态引入，也就是require(${path}/xx.js)，import 目前不支持，但是已有提案；
+4.  require 支持动态引入，也就是require(${path}/xx.js)，import 目前不支持，但是已有提案；
 
-5. import 可以使用 import * 引入全部的export，也可以使用 import aaa, { bbb} 的方式分别引入 default 和非 default 的export，相比 require 更灵活；
+5.  import 可以使用 import * 引入全部的export，也可以使用 import aaa, { bbb} 的方式分别引入 default 和非 default 的export，相比 require 更灵活；
 
-6. ES6模块之中，顶层的 this 关键字返回 undefined，而不是指向 window；
+6.  ES6模块之中，顶层的 this 关键字返回 undefined，而不是指向 window；
 
   - 利用顶层的 this 等于 undefined 这个语法点，可以侦测当前代码是否在 ES6 模块之中；
 
