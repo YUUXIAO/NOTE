@@ -1,10 +1,40 @@
 ## Class
 
+```javascript
+// ES6之前
+function Person(name, age) {
+    this.name = name
+}
+Person.prototype.information = function () {
+    return 'My name is ' + this.name 
+}
+
+// ES6之后
+class Person {
+    constructor(name, age) {
+        this.name = name
+    }
+    information() {
+        return 'My name is ' + this.name 
+    }
+}
+```
+
 ## 箭头函数
 
 ## 解构赋值
 
+> 通过解构赋值，可以将属性/值从对象/数组中取出，赋值给其它变量；
+
+```javascript
+let a = 10
+let b = 20
+[a, b] = [b, a]
+```
+
 ## 扩展操作符
+
+
 
 ## 模块化
 
@@ -12,7 +42,72 @@
 
 ## Symbol
 
-## Iterator/Generator
+## 迭代器/生成器
+
+### 迭代器
+
+1. 迭代器是一种特殊的对象，所有的的迭代器对象都有一个 next 方法；
+2. 每次调用都返回一个结果对象，结果对象包含两个属性：
+   - value：表示下一个将要返回的值；
+   - done：一个布尔值，当没有更多数据返回时返回 true；
+
+#### ES5实现
+
+```javascript
+function createIterator(items) {
+  var i = 0
+  return {
+    next: function () {
+      var done = i >= items.length;
+      var value = !done ? items[i++] : undefined;
+      return {
+        done: done,
+        value: value,
+      }
+    }
+  }
+}
+```
+
+### 生成器
+
+> Generator 函数可以通过 yield 关键字，把函数的执行流挂起，通过next()方法可以切换到下一个状态，为改变执行流程提供了可能；
+
+1. 生成器是一种返回迭代器的函数，通过 function 关键字后面的星号（*）来表示，函数中会用到关键字 yield；
+2. 星号可以紧挨着 function 关键字，也可以在中间添加一个空格；
+3. 生成器调用方式与普通函数相同，只不过返回的是一个迭代器；
+4. yeild 关键字只可在生成器内部使用，在其它地方使用会导致程序抛出错误，
+
+```javascript
+function *createIterator(items){
+  for(let i =0;i<items.length;i++){
+    yield items[i]
+  }
+}
+
+let iterator = createIterator([1,2,3])
+
+iterator.next() // '{value:1,done:false}'
+iterator.next() // '{value:2,done:false}'
+iterator.next() // '{value:3,done:false}'
+iterator.next() // '{value:undefine,done:true}'
+```
+
+## for...of
+
+> for...of 语句在可迭代对象（包括 Array，Map，Set，String，TypedArray，arguments对象等）上创建一个迭代循环，调用自定义迭代钩子，并为每个不同属性的值执行语句；
+
+```javascript
+const array1 = ['a', 'b', 'c'];
+
+for (const element of array1) {
+      console.log(element)
+}
+
+// "a"
+// "b"
+// "c"
+```
 
 ## Set/WeakSet
 
@@ -23,6 +118,8 @@ WeakSet 结构与 Set 类似，主要区别是：
 1. WeakSet 对象中只能存放对象引用，不能存放值，Set 对象都可以；
 2. WeakSet 对象中的值都是被弱引用的，如果没有其它变量引用这个属性值，则这个对象会被当成垃圾回收掉；
 3. WeakSet 对象是无法被枚举的，没有办法拿到它包含的所有元素；
+
+
 
 ## Map/WeakMap
 
