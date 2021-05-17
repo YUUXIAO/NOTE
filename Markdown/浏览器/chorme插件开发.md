@@ -162,7 +162,148 @@ function injectCustomJs(jsPath){
 
 ### homepage_url
 
+## 8种表现形式
 
+### browserAction(浏览器右上角)
+
+通过配置 browser_action 可以在浏览器的右上角增加一个图标，一个 browser_action 可以拥有一个图标，一个tooltip ，一个 badge 和一个 popup；
+
+1. 图标：推荐使用宽高都为 19 像素的图片，更大的图标会被缩小，一般通过配置 manifest 中 default_icon 字段配置，也可以调用 setIcon() 方法；
+2. tooltip：般通过配置 manifest 中 default_title 字段配置，也可以调用 setTitle() 方法；
+3. badge：就是在图标上显示一些文本，一般用来更新扩展状态提示信息；
+   - 空间有限，只支持 4 个以下的字符（英文4个，中文2个）；
+   - 无法通过配置文件指定，必须通过代码实现；
+   - 设置 badge 的文字和颜色使用 setBadgeText() 和 setBadgeBackgroundColor() 方法；
+
+```javascript
+"browser_action":{
+  "default_icon": "img/icon.png",
+  "default_title": "这是一个示例插件,
+  "default_popup": "popup.html",
+}
+  
+// 设置 badge 的文字和颜色
+chrome.browserAction.setBadgeText({text：'new'});
+chrome.browserAction.setBadgeBackgroundColor({color:[255, 0, 0, 255]);
+```
+
+### pageAction(地址栏右侧)
+
+> pageAction 指的是只有当某些特定页面打开时才显示的图标；
+
+它和 browserAction 最大的区别是一个始终都显示，一个只有在特定的情况才显示；
+
+1. pageAction和普通的browserAction一样也是放在浏览器右上角，只不过没有点亮时是灰色的，点亮了才是彩色的；
+2. 调整之后的 pageAction 我们可以简单地把它看成是可以置灰的 browserAction；
+
+```javascript
+chrome.pageAction.show(tabId) // 显示图标
+chrome.pageAction.hide(tabId) // 隐藏图标
+```
+
+示例(只有打开百度才显示图标)：
+
+```javascript
+// manifest.json
+{
+	"page_action":
+	{
+		"default_icon": "img/icon.png",
+		"default_title": "我是pageAction",
+		"default_popup": "popup.html"
+	},
+	"permissions": ["declarativeContent"]
+}
+
+// background.js
+chrome.runtime.onInstalled.addListener(function(){
+	chrome.declarativeContent.onPageChanged.removeRules(undefined, function(){
+		chrome.declarativeContent.onPageChanged.addRules([
+			{
+				conditions: [
+					// 只有打开百度才显示pageAction
+					new chrome.declarativeContent.PageStateMatcher({pageUrl: {urlContains: 'baidu.com'}})
+				],
+				actions: [new chrome.declarativeContent.ShowPageAction()]
+			}
+		]);
+	});
+});
+```
+
+### 右键菜单
+
+> 通过 chrome.contextMenus API 可以实现自定义浏览器的右键菜单；
+
+右键菜单可以出现在不同的上下文中，比如普通页面、选中的文字、图片、链接等；
+
+如果有同一个插件定义了多个菜单，Chrome 会自动组合放到以插件命名的二级菜单里；
+
+```javascript
+// 添加右键百度搜索
+
+// manifest.json
+{"permissions": ["contextMenus"， "tabs"]}
+
+// background.js
+chrome.contextMenus.create({
+	title: '使用度娘搜索：%s', // %s表示选中的文字
+	contexts: ['selection'], // 只有当选中文字时才会出现此右键菜单
+	onclick: function(params){
+      // 注意不能使用location.href，因为location是属于background的window对象
+      chrome.tabs.create({url: 'https://www.baidu.com/s?ie=utf-8&wd=' + encodeURI(params.selectionText)});
+	}
+});
+```
+
+#### 常见语法
+
+```javascript
+chrome.contextMenus.create({
+	type: 'normal'， // 类型，可选：["normal", "checkbox", "radio", "separator"]，默认 normal
+	title: '菜单的名字', // 显示的文字，除非为“separator”类型否则此参数必需，如果类型为“selection”，可以使用%s显示选定的文本
+	contexts: ['page'], // 上下文环境，可选：["all", "page", "frame", "selection", "link", "editable", "image", "video", "audio"]，默认page
+	onclick: function(){}, // 单击时触发的方法
+	parentId: 1, // 右键菜单项的父菜单项ID。指定父菜单项将会使此菜单项成为父菜单项的子菜单
+	documentUrlPatterns: 'https://*.baidu.com/*' // 只在某些页面显示此右键菜单
+});
+// 删除某一个菜单项
+chrome.contextMenus.remove(menuItemId)；
+// 删除所有自定义右键菜单
+chrome.contextMenus.removeAll();
+// 更新某一个菜单项
+chrome.contextMenus.update(menuItemId, updateProperties);
+```
+
+### override(覆盖特定页面)
+
+> 使用 override 页可以将Chrome 默认的一些特定页面替换掉，改为使用扩展提供的页面；
+
+扩展可以替代以下页面：
+
+1. 历史记录：从工具菜单上点击历史记录时访问的页面，或者从地址栏直接输入 [chrome://history](chrome://history/)
+   - 一个扩展只能替代一个页面；
+2. 新标签页：当创建新标签的时候访问的页面，或者从地址栏直接输入 [chrome://newtab](chrome://newtab/)
+   - 不能替代隐身窗口的新标签页面；
+3. 书签：浏览器的书签，或者直接输入 [chrome://bookmarks](chrome://bookmarks/)
+   - 网页必须设置 title，否则用户可能会看不到网页的 URL；
+
+```javascript
+"chrome_url_overrides":{
+	"newtab": "newtab.html",
+	"history": "history.html",
+	"bookmarks": "bookmarks.html"
+}
+```
+
+### devtools
+
+Chrome允许插件在开发者工具(devtools)上动手脚；
+
+1. 自定义一个和多个和 Elements 、Console 、Sources 等同级别的面板；
+2. 自定义侧边栏(sidebar)，目前只能自定义 Elements 面板的侧边栏；
+
+### 介绍
 
 ## 项目开发
 
