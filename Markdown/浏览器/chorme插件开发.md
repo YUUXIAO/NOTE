@@ -46,6 +46,8 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
 
 借助 content-scripts 可以实现通过配置的方式向指定的页面注入 JS 和 CSS，比如广告屏蔽、页面CSS 定制等；
 
+1. 通过 content_scripts 注入的CSS优先级非常高，几乎仅次于浏览器默认样式，所以尽量避免写一些影响全局的样式；
+
 ```javascript
 {
   // 需要直接注入页面的JS
@@ -482,13 +484,238 @@ chrome.notifications.create(null, {
 	title: '这是标题',
 	message: '您刚才点击了自定义右键菜单！'
 });
+
 ```
 
+## 消息通信
+
+Chrome插件中存在的5种 JS：injected-script、content-script、popup-js、background-js、devtools-js；
+
+### popup和background
+
+> popup可以直接调用 background 中的 JS 方法，也可以直接访问 background 的 DOM；
+
+```javascript
+// background.js
+function test(){
+	alert('我是background！');
+}
+
+// popup.js
+var bg = chrome.extension.getBackgroundPage();
+bg.test(); // 访问bg的函数
+alert(bg.document.body.innerHTML); // 访问bg的DOM
 
 
-## 5种类型的JS
+// background 访问 popup
+var views = chrome.extension.getViews({type:'popup'});
+if(views.length) {
+	console.log(views[0].location.href);
+}
+```
+
+### popup/bg和content
+
+```javascript
+// background.js 或 popup.js
+function sendMessageToContentScript(message, callback){
+	chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
+		chrome.tabs.sendMessage(tabs[0].id, message, function(response){
+			if(callback) callback(response);
+		});
+	});
+}
+sendMessageToContentScript({cmd:'test', value:'你好，我是popup！'}, function(response){
+	console.log('来自content的回复：'+response);
+});
 
 
+// content-script.js接收
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
+	if(request.cmd == 'test') alert(request.value);
+	sendResponse('我收到了你的消息！');
+});
+```
+
+### content 和 background/popup
+
+1. content-scripts 向 popup 发送消息的前提是 popup 必须打开，否则需要利用 background 作中转；
+2. 如果 background 和 popup 同时监听，它们可以同时收到消息，但只有一个可以 sendResponse ，一个先发送了，另一个再发送会无效； 
+
+```javascript
+// content-script
+chrome.runtime.sendMessage({greeting: '你好，我是content-script呀，我主动发消息给后台！'}, function(response) {
+	console.log('收到来自后台的回复：' + response);
+});
+
+// background.js 或 popup.js：
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
+	console.log('收到来自content-script的消息：');
+	console.log(request, sender, sendResponse);
+	sendResponse('我是后台，我已收到你的消息：' + JSON.stringify(request));
+});
+```
+
+### injected-script和content-script
+
+content-script 和页面内的脚本（injected-script 自然也属于页面内的脚本）之间唯一共享的东西就是页面的DOM元素；
+
+1. 可以通过 window.postMessage 和 window.addEventListener 来实现二者消息通讯；
+
+   ```javascript
+   // injected-script
+   window.postMessage({"test": '你好！'}, '*');
+
+   // content-script
+   window.addEventListener("message", function(e){
+   	console.log(e.data);
+   }, false);
+   ```
+
+2. 通过自定义 DOM 事件来实现；
+
+   ```javascript
+   // injected-script
+   var customEvent = document.createEvent('Event');
+   customEvent.initEvent('myCustomEvent', true, true);
+   function fireCustomEvent(data) {
+   	hiddenDiv = document.getElementById('myCustomEventDiv');
+   	hiddenDiv.innerText = data
+   	hiddenDiv.dispatchEvent(customEvent);
+   }
+   fireCustomEvent('你好，我是普通JS！');
+
+   // content-script.js
+   var hiddenDiv = document.getElementById('myCustomEventDiv');
+   if(!hiddenDiv) {
+   	hiddenDiv = document.createElement('div');
+   	hiddenDiv.style.display = 'none';
+   	document.body.appendChild(hiddenDiv);
+   }
+   hiddenDiv.addEventListener('myCustomEvent', function() {
+   	var eventData = document.getElementById('myCustomEventDiv').innerText;
+   	console.log('收到自定义事件消息：' + eventData);
+   });
+   ```
+
+### 长连接和短连接
+
+1. 短连接
+
+   - 指的是 chrome.tabs.sendMessage 和 chrome.runtime.sendMessage；
+   - 短连接就是我发送一下，你收到了再回复一下，如果对方不回复，只能重新发；
+
+2. 长连接
+
+   - chrome.tabs.connect 和 chrome.runtime.connect；
+   - 长连接类似于 webSocket 会一直建立连接，双方可以随时互发消息；
+
+   ```javascript
+   // popup-js
+   getCurrentTabId((tabId) => {
+   	var port = chrome.tabs.connect(tabId, {name: 'test-connect'});
+   	port.postMessage({question: '你是谁啊？'});
+   	port.onMessage.addListener(function(msg) {
+   		alert('收到消息：'+msg.answer);
+   		if(msg.answer && msg.answer.startsWith('我是')){
+   			port.postMessage({question: '哦，原来是你啊！'});
+   		}
+   	});
+   });
+
+   // content-script.js
+   chrome.runtime.onConnect.addListener(function(port) {
+   	console.log(port);
+   	if(port.name == 'test-connect') {
+   		port.onMessage.addListener(function(msg) {
+   			console.log('收到长连接消息：', msg);
+   			if(msg.question == '你是谁啊？'){
+                 port.postMessage({answer: '我是你爸！'});
+   			}
+   		});
+   	}
+   });
+   ```
+
+## 其它
+
+### 动态注入代码
+
+虽然在 background 和 popup 中无法直接访问页面DOM，但可以通过 chrome.tabs.executeScriptchrome.tabs.executeScript 来执行脚本，从而实现访问web页面的DOM，这种方式也不能直接访问页面 JS；
+
+```javascript
+// manifest.json
+{
+	"name": "动态CSS注入演示",
+	...
+	"permissions": [
+      	// 可以通过executeScript或者insertCSS访问的网站
+		"tabs", "http://*/*", "https://*/*" 
+	],
+	...
+}
+
+// 动态执行JS代码
+chrome.tabs.executeScript(tabId, {code: 'document.body.style.backgroundColor="red"'});
+// 动态执行JS文件
+chrome.tabs.executeScript(tabId, {file: 'some-script.js'});
+// 动态执行CSS文件
+chrome.tabs.insertCSS(tabId, {file: 'some-style.css'});
+```
+
+### 本地存储
+
+1. chrome.storage 是针对插件全局的，即使在 background 中保存的数据，在content-script 也能获取到；
+2. chrome.storage.sync 可以跟随当前登录用户自动同步，这台电脑修改的设置会自动同步到其它电脑，如果没有登录或者未联网则先保存到本地，等登录了再同步至网络；
+3. 需要在 manifest.json 中声明 storage 权限；
+
+```javascript
+// 读取数据，第一个参数是指定要读取的key以及设置默认值
+chrome.storage.sync.get({color: 'red', age: 18}, function(items) {
+	console.log(items.color, items.age);
+});
+// 保存数据
+chrome.storage.sync.set({color: 'blue'}, function() {
+	console.log('保存成功！');
+});
+```
+
+### webRequest
+
+通过 webRequest 系列 API 可以对 HTTP 请求进行任性地修改、定制；
+
+```javascript
+//manifest.json
+{
+	"permissions":[
+		"webRequest", // web请求
+      	"storage",
+		"webRequestBlocking", // 阻塞式web请求
+	],
+}
+
+
+// background.js
+
+var showImage; // 是否显示图片
+chrome.storage.sync.get({showImage: true}, function(items) {
+	showImage = items.showImage;
+});
+// web请求监听，最后一个参数表示阻塞式，需单独声明权限：webRequestBlocking
+chrome.webRequest.onBeforeRequest.addListener(details => {
+	// cancel 表示取消本次请求
+	if(!showImage && details.type == 'image') return {cancel: true};
+	// 简单的音视频检测
+	if(details.type == 'media') {
+		chrome.notifications.create(null, {
+			type: 'basic',
+			iconUrl: 'img/icon.png',
+			title: '检测到音视频',
+			message: '音视频地址：' + details.url,
+		});
+	}
+}, {urls: ["<all_urls>"]}, ["blocking"]);
+```
 
 ## 项目开发
 
@@ -612,7 +839,18 @@ chrome.storage.sync.get(['key'], function(result) {
 });
 ```
 
-## 上传与发布
+## 打包与发布
+
+打包的话直接在插件管理页有一个打包按钮，点击会生成一个 .crx 文件；
+
+如果要发布到 Google 应用商店的话需要先登录你的Google账号，然后花5个$注册为开发者；
+
+
+
+## 查看已安装的插件路径
+
+1. 进入  chrome://extensions，勾选开发者模式，获取插件 ID；
+2. ​
 
 ## 调试
 
