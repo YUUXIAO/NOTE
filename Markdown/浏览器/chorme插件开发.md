@@ -298,12 +298,197 @@ chrome.contextMenus.update(menuItemId, updateProperties);
 
 ### devtools
 
-Chrome允许插件在开发者工具(devtools)上动手脚；
+Chrome允许插件在开发者工具(devtools)上动手脚，主要表现在：
 
 1. 自定义一个和多个和 Elements 、Console 、Sources 等同级别的面板；
 2. 自定义侧边栏(sidebar)，目前只能自定义 Elements 面板的侧边栏；
 
-### 介绍
+#### 介绍
+
+1. 每打开一个开发者工具窗口，都会创建一个 devtools 页面的实例；
+2. F12 窗口关闭，页面也随着关闭，所以 devtools 页面的生命周期和 devtools 窗口是一致的；
+3. devtools 页面可以访问一新组特有的 DevTools API 以及有限的扩展 API，这组特定的 DevTools API 只有 devtools 页面才可以访问，background 是无法访问的；
+
+```javascript
+chorme.devtools.panels  	// 面板相关
+chrome.devtools.inspectedWindwo 	// 获取被审查窗口的有关信息
+chrome.devtools.network	 	// 获取有关网络请求的信息
+```
+
+大部分扩展API都无法直接被 DevTools 页面调用，但它可以像 content-script 一样直接调用 chrome.extension 和 chrome.runtime API，同时它也可以像 content-script 一样使用 Message 交互的方式与 background 页面进行通信。
+
+```javascript
+// manifest.json
+{
+  "devtools_page": "devtools.html"  // 只能指向一个HTML文件，不能是JS文件
+}
+
+// devtools.html
+<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+	<script type="text/javascript" src="js/devtools.js"></script>
+</body>
+</html>
+
+// devtools.js
+// 创建自定义面板，同一个插件可以创建多个自定义面板
+// 几个参数依次为：panel标题、图标（其实设置了也没地方显示）、要加载的页面、加载成功后的回调
+chrome.devtools.panels.create('MyPanel', 'img/icon.png', 'mypanel.html', function(panel){
+	console.log('自定义面板创建成功！'); // 注意这个log一般看不到
+});
+
+// 创建自定义侧边栏
+chrome.devtools.panels.elements.createSidebarPane("Images", function(sidebar){
+	// sidebar.setPage('../sidebar.html'); // 指定加载某个页面
+	sidebar.setExpression('document.querySelectorAll("img")', 'All Images'); // 通过表达式来指定
+	//sidebar.setObject({aaa: 111, bbb: 'Hello World!'}); // 直接设置显示某个对象
+});
+```
+
+```javascript
+// 检测jQuery
+document.getElementById('check_jquery').addEventListener('click', function(){
+	// 访问被检查的页面DOM需要使用inspectedWindow
+	// 简单例子：检测被检查页面是否使用了jQuery
+	chrome.devtools.inspectedWindow.eval("jQuery.fn.jquery", function(result, isException){
+		var html = '';
+		if (isException) html = '当前页面没有使用jQuery。';
+		else html = '当前页面使用了jQuery，版本为：'+result;
+		alert(html);
+	});
+});
+
+// 打开某个资源
+document.getElementById('open_resource').addEventListener('click', function(){
+	chrome.devtools.inspectedWindow.eval("window.location.href", function(result, isException){
+		chrome.devtools.panels.openResource(result, 20, function(){
+			console.log('资源打开成功！');
+		});
+	});
+});
+
+// 审查元素
+document.getElementById('test_inspect').addEventListener('click', function(){
+	chrome.devtools.inspectedWindow.eval("inspect(document.images[0])", function(result, isException){});
+});
+
+// 获取所有资源
+document.getElementById('get_all_resources').addEventListener('click', function(){
+	chrome.devtools.inspectedWindow.getResources(function(resources){
+		alert(JSON.stringify(resources));
+	});
+});
+```
+
+#### 调试技巧
+
+修改了devtools页面的代码时，需要先在 chrome://extensions 页面按下`Ctrl+R`重新加载插件，然后关闭再打开开发者工具即可，无需刷新页面（而且只刷新页面不刷新开发者工具的话是不会生效的）。
+
+###  option(选项页)
+
+> option 页就是插件的设置页面，有两个入口，一个是右键图标的”选项“菜单，一个是在插件管理页面；
+
+```javascript
+{
+   // Chrome40以前的插件配置页写法
+   "options_page": "options.html",
+      
+  // 新版的optionsV2：
+  "options_ui":{
+      "page": "options.html",
+      // 添加一些默认的样式，推荐使用
+      "chrome_style": true
+  },
+}
+```
+
+### omnibox
+
+> omnibox 是向用户提供搜索建议的一种方式，通过注册某个关键字以触发插件自己的搜索建议界面；
+
+```javascript
+// manidest.json
+{
+	// 向地址栏注册一个关键字以提供搜索建议，只能设置一个关键字
+	"omnibox": { "keyword" : "go" },
+}
+
+// background.js
+chrome.omnibox.onInputChanged.addListener((text, suggest) => {
+	console.log('inputChanged: ' + text);
+	if(!text) return;
+	if(text == '美女') {
+		suggest([
+			{content: '中国' + text, description: '你要找“中国美女”吗？'},
+			{content: '日本' + text, description: '你要找“日本美女”吗？'},
+			{content: '泰国' + text, description: '你要找“泰国美女或人妖”吗？'},
+			{content: '韩国' + text, description: '你要找“韩国美女”吗？'}
+		]);
+	}
+	else if(text == '微博') {
+		suggest([
+			{content: '新浪' + text, description: '新浪' + text},
+			{content: '腾讯' + text, description: '腾讯' + text},
+			{content: '搜狐' + text, description: '搜索' + text},
+		]);
+	}
+	else {
+		suggest([
+			{content: '百度搜索 ' + text, description: '百度搜索 ' + text},
+			{content: '谷歌搜索 ' + text, description: '谷歌搜索 ' + text},
+		]);
+	}
+});
+
+// 当用户接收关键字建议时触发
+chrome.omnibox.onInputEntered.addListener((text) => {
+	console.log('inputEntered: ' + text);
+	if(!text) return;
+	var href = '';
+	if(text.endsWith('美女')) href = 'http://image.baidu.com/search/index?tn=baiduimage&ie=utf-8&word=' + text;
+	else if(text.startsWith('百度搜索')) href = 'https://www.baidu.com/s?ie=UTF-8&wd=' + text.replace('百度搜索 ', '');
+	else if(text.startsWith('谷歌搜索')) href = 'https://www.google.com.tw/search?q=' + text.replace('谷歌搜索 ', '');
+	else href = 'https://www.baidu.com/s?ie=UTF-8&wd=' + text;
+	openUrlCurrentTab(href);
+});
+// 获取当前选项卡ID
+function getCurrentTabId(callback){
+	chrome.tabs.query({active: true, currentWindow: true}, function(tabs)
+	{
+		if(callback) callback(tabs.length ? tabs[0].id: null);
+	});
+}
+
+// 当前标签打开某个链接
+function openUrlCurrentTab(url){
+	getCurrentTabId(tabId => {
+		chrome.tabs.update(tabId, {url: url});
+	})
+}
+```
+
+### 桌面通知
+
+Chrome提供了一个 chrome.notifications API以便插件推送桌面通知，暂未找到 chrome.notifications 和 HTML5自带的 Notification 的显著区别及优势。
+
+在后台JS中，无论是使用 chrome.notifications 还是 Notification 都不需要申请权限；
+
+```javascript
+chrome.notifications.create(null, {
+	type: 'basic',
+	iconUrl: 'img/icon.png',
+	title: '这是标题',
+	message: '您刚才点击了自定义右键菜单！'
+});
+```
+
+
+
+## 5种类型的JS
+
+
 
 ## 项目开发
 
