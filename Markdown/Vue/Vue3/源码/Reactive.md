@@ -1,3 +1,29 @@
+> reactive 是 vue3 用于生成引用类型的 api，接收一个对象；
+
+1. 对传入的对象进行了一个 target 的只读判断；
+
+   - 如果 target 是一个只读代理，直接返回；
+   - 返回 createReactiveObject 方法的值；
+
+   ```javascript
+   export function reactive(target:object){
+     if(target && (target as Target)[ReactiveFlags.IS_READONLY]){
+       return target
+     }
+     return createReactiveObject(
+     	target,
+       false,
+       mutableHandlers,
+       mutableCollectionHandlers,
+       reactiveMap
+     )
+   }
+   ```
+
+2. ​
+
+
+
 ## reactive&readonly
 
 两个方法主要逻辑都封装到了 createReactiveObject，主要作用是：
@@ -50,7 +76,10 @@ export function readonly<T extends object>(
 
 ## createReactiveObject
 
-> createReactiveObject 方法保存了代理的数据和原始数据，返回了 new Proxy 代理后的对象；
+> 该方法保存了代理的数据和原始数据，返回 new Proxy 代理后的对象；
+
+1. 判断 target 的类型，不符合要求的抛出警告并返回原来的值；
+2. 判断当前对象是否已经被代理且不是只读的，直接将其当作返回值返回，避免重复代理；
 
 rawToReactive 和 reactiveToRaw 是两个弱引用的 Map 结构，这两个 Map 用来保存原始数据和可响应数据，toProxy  和 toRaw 传入的是这两个 Map；
 
