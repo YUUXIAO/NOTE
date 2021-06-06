@@ -19,6 +19,10 @@ Chorme 插件没有严格的项目结构要求，只要保证目录下有一个 
 
 勾选开发者模式即可以文件夹的形式直接加载插件，否则只能安装.crx格式的文件；
 
+### 调试
+
+
+
 ## 项目结构
 
 ### manifest.json
@@ -719,66 +723,6 @@ chrome.webRequest.onBeforeRequest.addListener(details => {
 
 ## 项目开发
 
-Chrome 插件可以分为三部分，分别运行在不同的环境；
-
-### 后台页面/事件页面（background）
-
-1. 后台页面是运行在浏览器后台的，随着浏览器的启动开始运行，浏览器关闭就对事运行；
-2. 事件页面是需要调用时加载，脚本空闲时被卸载；
-3. 两者都是运行在后台；
-
-在 manifest.json 文件中配置需要运行的脚本；
-
-```javascript
-{
-  "background": {
-    "scripts": ["eventPage.js"],
-    "persistent": false
-  }
-}
-
-```
-
-### 用户界面网页（popup）
-
-用户界面指的是点击插件显示的小弹窗，每次点击开始运行，弹窗关闭后结束，可以与 background 脚本交互；
-
-#### 工具栏界面
-
-点击工具栏/地址栏插件图标出来的弹窗其实就是一个html页面，弹窗要显示的文件，和工具栏小图标在 manifest.json 文件中配置；
-
-```javascript
-{
-  "browser_action": {
-    "default_title": "clearRead",
-    "default_icon": "icon.png",
-    "default_popup": "popup.html"
-  },
-}
-```
-
-### 内容脚本（content）
-
-> 安装插件后每打开一个网页可以将 content 脚本注入到时页面中，内容脚本可以读取浏览器访问的网页的细节，并且可以修改页面；
-
-1. 内容脚本在打开网页时会被注入到网页中，它们在浏览器中已加载页面的上下文中执行；
-2. 可以将内容脚本视为已加载页面的一部分；
-
-在哪些页面中注入脚本和注入什么脚本在 manifest.json 文件中配置；
-
-```javascript
-{
-  "content_scripts": [
-    {
-      // 可以设置一个匹配表达式来过滤需要注入脚本的网站
-      "matches": ["*://*/*", "file://*"], 
-      "css": ["style/content.css"],
-      "js": ["js/contentScript.js"]
-    }
-  ]
-}
-```
-
 ### 通信方式
 
 #### 事件
@@ -813,6 +757,8 @@ chrome.extension.getBackgroundPage()
 chrome.extension.getViews()
 
 ```
+
+
 
 ### 本地储存
 
@@ -849,8 +795,7 @@ chrome.storage.sync.get(['key'], function(result) {
 
 ## 查看已安装的插件路径
 
-1. 进入  chrome://extensions，勾选开发者模式，获取插件 ID；
-2. ​
+
 
 ## 调试
 
