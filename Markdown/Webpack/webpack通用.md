@@ -1,3 +1,7 @@
+cpselvis github
+
+
+
 ## 代码分割和动态import
 
 webpack有一个功能是将代码库分割成 chunks(语块)，当代码运行到需要它们的时候再加载；
@@ -216,13 +220,247 @@ eslint --fix 可以自动处理空格；
 
 3. 在 package.json 中的 scripts 字段增加 test 命令；
 
-   ```
+   ```javascript
    scripts：{
      test: "node_modules/mocha/bin/_mocha"
    }
    ```
 
-   ​
+4. 执行测试命令
+
+   ```javascript
+   npm run test
+   ```
+
+### 测试覆盖率-instanbul
+
+## 持续集成
+
+优点：
+
+1. 快速发现错误；
+2. 防止分支大幅偏离主干；
+
+核心措施是：代码集成到主干之前，必须通过自动化测试，只要有一个测试用例失败，就不能集成；
+
+## 发布npm
+
+```javascript
+添加用户：npm address
+升级版本：
+	升级大版本号：npm version major
+    升级小版本号：npm version minor
+    升级补丁版本号：npm version patch
+发布版本：npm publish
+```
+
+## git-commit规范和changeLog生成
+
+### 良好的git Commit 规范优势
+
+- 加快 code review 的流程；
+- 根据 git commit 的元数据生成 changelog；
+- 后续维护者可以知道 feature 生成的原因
+
+### 本地开发阶段增加 precommit 钩子
+
+### 安装 husky
+
+```javascript
+npm install husky --save-dev
+```
+
+### 通过commitmsg 钩子校验
+
+```javascript
+scripts:{
+  commitmsg: "validate-commit-msg",
+  changelog: "conventinal-changelog -p angular -i CHANGELOG.md -s -r 0"
+},
+devDependencies: {
+  "validate-commit-msg": "^2.11.1",
+  "conventinal-changelog-cli": "^1.2.1",
+  "husky": "^0.13.1",
+}
+```
+
+## 语义化版本（semantic-versioning）规范格式
+
+1. 版本通常由三位数组成：X.Y.Z；
+2. 版本是严格递增的；
+3. 在发布重要版本时，可以先发布 alpha、rc等先行版本；
+   - aplha：内部测试版，一般不向外发布，会有很多 bug，测试人员使用；
+   - beta：也是测试版，这个阶段的版本会一直加入新功能，在 Alpha版本后发布；
+   - rc：（release candlidate）系统平台上就是发行候选版本，不会再加入新的功能了，主要着重于除错；
+
+### 遵守 semver 规范的优势
+
+1. 避免出现循环依赖；
+2. 依赖冲突减少；
+
+## 使用内置的stats
+
+stats：构建的统计信息
+
+package.json 中使用 stats
+
+```javascript
+scripts: {
+  "build:stats": "webpack --env production --json > stats.json"
+}
+```
+
+## 速度分析：speed-measure-webpack-plugin
+
+```javascript
+const SpeedMeasureWebpackPlugin = require('speed-measure-webpack-plugin')
+
+const smp = new SpeedMeasureWebpackPlugin()
+
+const webpackConfig = smp.wrap({
+  plugins:[
+    new myPlugin(),
+    new myOtherPlugin()
+  ]
+})
+```
+
+分析整个打包总耗时；
+
+可以看到每个loader和插件执行耗时；
+
+## 体积分析：webpack-bundle-analyzer
+
+```javascript
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer')
+
+module.exports = {
+  plugins: [
+    new BundleAnalyzerPlugin()
+  ]
+}
+```
+
+分析依赖的第三方模块文件的大小；
+
+业务里面的组件代码大小；
+
+## 高版本的webpack和node.js
+
+### 使用webpack4 优化的原因
+
+1. v8带来的优化（for of 替代 forEach、Map 和 Set 替代 Object，includes 替代 indexOf）
+2. 默认使用更快的 md4 hash算法；
+3. webpacks AST 可以直接从 loader 传递给 AST，减少解析时间；
+4. 使用字符串方法代替正则表达式；
+
+## 多进程/多实例构建：资源并行解析可选方案
+
+thread-loader（官方推荐）
+
+parallel-webpack
+
+### HappyPack
+
+原理：每次 webpack解析一个模块，HappyPack会将它及它的依赖分配给 worker 线程中；
+
+```javascript
+export.plugins = [
+  new HappyPack({
+    id: 'styles',
+    threads: 2,
+    loaders: ['style-loader', 'css-loader', 'less-loader']
+  })
+]
+```
+
+### thread-loader
+
+原理：每次 webpack解析一个模块，threade-loader 会将它及它的依赖分配给 worker 线程中；
+
+```javascript
+modules.exports = {
+  module: {
+    rules: [
+      {
+        test: /.js$/,
+        include: path.resolve('src'),
+        use:[
+          "thread-loader",
+          "babel-loader",
+          // ...
+        ]
+      }
+    ]
+  }
+}
+```
+
+## 多进程/多实例并行压缩
+
+### parallel-uglify-plugin
+
+```javascript
+const ParallelUglifyPlugin = require('parallel-uglify-plugin')
+
+module.exports = {
+  new ParallelUglifyPlugin({
+    uglifyJs: {
+      output: {
+        beautify: false,
+        comments: false,
+      },
+      compress: {
+        warnings: false,
+        drop_console: true,
+        collapse_vars: true,
+        reduce_vars: true,
+      }
+    }
+  })
+}
+```
+
+## uglifyjs-webpack-plugin开启parallel参数
 
 
+
+```javascript
+const ParallelUglifyPlugin = require('uglifyjs-webpack-plugin')
+
+module.exports = {
+  plugins: [
+    new UglifyJsPlugin({
+      uglifyOptions: {
+        warning: false,
+        parse: {},
+        compress: {},
+        output: null.
+        toplevel: false,
+        nameCache: null,
+        ie8: false,
+      }，
+      parallel： true
+    })
+  ]
+}
+```
+
+### terser-webpack-plugin开启parallel参数（webpack4）
+
+支持es6语法
+
+```
+const TeserPlugin = require('terser-webpack-plugin')
+
+module.exports = {
+  optimization: {
+    minimizer: [
+      new TeserPlugin({
+        parallel: 4
+      })
+    ]
+  }
+}
+```
 

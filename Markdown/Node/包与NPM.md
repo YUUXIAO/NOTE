@@ -3,6 +3,14 @@ CommonJS 的包规范的定义是由包结构和包描述文件两个部分组�
 1. 包结构文件用于组织包中的各种文件；
 2. 包描述文件用于描述包的相关信息；
 
+https://segmentfault.com/q/1010000009864039 【dependencies、devDependencies 的区别】
+
+https://segmentfault.com/a/1190000008398819 【`dependency`，`devDependency`】
+
+https://zhuanlan.zhihu.com/p/128625669 【npm Install 详解】
+
+https://blog.csdn.net/liuyan19891230/article/details/103856130
+
 ## 包结构
 
 > 包实际上是一个存档文件，即一个目录直接打包为 .zip 或 tar.gz 格式的文件，安装解压后还原为目录；
