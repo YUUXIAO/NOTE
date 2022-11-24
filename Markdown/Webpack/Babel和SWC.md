@@ -1,32 +1,35 @@
-> Babel 是一个工具链，主要用于将 ECMAScript 2015+ 版本代码向后兼容 Javascript 语法，以便可以运行到旧版本浏览器或其它环境中；
+> Babel 是一个 JavaScript 编译器，主要用于将 ECMAScript 2015+ 版本代码向后兼容 Javascript 语法，以便可以运行到旧版本浏览器或其它环境中；
 
-## 处理步骤
+## Babel的作用 
 
-### 解析
+- 语法转换（ES6转ES5，转 JSX 语法）
+- 通过 Polyfill 方式在目标环境中添加缺失的特性（通过引入第三方polyfill模块，比如 core-js）
+- Babel 支持 Source map，可以调试编译后的代码
 
-将代码解析成抽象语法树（AST），每个 js 引擎都有自己的 AST 解析器，Babel 是通过 BabyIon 实现的；
+### 处理步骤
 
-#### 词法分析
+#### 解析（parse）
 
-词法分析阶段把字符串形式的代码转换为令牌（tokens）流，令牌类似于 AST 中节点；
+将代码解析成抽象语法树（AST），先词法分析再语法分析，最终转换成 AST，使用 @babel/parser 解析代码，对不同词法添加不同type。
 
-#### 语法分析
+每个 js 引擎都有自己的 AST 解析器，Babel 是通过 BabyIon 实现的；
 
-语法分析阶段会把一个令牌转换成 AST 的形式，同时这个阶段会把令牌中的信息转换成 AST 的表述结构；
+- 词法分析：词法分析阶段把字符串形式的代码转换为令牌（tokens）流，令牌类似于 AST 中节点；
+- 语法分析：语法分析阶段会把一个令牌转换成 AST 的形式，同时这个阶段会把令牌中的信息转换成 AST 的表述结构；
 
-### 转换
+#### 转换（transform）
 
-在这个阶段，Babel 接受得到 AST 并通过 babel-traverse 对其进行深度优先遍历，在此过程中对节点进行添加、更新及移除操作；
+在这个阶段，Babel 接收得到 AST 并通过 babel-traverse 对其进行深度优先遍历，在此过程中对节点进行添加、更新及移除操作；
 
 这部分也是 Babel 插件介入工作的部分；
 
-### 生成
+#### 生成（generator）
 
-在这个阶段，将经过转换的 AST 通过 babel-generator 再转换成 js 代码，过程就是深度优先遍历整个 AST ，然后构建可以表示转换后代码的字符串；
+在这个阶段，将经过转换的 AST 通过 babel-generator 再转换成 js 代码，同时还会创建源码映射（source maps），过程就是深度优先遍历整个 AST ，然后构建可以表示转换后代码的字符串；
 
-## 模块
+### 模块
 
-### babel-core
+#### babel-core
 
 > babel的核心模块，包括一些核心api例如：transform；
 
@@ -46,7 +49,7 @@ babel.transform(code: string, options?: Object)
 }
 ```
 
-### babel-cli
+#### babel-cli
 
 > Babel 的 CLI 是一种在命令行下使用 Babel 编译文件的简单方法，主要用于文件的输入输出；
 
@@ -61,13 +64,13 @@ babel test.js
 babel test.js -o test-out.js
 ```
 
-### babel-node
+#### babel-node
 
 babel-node是随babel-cli一起安装的，只要安装了babel-cli就会自带babel-node；
 
  在命令行输入babel-node会启动一个REPL（Read-Eval-Print-Loop），这是一个支持ES6的js执行环境；
 
-### babel-register
+#### babel-register
 
 > babel-register 是一个 babel 的注册器，它在底层改写了 node 的 require 方法；
 
@@ -93,21 +96,21 @@ console.log(test.toString()); //通过toString方法，看看控制台输出的�
 */
 ```
 
-### babel-polyfill
+#### babel-polyfill
 
 > babel-polyfill 主要是用已经存在的语法和 api 实现一些浏览器还没有实现的 api，对浏览器的一些缺陷做一些修补；
 
-## 项目使用
+### 项目使用
 
-### .babelrc
+#### .babelrc
 
 babel 所有的操作基本都会来读取这个配置文件，除了一些在回调函数中设置 options 参数的，如果没有这个配置文件，会从 package.json 文件的babel 属性中读取配置；
 
-### plugins
+#### plugins
 
 babel中的插件，通过配置不同的插件才能告诉babel，我们的代码中有哪些是需要转译的；
 
-### presets
+#### presets
 
 > 预设就是一系列插件的集合；
 
@@ -145,3 +148,12 @@ babel中的插件，通过配置不同的插件才能告诉babel，我们的代�
 }
 ```
 
+## SWC
+
+> SWC（`Speedy Web Compiler`）是用 Rust 编写的超快 TypeScript / JavaScript 编译器。是一个社区驱动的项目。
+
+SWC 的编译旨在支持所有 ECMAScript 功能。SWC CLI 旨在替代 Babel。可以说是更快的babel。
+
+### SWC相比于Babel的优势
+
+Babel是JavaScript写的，JavaScript就是有点慢。而swc也提供了对 webpack 良好支持，所以使用webpack + swc搭配没有任何问题。
