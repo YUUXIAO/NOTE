@@ -3,13 +3,41 @@ CommonJS 的包规范的定义是由包结构和包描述文件两个部分组�
 1. 包结构文件用于组织包中的各种文件；
 2. 包描述文件用于描述包的相关信息；
 
+https://blog.csdn.net/azl397985856/article/details/103982369?spm=1001.2101.3001.6650.10&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EOPENSEARCH%7ERate-10-103982369-blog-126813607.pc_relevant_3mothn_strategy_and_data_recovery&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EOPENSEARCH%7ERate-10-103982369-blog-126813607.pc_relevant_3mothn_strategy_and_data_recovery&utm_relevant_index=11
+
 https://segmentfault.com/q/1010000009864039 【dependencies、devDependencies 的区别】
 
 https://segmentfault.com/a/1190000008398819 【`dependency`，`devDependency`】
 
-https://zhuanlan.zhihu.com/p/128625669 【npm Install 详解】
+**https://zhuanlan.zhihu.com/p/128625669 【npm 进化详解】**
 
 https://blog.csdn.net/liuyan19891230/article/details/103856130
+
+## package.json文件
+
+xmind属性字段分类
+
+https://mmbiz.qpic.cn/mmbiz_png/EO58xpw5UMO5o6m7MzbCAbXRYJGekcC98XV28Oia6K9DUwHN2sAp1jdBDa0UFFFl6COoONvIf9xOh0oG1sicnUnQ/640?wx_fmt=png&wxfrom=5&wx_lazy=1&wx_co=1
+
+### 依赖配置
+
+根据项目依赖包的不同用途，可以将他们配置在下面的五个属性：
+
+#### dependencies
+
+> 该字段声明的是项目的生产环境所必须的依赖包，安装依赖时使用--save参数，可以将新安装的npm包写入dependencies属性。
+
+
+
+#### devDependencies
+
+
+
+#### peerDependencies
+
+#### bundledDependencies
+
+#### optionalDependencies 
 
 ## 包结构
 
@@ -22,6 +50,83 @@ https://blog.csdn.net/liuyan19891230/article/details/103856130
 3. lib: 用于存放 Javascript 代码的目录；
 4. doc: 用于存放文档的目录；
 5. test: 用于存放单元测试用例的代码；
+
+## NPM
+
+### 嵌套结构
+
+npm3.x之前的版本，处理依赖的方式是以一个递归的形式处理：
+
+严格按照 package.json 结构以及子依赖包的 package.json 的结构将依赖安装到他们各自的 node_modules 中
+
+优点：node_modules 的结构和 package.json 结构一一对应，层级结构明显，并且保证了每次安装目录结构都是相同的
+
+缺点：如果出现不同层级的包引用了同一个模块或包的情况下，会造成冗余，不能复用
+
+### 扁平解构
+
+npm3.x之前的版本，将早期的嵌套结构改为扁平结构，就是把所有依赖以及其子依赖包都统一“拍平”处理，
+
+安装模块时，不管其是直接依赖还是子依赖的依赖，**优先**将其安装在 node_modules 根目录
+
+当安装到相同模块时，先判断已安装的模块版本是否符合新模块的版本范围，如果符合则跳过，不符合则在当前模块的 node_modules 下安装该模块。
+
+在项目代码中引用了模块，模块查找流程：
+
+当前模块路径 --> 当前模块node_modules --> 上级模块node_modules --> ... --> 全局路径中的 node_modules
+
+比如：项目中依赖的包有 A、B、C，A下依赖了 Aa@^1.0.1，B下依赖了Bb@^1.0.1，C不依赖其他模块,此时在执行 npm install 时得到的目录结构：
+
+```
+app
+A、Aa@^1.0.2、B、Bb@^1.0.1、C
+```
+
+如果此时项目又引入了 Aa@^1.0.1，判断得到新模块的版本范围符合  Aa@^1.0.2，则跳过安装
+
+如果此时B引入了 Aa@^1.0.3，判断得到新模块的版本范围不符合  Aa@^1.0.2，此时在执行 npm install 时得到的目录结构：
+
+```
+app
+A、Aa@^1.0.2、B、Bb@^1.0.1、C
+-、-、Aa@^1.0.3、-
+```
+
+此时会发现，扁平结构的设计并不能完全解决老版本的模块冗余问题，还带来了一个新的问题
+
+在执行  npm install 的时候，按照 package.json 里依赖的顺序依次解析，如果项目依赖A和依赖B同时引用了同一模块C的不同版本，模块C在node_modules 的依赖结构取决于依赖A和依赖B在 package.json 的顺序
+
+在 package.json通常只会锁定大版本，而且在某些依赖包小版本更新后，同样可能造成依赖结构的改动，依赖结构的不确定性可能会给程序带来不可预知的问题
+
+### Lock文件（json格式）
+
+npm 5.x 版本新增了 package-lock.json 文件，而安装方式还是 npm 3.x 的扁平化的方式，Lock 文件解决了 npm3.x install 时依赖不稳定的情况
+
+lock.json 的作用是锁定依赖结构，即只要你目录下有 package-lock.json 文件，那么你每次执行 npm install 后生成的 node_modules 目录结构一定是完全相同的。
+
+```json
+"name": "xxx",
+"version": "0.1.0",
+"lockfileVersion": 1,
+"requires": true,
+"dependencies":｛
+  "element-ui": {
+    "version": "2.14.1",
+    "resolved": "https://registry.npmjs.org/element-ui/-/element-ui-2.14.1.tgz",
+    "integrity": "sha512-Uje0J12dBaXdyvt/EtuDA8diFbYTdO7uI4QCfl7zmEJmE1WxgCSVKhlRRoL8MDonO8pyNVhB4n0AFAR14g56nw==",
+    "requires": {
+      "async-validator": "~1.8.1",
+      "babel-helper-vue-jsx-merge-props": "^2.0.0",
+      "deepmerge": "^1.2.0",
+      "normalize-wheel": "^1.0.1",
+      "resize-observer-polyfill": "^1.5.0",
+      "throttle-debounce": "^1.0.1"
+    }
+  }
+｝
+```
+
+
 
 ## 包描述文件与NPM
 
