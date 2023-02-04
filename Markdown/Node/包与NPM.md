@@ -104,16 +104,21 @@ npm 5.x 版本新增了 package-lock.json 文件，而安装方式还是 npm 3.x
 
 lock.json 的作用是锁定依赖结构，即只要你目录下有 package-lock.json 文件，那么你每次执行 npm install 后生成的 node_modules 目录结构一定是完全相同的。
 
-```json
+```javascript
 "name": "xxx",
 "version": "0.1.0",
 "lockfileVersion": 1,
 "requires": true,
+ // dependencies 是一个对象，和node_modules中的包结构一一对应，key为包名称，值为包的一些描述信息
 "dependencies":｛
   "element-ui": {
-    "version": "2.14.1",
-    "resolved": "https://registry.npmjs.org/element-ui/-/element-ui-2.14.1.tgz",
+    // 包版本 —— 这个包当前安装在 node_modules 中的版本
+    "version": "2.14.1", 
+     // 包具体的安装来源
+    "resolved": "https://registry.npmjs.org/element-ui/-/element-ui-2.14.1.tgz", 
+     // 包 hash 值，基于 Subresource Integrity 来验证已安装的软件包是否被改动过、是否已失效
     "integrity": "sha512-Uje0J12dBaXdyvt/EtuDA8diFbYTdO7uI4QCfl7zmEJmE1WxgCSVKhlRRoL8MDonO8pyNVhB4n0AFAR14g56nw==",
+    // 对应子依赖的依赖，与子依赖的 package.json 中 dependencies的依赖项相同
     "requires": {
       "async-validator": "~1.8.1",
       "babel-helper-vue-jsx-merge-props": "^2.0.0",
@@ -121,12 +126,83 @@ lock.json 的作用是锁定依赖结构，即只要你目录下有 package-lock
       "normalize-wheel": "^1.0.1",
       "resize-observer-polyfill": "^1.5.0",
       "throttle-debounce": "^1.0.1"
+    },
+    // 结构和外层的 dependencies 结构相同，存储安装在子依赖node_modules 中的依赖包。
+    // 并不是所有的子依赖都有 dependencies 属性，只有子依赖的依赖和当前已安装在根目录的 node_modules 中的依赖冲突之后，才会有这个属性。
+    "dependencies":{
+      "is-extendable": {
+          "version": "1.0.1",
+          "resolved": "xx",
+          "integrity": "xx",
+          "dev": true,
+          "requires": {}
+        }
     }
   }
 ｝
 ```
 
+优点：lock文件已经记录缓存子依赖包包的具体版本和下载链接，不需要再去远程仓库进行查询，可以直接进入文件完整性校验环节，减少了大量网络请求，所以项目中使用 lock 文件可以显著加速依赖安装时间
 
+在团队开发项目时，建议上传lock文件到远端，这样能保证所有项目开发者以及 CI 环节可以在执行 npm install 时安装的依赖版本都是一致的
+
+如果是在开发一个 npm包 时，你的 npm包 是需要被其他仓库依赖的，由于上面我们讲到的扁平安装机制，如果你锁定了依赖包版本，你的依赖包就不能和其他依赖包共享同一 semver 范围内的依赖包，这样会造成不必要的冗余。所以我们不应该把package-lock.json 文件发布出去（ npm 默认也不会把 package-lock.json文件发布出去）
+
+### 缓存
+
+在执行 npm install 或 npm update命令下载依赖后，除了将依赖包安装在node_modules 目录下外，还会在本地的缓存目录缓存一份
+
+通过 npm config get cache 命令可以查询到：在 Linux 或 Mac 默认是用户主目录下的 .npm/_cacache 目录。
+在这个目录下又存在两个目录：content-v2、index-v5，content-v2 目录用于存储 tar包的缓存，而index-v5目录用于存储tar包的 hash。
+npm 在执行安装时，可以根据 package-lock.json 中存储的 integrity、version、name 生成一个唯一的 key 对应到 index-v5 目录下的缓存记录，从而找到 tar包的 hash，然后根据 hash 再去找缓存的 tar包直接使用。
+
+以上的缓存策略是从 npm v5 版本开始的，在 npm v5 版本之前，每个缓存的模块在 ~/.npm 文件夹中以模块名的形式直接存储，储存结构是{cache}/{name}/{version}。
+
+### 文件完整性
+
+在下载依赖包之前，我们一般就能拿到 npm 对该依赖包计算的 hash 值
+
+用户下载依赖包到本地后，需要确定在下载过程中没有出现错误，所以在下载完成之后需要在本地在计算一次文件的 hash 值，如果两个 hash 值是相同的，则确保下载的依赖是完整的，如果不同，则进行重新下载。
+
+## Yarn
+
+yarn 也是采用的是 npm v3.x 的扁平结构来管理依赖，安装依赖后默认会生成一个 yarn.lock 文件
+
+package-lock.json 使用的是 json 格式，yarn.lock 使用的是一种自定义格式
+
+```json
+"@babel/runtime@7.x":
+  "integrity" "sha512-38Y8f7YUhce/K7RMwTp7m0uCumpv9hZkitCbBClqQIow1qSbCvGkcegKOXpEWCQLfWmevgRiWokZ1GkpfhbZug=="
+  "resolved" "https://registry.npmmirror.com/@babel/runtime/-/runtime-7.18.3.tgz"
+  "version" "7.18.3"
+  dependencies:
+    "regenerator-runtime" "^0.13.4"
+
+"@commitlint/cli@^12.1.1":
+  "integrity" "sha1-dANw5VeooX9BUFKCHN1Sduywq5g="
+  "resolved" "https://registry.nlark.com/@commitlint/cli/download/@commitlint/cli-12.1.1.tgz"
+  "version" "12.1.1"
+  dependencies:
+    "@commitlint/format" "^12.1.1"
+    "@commitlint/lint" "^12.1.1"
+    "@commitlint/load" "^12.1.1"
+    "@commitlint/read" "^12.1.1"
+    "@commitlint/types" "^12.1.1"
+    "get-stdin" "8.0.0"
+    "lodash" "^4.17.19"
+    "resolve-from" "5.0.0"
+    "resolve-global" "1.0.0"
+    "yargs" "^16.2.0"
+```
+
+yarn.lock 中子依赖的版本号并不是和npm一样是固定的，意味着单独又一个 yarn.lock确定不了 node_modules 目录结构，还需要和 package.json 文件进行配合。而 package-lock.json 只需要一个文件即可确定。
+
+yarn 的缓策略看起来和 npm v5 之前的很像，每个缓存的模块被存放在独立的文件夹，文件夹名称包含了模块名称、版本号等信息。
+
+![img](C:\Users\slb0930\AppData\Local\Temp\企业微信截图_16755044198818.png)
+
+使用命令 yarn cache dir可以查看缓存数据的目录。
+yarn 默认使用 prefer-online 模式，即优先使用网络数据，如果网络数据请求失败，再去请求缓存数据。
 
 ## 包描述文件与NPM
 
