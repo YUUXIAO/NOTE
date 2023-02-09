@@ -5,7 +5,7 @@ CommonJS 的包规范的定义是由包结构和包描述文件两个部分组�
 
 https://blog.csdn.net/azl397985856/article/details/103982369?spm=1001.2101.3001.6650.10&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7EOPENSEARCH%7ERate-10-103982369-blog-126813607.pc_relevant_3mothn_strategy_and_data_recovery&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7EOPENSEARCH%7ERate-10-103982369-blog-126813607.pc_relevant_3mothn_strategy_and_data_recovery&utm_relevant_index=11
 
-https://segmentfault.com/q/1010000009864039 【dependencies、devDependencies 的区别】
+**~~https://segmentfault.com/q/1010000009864039 【dependencies、devDependencies 的区别】~~**
 
 **~~https://segmentfault.com/a/1190000008398819 【`dependency`，`devDependency`】~~**
 
@@ -36,29 +36,119 @@ https://mmbiz.qpic.cn/mmbiz_png/EO58xpw5UMO5o6m7MzbCAbXRYJGekcC98XV28Oia6K9DUwHN
 
 ![dependcy](F:\Yabby\NOTE\Markdown\Node\image\dependcy.png)
 
-当我们在 project 项目下执行 npm install 时，
-
-
+当我们在 project 项目下执行 npm install 时，packageA、 packageB 、packageA1都会添加到 node_modules 文件夹中，packageA2 则不会下载，在node_modules 文件夹中找不到该依赖
 
 ## 依赖配置
+
+总结放最上面吧，其实package.json 的依赖配置都是node 设计的一个配置规范，
+
+如果你项目只是自己在开发或者工作环境不改变，写不写或者依赖放的位置在哪都无所谓，npm install 都会安装这些依赖
+
+如果你是在开发一个 node 包去提供给别人引用，那可能就要注意这些依赖放哪个位置，因为在 npm install 时，只会安装配置在 dependencies 下的依赖到 node_modules 里，否则运行打包时在 node_modules 找不到对应的依赖会报错
+
+
 
 根据项目依赖包的不同用途，可以将他们配置在下面的五个属性：
 
 #### dependencies 与 devDependencies
 
-> 该字段声明的是项目的生产环境所必须的依赖包，安装依赖时使用--save参数，可以将新安装的npm包写入dependencies属性。
+npm install xxx --save，将依赖添加到 dependencies 下，表示为项目运行且上线也依然需要的依赖，比如 vue、elementUI 等
 
+npm install xxx --save-dev，将依赖添加到 devDependencies下，表示为项目在开发阶段中需要的依赖，上线时无需打包此依赖，比如 webpack、typescript、prettier、eslint、babel 等做为测试、打包、编译等功能作用的依赖
 
+可以理解为如果是自已团队的项目里，将依赖安装到 dependencies 或 devDependencies 下，其实没有太大的区别，执行 npm install 时都会下载包到 node_modules 文件夹下
 
-#### devDependencies
+如果只在自己的项目里，也不想安装自己的 devDependencies 下的依赖，可以使用 npm install --production 命令，
 
-
+如果是开发一个 node 包或者别的项目需要依赖你的包，那么将依赖添加到 dependencies 或 devDependencies 可能需要好好留意一下
 
 #### peerDependencies
 
+假设 packageA 依赖中声明了 peerDependencies 属性下有 packageC，可以理解为使用到 packageA 的项目需要同时安装 packageC，否则程序就可能会有异常
+
+如果在 npm3.x 下执行 npm install，控制台就会告警  UNMET PEER DEPENDENCY packageC（只是打印警告提示）
+
+如果在 npm1.x 或 npm2.x 下执行 npm install，不会报错而是自动会把 packageA 依赖的 peerDependencies 属性下的包安装上（强制安装）
+
+比如安装 ant-design@3.x，它只是提供一套 react 组件的 UI 库，所以它是要求在 运行环境要安装指定版本的 react 依赖
+
+```javascript
+//  ant-design@3.x 的 package.json 部分配置
+{
+  'name': 'ant-design',
+  'version': '3.1'
+  "peerDependencies": {
+    "react": ">=16.0.0",
+    "react-dom": ">=16.0.0"
+  }
+}
+
+// 此时项目中 node_modules下依赖结构为
+-- ant-design
+-- react
+-- react-dom
+
+// 项目中使用
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+```
+
+在项目中执行 npm install 时 ，可以在 node_modules 下找到 react 和 react-dom 依赖
+
+此时在项目中引入的 react 或 react-dom，其实是引用的运行项目自己提供的依赖包，不是用的 node_modules 下 ant-design 依赖下的 react 或 react-dom
+
+如果在 npm3.x 下，peerDependencies 属性下的依赖是不会强制安装的，所以 如果需要引入 react-dom，是需要开发者在项目的 package.json 手动安装该属性下的依赖，如果你项目中的一个依赖包更新了它的  peerDependencies ，开发者也需要自己更新项目中 package.json 该依赖的版本
+
+![企业微信截图_16759138135947](F:\Yabby\NOTE\Markdown\Node\image\企业微信截图_16759138135947.png)
+
 #### bundledDependencies
 
+假设你的项目 package.json 文件如下：
+
+```json
+{
+  "name": "packageA",
+  "dependencies": {
+    "packageA1": "xxx",
+    "packageA2": "xxx",
+    "packageA3": "xxx"
+  },
+  "bundleDependencies": [
+    "packageA1",
+    "packageA2"
+  ]
+}
+```
+
+那么当你的项目中使用 npm3.x 安装依赖 packageA 时，项目的 node_modules 会是下面这样
+
+```
+-- node_modules
+----packageA
+------packageA1
+------packageA2
+----packageA3
+```
+
+这个属性的作用就是在项目安装了依赖 packageA 时，将该依赖下 bundleDependencies 所声明的依赖安装在自身的 node_modules下，其他的依赖否则会按照 npm3.x 的“扁平”处理
+
 #### optionalDependencies 
+
+如果你项目中的一个依赖了一个包 packageA，这个 packageA 没有安装，你仍然想让程序正常执行，这个时候就可以配置 optionalDependencies  属性
+
+如果同一个依赖packageA同时在 dependencies 和 optionalDependencies 中声明，option 还会*覆盖* dependency 的声明。
+
+如果 package-optional 这个包是可选的，在代码中需要做兼容处理：
+
+```javascript
+try {
+    var pkgOpt = require('packageOptional');
+} catch (e) {
+    pkgOpt = null;
+}
+```
+
+
 
 ## 包结构
 
@@ -86,7 +176,7 @@ npm3.x之前的版本，处理依赖的方式是以一个递归的形式处理�
 
 ### 扁平解构
 
-npm3.x之前的版本，将早期的嵌套结构改为扁平结构，就是把所有依赖以及其子依赖包都统一“拍平”处理，
+npm3.x之后的版本，将早期的嵌套结构改为扁平结构，就是把所有依赖以及其子依赖包都统一“拍平”处理，
 
 安装模块时，不管其是直接依赖还是子依赖的依赖，**优先**将其安装在 node_modules 根目录
 
