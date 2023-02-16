@@ -2,6 +2,8 @@
 
 [官方文档 ](https://cn.vitejs.dev/guide/api-plugin.html)
 
+https://blog.csdn.net/qq_34621851/article/details/123535975?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-1-123535975-blog-124456738.pc_relevant_3mothn_strategy_and_data_recovery&spm=1001.2101.3001.4242.2&utm_relevant_index=4
+
 ## 插件钩子
 
 ### 通用钩子
