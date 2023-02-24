@@ -1,3 +1,7 @@
+https://blog.csdn.net/ljinkai_ljk/article/details/125127805 【v2升级v3】
+
+
+
 Chrome 插件是一个用 Web 技术开发、用来增强浏览器功能的软件，它其实就是一个由HTML、CSS、JS、图片等资源组成的一个.crx 后缀的压缩包；
 
 ## 核心文件
