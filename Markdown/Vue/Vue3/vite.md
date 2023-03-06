@@ -1,6 +1,16 @@
 
 
-https://www.cnblogs.com/mlzzen/p/15730345.html
+~~https://www.cnblogs.com/mlzzen/p/15730345.html~~
+
+
+
+## 问题
+
+为什么 setup 里面 defindProps 不能使用 import 的 ts
+
+
+
+
 
 vite 利用浏览器原生支持 ESM 的这个特性，省略了对模块的打包，也不需要生成 bundle（webpack 就花了很多时间在这一步，预处理的时间很长），所以初次启动时间更快，HMR特性友好
 
@@ -21,6 +31,90 @@ Vite Server的所有逻辑基本都依赖于中间件，这些中间件，拦截
 - 没有修改的文件返回304状态码（浏览器缓存），所以浏览器不会再请求，直接使用缓存
 - 通过 esbuild 来支持 .(t|j)sx？ 文件，打包编译速度更快
 
+
+## Vite如何做到按需加载
+
+- 处理 index.html 文件的内容
+
+  - 在文件中插入 script 标签，注入环境变量，定义 process：
+
+    ```
+     window.process = { env: { NODE_ENV: 'DEV' } }
+    ```
+
+- 在 index.html 中会请求 /src/main.js 文件
+
+  - 将 import { createApp } from 'vue' 引入依赖包的代码处理成 import { createApp } from '/@modules/vue' ，把路径换成相对路径
+
+- 请求 node_modules 中的文件
+
+  - 浏览器向开发服务器请求 /@modules/vue，./App.vue，./index.css 
+  - 后台收到以上文件请求，会去读取项目 node_modules/vue/package.json 中的 module 字段，拿到  "dist/vue.runtime.esm-bundler.js"，接着去请求这个文件
+
+- main.js 文件中 import 了 ./App.vue 文件（相对路径），浏览器向后台请求 /src/App.vue
+
+- 后台处理.vue 的代码，主要是处理 template 的内容
+
+  - 页面引用路径调整成 ${url}?type=template
+
+    ```js
+    import { ref, computed } from '/@modules/vue'
+    const __script = {
+        setup() {
+            const count = ref(1)
+            function add() {
+                count.value++
+            }
+            const double = computed(() => count.value * 2)
+            return { count, double, add }
+        },
+    }
+    import { render as __render } from '/src/App.vue?type=template'
+    __script.render = __rend
+    export default __script
+    ```
+
+  - 经过后台处理的 App.vue 文件的 template：可以理解为把 App.vue 的 template  编译成一个 render  函数
+
+    ```js
+    export function render(_ctx, _cache) {
+        return (
+            _openBlock(),
+            _createElementBlock('div', null, [
+                _createElementVNode(
+                    'h1',
+                    null,
+                    _toDisplayString(_ctx.count) + ' * 2 = ' + _toDisplayString(_ctx.double),
+                    1 /* TEXT */,
+                ),
+                _createElementVNode('button', { onClick: _ctx.add }, 'click', 8 /* PROPS */, [
+                    'onClick',
+                ]),
+            ])
+        )
+    }
+    ```
+
+- 后台处理 style 的代码
+
+  ```css
+  if (url.endsWith('.css')) {
+      const p = path.resolve(__dirname, url.slice(1))
+      const file = fs.readFileSync(p, 'utf-8')
+      const content = `
+          const css = '${file.replace(/\n/g, '')}'
+          let link = document.createElement('style')
+          link.setAttribute('type','text/css')
+          document.head.appendChild(link)
+          link.innerHTML = css
+          export default css
+      `
+      ctx.type = 'application/javascript'
+      ctx.body = content
+  }
+  ```
+
+- 因为请求/@modules/vue返回的内容中import了/@modules/@vue/runtime-dom，所以浏览器会向后台请求/@modules/@vue/runtime-dom，直到把所有依赖请求加载完毕，然后页面才会渲染
 
 
 

