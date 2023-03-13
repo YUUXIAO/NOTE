@@ -23,3 +23,36 @@ https://www.cnblogs.com/zdsdididi/p/16396088.html 【vue3特性】
 
 - `Attribute`强制策略
 
+
+## 响应式 API
+
+https://cn.vuejs.org/api/reactivity-advanced.html 【官方组件】
+
+## shallowRef()
+
+场景：长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
+
+## dev 调试 Api
+
+### onRenderTracked 状态跟踪
+
+当组件渲染过程中追踪到响应式依赖时调用
+
+onRenderTracked 会跟踪页面上所有响应式变量和方法的状态（可以理解为用 return 返回的值都会跟踪），只要页面有 update 的情况，就会跟踪，生成一个 event 对象
+
+
+
+### onRenderTriggered 状态触发
+
+当响应式依赖的变更触发了组件渲染时调用
+
+onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，并且新值和旧值都会给你明确的展示出来。
+
+可以理解为就是跟踪渲染页面的变量，js 变量不会跟踪，更精准，会返回：
+
+- 变化变量的 key 
+- newValue 更新后变量的值
+- oldValue 更新前变量的值
+- target 目前页面中的响应变量和函数
+
+感觉和watch 很像，而且是 immidate= true
