@@ -28,6 +28,173 @@ https://www.cnblogs.com/zdsdididi/p/16396088.html 【vue3特性】
 
 https://cn.vuejs.org/api/reactivity-advanced.html 【官方组件】
 
+~~https://zhuanlan.zhihu.com/p/528715632?utm_id=0【vue3的watch和watchEffect】~~
+
+
+
+### watch 和 watchEffect()
+
+#### watch()
+
+watch 方法一般用于侦听一个或多个响应式数据源，并在数据源变化时调用所给的回调函数。
+
+`watch()` 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
+
+**watch的监听类型**
+
+先看watch 属性的Ts类型定义 
+
+```typescript
+interface ComponentOptions {
+  watch?: {
+    [key: string]: WatchOptionItem | WatchOptionItem[]
+  }
+}
+
+type WatchOptionItem = string | WatchCallback | ObjectWatchOptionItem
+
+type WatchCallback<T> = (
+  value: T,
+  oldValue: T,
+  onCleanup: (cleanupFn: () => void) => void
+) => void
+
+type ObjectWatchOptionItem = {
+  handler: WatchCallback | string
+  immediate?: boolean // default: false
+  deep?: boolean // default: false
+  flush?: 'pre' | 'post' | 'sync' // default: 'pre'
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
+}
+```
+
+**参数信息：**
+
+- 第一个参数是侦听器的**源**。这个来源可以是以下几种：
+  - 一个函数，返回一个值
+  - 一个 ref
+  - 一个响应式对象
+  - ...或是由以上类型的值组成的数组
+- 第二个参数是在发生变化时要调用的回调函数。这个回调函数接受三个参数：新值、旧值，以及一个用于注册副作用清理的回调函数。该回调函数会在副作用下一次重新执行前调用，可以用来清除无效的副作用（同watchEffect 的使用）；
+  - 当侦听多个来源时，回调函数接受两个数组，分别对应来源数组中的新值和旧值。
+- 第三个可选的参数是一个对象，支持以下这些选项：
+  - **immediate**：在侦听器创建时立即触发回调。第一次调用时旧值是 `undefined`（watchEffect 自带，无须配置）
+  - **deep**：如果源是对象，强制深度遍历，以便在深层级变更时触发回调
+  - **flush**：调整回调函数的刷新时机（同 watchEffect ）
+  - **onTrack / onTrigger**：调试侦听器的依赖（同 watchEffect ）
+
+#### watchEffect()
+
+立即运行一个函数，同时响应式地追踪其依赖，并在依赖更改时重新执行
+
+比watch不同的是，这个方法是默认初始化会之执行一次副作用函数，不需要添加属性 immediate: true
+
+使用场景：
+
+- 不需要持续监听，比较适合初始化根据某部分数据执行方法
+- 比 watch 方便，immediate 方向的使用
+- 不需要关心监听的数据具体变化的值，只关注结果
+
+看下watchEffect 的ts 类型定义：
+
+```typescript
+function watchEffect(
+  effect: (onCleanup: OnCleanup) => void,
+  options?: WatchEffectOptions
+): StopHandle
+
+type OnCleanup = (cleanupFn: () => void) => void
+
+interface WatchEffectOptions {
+  flush?: 'pre' | 'post' | 'sync' // 默认：'pre'
+  onTrack?: (event: DebuggerEvent) => void
+  onTrigger?: (event: DebuggerEvent) => void
+}
+
+type StopHandle = () => void
+```
+
+**参数信息：**
+
+- effect：要运行的副作用函数，用来注册清理回调。清理回调会在该副作用下一次执行前被调用，可以用来清理无效的副作用，例如等待中的异步请求
+
+  ```javascript
+  const CancelToken = axios.CancelToken;
+  let cancel;
+
+  const getData = ()=>{
+    axios.get('xxx', {
+      cancelToken: new CancelToken(function executor(c) {
+        cancel = c;
+      },params:{})
+    });
+  }
+
+  watchEffect((onCleanup) => {
+    onCleanup(cancel)  // 先取消上一次的请求
+    if(props.id) getData(id) 
+  })
+  ```
+
+- options：一个可选的选项，一般用来调整副作用的刷新时机或调试副作用的依赖
+
+  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况 
+
+  ```
+
+  ```
+
+  ​
+
+- 返回一个用来停止该副作用的函数（停止监听）
+
+  ```javascript
+  const stop = watchEffect((onCleanup) => {
+    if (props.id) {
+      getData() // 获取接口信息
+      stop() // 达到条件，停止监听
+    }
+  })
+  ```
+
+#### 手动停止监听器
+
+通常来说，在组件被销毁或者卸载后，监听器也会跟着被销毁。但是总是有一些特殊情况，即使组件卸载了，但是监听器依然存在，这个时候其实式需要我们手动关闭它的，否则容易造成内存泄漏
+
+```javascript
+<script setup>
+import { watchEffect } from 'vue'
+// 它会自动停止
+watchEffect(() => {})
+// ...这个则不会！
+setTimeout(() => {
+  watchEffect(() => {})
+}, 100)
+</script>
+```
+
+上段代码中我们采用异步的方式创建了一个监听器，这个时候监听器没有与当前组件绑定，所以即使组件销毁了，监听器依然存在。
+
+我们需要用一个变量接收监听器函数的返回值，其实就是返回的一个函数，然后我们调用该函数，即可关闭当前监听器。
+
+```javascript
+const unwatch = watchEffect(() => {})
+// ...当该侦听器不再需要时
+unwatch()
+```
+
+#### 回调中的 DOM
+
+如果我们在监听器的回调函数中或取 DOM，这个时候的 DOM 是更新前的，可以通过给监听器多传递一个参数选项：flush: 'post' 来调整获取对应状态的 DOM
+
+#### 使用场景区分
+
+相比watchEffect而言，watch 可以 
+
+- **执行时机：**watch 是懒执行副作用（可配置 immediate：true），watchEffect 是默认初始化先执行一次，无需配置，如果关注这个使用 watchEffect 更方便
+- **数据源的变化：**watch 更明确、关注由哪个/哪些数据触发的侦听器执行（过程，可以访问所侦听状态的前一个值和当前值），watchEffect 只关注数据改变的状态-触发侦听器方法执行（结果）
+
 ## shallowRef()
 
 场景：长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
