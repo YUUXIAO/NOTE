@@ -19,6 +19,12 @@ https://blog.csdn.net/weixin_52148548/article/details/125055677?spm=1001.2014.30
 - `Attribute`强制策略
 
 
+
+
+## v-memo 指令
+
+提供了记忆一部分模板树的能力。 v-memo 指令使得这部分模板可以跳过虚拟 DOM 的 diff 比较，同时还完全跳过新 VNode 的创建。 虽然很少需要，但它提供了一种在某些情况下想要得到最大性能的方案，例如大型 v-for 列表
+
 ## 响应式 API
 
 https://cn.vuejs.org/api/reactivity-advanced.html 【官方组件】
@@ -306,6 +312,32 @@ unwatch()
 
 场景：长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
 
+如果不是页面上需要进行视图更新的，我们可以不用reactive，ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowref) 和 [`shallowReactive()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowreactive) 浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
+
+```javascript
+const shallowArray = shallowRef([
+  /* 巨大的列表，里面包含深层的对象 */
+])
+
+// 这不会触发更新...
+shallowArray.value.push(newObject)
+// 这才会触发更新
+shallowArray.value = [...shallowArray.value, newObject]
+
+// 这不会触发更新...
+shallowArray.value[0].foo = 1
+// 这才会触发更新
+shallowArray.value = [
+  {
+    ...shallowArray.value[0],
+    foo: 1
+  },
+  ...shallowArray.value.slice(1)
+]
+```
+
+###  Effect 作用域 API（v2.3）
+
 ## effectScope
 
 创建一个 effect 作用域，可以捕获其中所创建的响应式副作用（computed 和  watchers），这样捕获到的副作用就可以 一起处理（直接销毁作用域）
@@ -365,17 +397,17 @@ scope.stop() // 处理掉当前作用域内的所有 effect
 
 ## dev 调试 Api
 
-### onRenderTracked 状态跟踪
+### 【组件调试钩子】onRenderTracked 状态跟踪
 
-当组件渲染过程中追踪到响应式依赖时调用
+当组件渲染过程中追踪到响应式依赖时调用，用来调试查看哪些依赖正在被使用（这是一个**生命周期钩子**）
 
 onRenderTracked 会跟踪页面上所有响应式变量和方法的状态（可以理解为用 return 返回的值都会跟踪），只要页面有 update 的情况，就会跟踪，生成一个 event 对象
 
 
 
-### onRenderTriggered 状态触发
+### 【组件调试钩子】onRenderTriggered 状态触发
 
-当响应式依赖的变更触发了组件渲染时调用
+当响应式依赖的变更触发了组件渲染时调用，用来确定哪个依赖正在触发更新
 
 onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，并且新值和旧值都会给你明确的展示出来。
 
@@ -386,4 +418,4 @@ onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，�
 - oldValue 更新前变量的值
 - target 目前页面中的响应变量和函数
 
-感觉和watch 很像，而且是 immidate= true
+感觉和watch 很像，而且是 immidate= true 的时候
