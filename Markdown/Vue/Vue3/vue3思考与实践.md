@@ -1,17 +1,16 @@
-区别于2.0的 computed、watch，3.0针对响应式进行了更细化的处理和使用场景区分（我个人觉得是性能优化入手的重头）
-
-
-
-https://www.cnblogs.com/zdsdididi/p/16396088.html 【vue3特性】
-
 - watch和watchEffect的区别？
 
   - https://zhuanlan.zhihu.com/p/528715632?utm_id=0
   - https://blog.csdn.net/weixin_52148548/article/details/125073998
-  - computed和watch所依赖的数据必须是响应式的。Vue3引入了watchEffect,watchEffect 相当于将 watch 的依赖源和回调函数合并，当任何你有用到的响应式依赖更新时，该回调函数便会重新执行。不同于 watch的是watchEffect的回调函数会被立即执行，即（{ immediate: true }）
-    https://blog.csdn.net/weixin_52148548/article/details/125055677?spm=1001.2014.3001.5502 【reactive、ref、toRef、toRefs】
+  - https://blog.csdn.net/weixin_52148548/article/details/125055677?spm=1001.2014.3001.5502 【reactive、ref、toRef、toRefs】
 
-- **defineProps** 不能引用外部的 Ts？
+- **defineProps** 在setup不能引用外部的 Ts？宏作用域
+
+- **props 稳定性**，控制传给组件的 props尽量稳定
+
+- 响应式api接收 proxy对象
+
+- 但readonly可以接受Proxy对象，而且有实际意义，它可以获取纯对象或者Proxy或者RefImpl，返回原始代理的只读代理。说白了它做2步操作，先reactive，然后另生成一个只读Proxy。
 
 - ### attrs和listeners
 
@@ -21,7 +20,7 @@ https://www.cnblogs.com/zdsdididi/p/16396088.html 【vue3特性】
 
   - 在组合式API中，如果想在子组件中用其它变量接收props的值时需要使用toRef将props中的属性转为响应式。
 
-- build.polyfillDynamicImport ？？？ 已经废弃
+- build.polyfillDynamicImport ？？？ 已经废弃（会兼容），新的替代方案
 
 - inheritAttrs 属性
 
@@ -48,35 +47,141 @@ watch(idValue, (id, oldId, onCleanup) => {
 ```
 
 
-## v-memo 指令
 
-提供了记忆一部分模板树的能力。 v-memo 指令使得这部分模板可以跳过虚拟 DOM 的 diff 比较，同时还完全跳过新 VNode 的创建。 虽然很少需要，但它提供了一种在某些情况下想要得到最大性能的方案，例如大型 v-for 列表
+### TODO extends 属性
 
 ## 响应式 API
 
 https://cn.vuejs.org/api/reactivity-advanced.html 【官方组件】
 
+### reactive 和 shallowReactive 
+
+#### reactive 
+
+reactive 的响应式转换是深层的，会影响到所有嵌套的属性
+
+**TODO** 试试原始对象
+
+Vue 3的根基。返回对象的响应式副本，响应式转换是“深层”的——它影响所有嵌套property。返回Proxy对象，不等于原始对象。建议只操作Proxy对象，不要操作原始对象。
+
+#### shallowReactive
+
+ shallowReactive 就是把数据转为浅层次（第一层）的响应式数据，假设对象里是对象B，对象B就不是响应式的（有点类比浅拷贝）
+
+**场景**：如果一个对象的深层不可能变化，那么就没必要深层响应，这时候用shallowReactive可以节省系统开销
+
+```javascript
+
+<template>
+<div>
+  <button @click="r.b.c++">count is: {{ r.b.c }}</button>
+  <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+</div>
+</template>
+
+<script>
+import { reactive, shallowReactive } from "vue";
+export default {
+  setup() {
+    let r = reactive({a: 1, b: {c: 2}});
+    console.log(r);
+    let s = shallowReactive({a: 1, b: {c: 2}});
+    console.log(s);
+    return {
+      r,s
+    };
+  },
+};
+</script>
+```
+
+按下第2个button不会有反应，只有又去按下第1个button之后，视图刷新，第二个button才有反应。
+
+### toRef 和 toRefs
+
+#### toRef
+
+基于**响应式对象**上的一个属性，创建一个对应的 ref，创建的 ref 与其源属性保持同步，即改变源属性的值也将更新ref 的值
+
+**使用场景：**
+
+- 利用它去处理，把响应式的对象结构出来，方便在模板中使用
+
+```
+const person = reactive({
+  name： "yabby"
+})
+
+const name = toRef(person.name)
+```
+
+#### toRefs
+
+将一个响应式对象转换为一个普通对象，这个普通对象的每个属性都是指向源对象相应属性的ref
+
+相当于创建了一个普通对象，而对象中每个属性都是使用 toRefs 创建的 ref
+
+比如之前没有用 setup 时我们一般return ...toRefs(state)
+
 ### ref 和 shallowRef 
+
+#### ref
+
+
+
+ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)
+
+这里有一个问题，为什么 vue2.0 没有区分基本数据类型和引用数据类型做响应式？
+
+- 因为defineproperty就是Object的静态方法，它只是为对象服务的，甚至无法对数组服务，因此Vue 2弄了一个data根对象来存放基本数据类型，这样无论什么类型，都是根对象的property，所以也就能代理基本数据类型。
+
+
+- Proxy能对所有引用类型代理，Vue 3也不再用data根对象，而是一个个的变量，所以带来了新问题，如何代理基本数据类型呢？并没有原生办法，只能构建一个{value: Proxy Object}结构的对象，这样Proxy也就能代理了。
+
+
 
 #### shallowRef
 
-shallowRef 的内部值将会原样存储和暴露，并不会被深层递归地转为响应式，只处理基本数据类型的响应式，不进行对象的响应式处理
+shallowRef 也是把数据类型转为可响应的，如果传入的是基本数据类型，和ref 是没有区别的
+
+- 如果传入的是基础数据类型，和ref没有区别
+- 如果传入的是对象数据类型，那么 ref 底层还是调用了reactive变成 proxy 对象，成为可响应的；而 shallowRef 传入的是对象数据类型，则不会变成响应式
+
+shallowRef 的内部值将会原样存储和暴露，并不会被深层递归地转为响应式，只处理基本数据类
+
+型的响应式，不进行对象的响应式处理
 
 可以理解为只响应式.value返回的值，打印的包裹的对象类型数据是 Object 不是 proxy，针对ref包裹的对象类型数据，结果打印是Proxy，所以是响应式的
 
-可优化场景（用于对大型数据结构的性能优化或是与外部的状态管理系统集成）
+**可优化场景**：
 
-- refs 组件引用，典型的 ref.value.validate（表单、表格引用）
-- ​
+- refs 组件引用，项目中典型的 ref.value.validate()（表单、表格引用）
+
+- 如果数据是服务器返回的 LIST 数据，而且只显示、不变更，那么最好是使用 shallowRef 来包装数据，可以节能。如果会有变更，那么应该用 ref
+
+- 长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
+
+  如果不是页面上需要进行视图更新的，我们可以不用reactive、ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowref) 和 [`shallowReactive()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowreactive) 浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
 
 ```javascript
-const state = shallowRef({ count: 1 })
+const shallowArray = shallowRef([
+  {...},
+   ...
+  /* 巨大的列表，里面包含深层的对象 */
+])
 
-// shallowRef 不会触发更改, ref 会触发页面更改
-state.value.count = 2
+shallowArray.value.push(newObject)  // 这不会触发更新...
+shallowArray.value = [...shallowArray.value, newObject] // 这才会触发更新
 
-// shallowRef 和  ref 都会触发更改
-state.value = { count: 2 }
+
+shallowArray.value[0].foo = 1 // 这不会触发更新...
+shallowArray.value = [
+  {
+    ...shallowArray.value[0],
+    foo: 1
+  },
+  ...shallowArray.value.slice(1)
+] // 这才会触发更新
 ```
 
 #### triggerRef
@@ -92,9 +197,8 @@ const shallow = shallowRef({
   greet: 'Hello, world'
 })
 
-// 触发该副作用第一次应该会打印 "Hello, world"
 watchEffect(() => {
-  console.log(shallow.value.greet)
+  console.log(shallow.value.greet)  // "Hello, world"
 })
 
 // 这次变更不应触发副作用，因为这个 ref 是浅层的
@@ -108,9 +212,17 @@ triggerRef(shallow)
 
 创建一个自定义的 ref，显式声明对其依赖追踪和更新触发的控制方式
 
+参数说明：
+
+- 入参是一个回调函数；
+
+- 回调函数接受 `track` 和 `trigger` 两个函数作为参数，并返回一个带有 `get` 和 `set` 方法的对象（必须）
+
+  ​
+
 `customRef()` 预期接收一个工厂函数作为参数，这个工厂函数接受 `track` 和 `trigger` 两个函数作为参数，并返回一个带有 `get` 和 `set` 方法的对象。
 
-一般来说，`track()` 应该在 `get()` 方法中调用，而 `trigger()` 应该在 `set()` 中调用。然而事实上，你对何时调用、是否应该调用他们有完全的控制权。
+一般来说，`track()` 应该在 `get()` 方法中调用，而 `trigger()` 应该在 `set()` 中调用。
 
 比如我们有一个值会频繁刷新调用，我们想手动控制它的刷新时机，创建一个防抖 ref
 
@@ -122,14 +234,14 @@ export function useDebouncedRef(value, delay = 200) {
   return customRef((track, trigger) => {
     return {
       get() {
-        track() // 可以理解为添加响应式追踪(vue 一般起名为track 的都是这个作用)
+        track() // 可以理解为添加响应式追踪(vue代码里 一般起名为track 的都是这个作用)
         return value
       },
       set(newValue) {
         clearTimeout(timeout)
         timeout = setTimeout(() => {
           value = newValue
-          trigger() // 可以理解为触发页面渲染更新函数
+          trigger() // 可以理解为通知vue去重新解析模板，触发页面渲染更新函数
         }, delay)
       }
     }
@@ -139,52 +251,170 @@ export function useDebouncedRef(value, delay = 200) {
 const text = useDebouncedRef('text')
 ```
 
-#### shallowRef 和 shallowReactive
+#### ref 和 reactive 的区别
 
-- shallowReactive：只处理**最外层** 属性的响应式（浅响应式）
-  - 有一个对象数据（数据结构嵌套深），使用变化修改时只是外层属性的变化===>shallowReactive
-- shallowRef：只处理基本数据类型的响应式，不进行对象的响应式处理
-  - 一个对象数据，后续不会修改该对象中的属性，可能只是节点引用或生成新的对象来替换的===》shallowRef
+| 对比           | ref                | reactive |
+| ------------ | ------------------ | -------- |
+| **返回数据类型**   | RefImpl对象（也叫ref对象） | Proxy对象  |
+| **传入基本类型返回** | {value: 基本类型}      | 禁止这么做    |
+| **传入引用类型返回** | {value: Proxy对象}   | Proxy对象  |
+
+**TODO 那么对于引用类型，什么时候用ref，什么时候用reactive？**
+
+如果你只打算修改引用类型的一个属性，那么推荐用reactive，如果你打算变量重赋值，那么一定要用ref。
+
+TODO 换成ref试试
+
+```javascript
+
+<template>
+  <div>
+    {{ jsonData }}  // 打印出什么name：xxx， age： xxx ??
+  </div>
+</template>
+
+<script>
+import { onMounted, reactive } from "vue";
+export default {
+  setup() {
+    let jsonData = reactive([
+      {
+        name: "牛二",
+        age: 13,
+      },
+    ]);
+    jsonData = reactive([
+      {
+        name: "王五",
+        age: 19,
+      },
+    ]);
+    onMounted(() => {
+      jsonData = reactive([
+        {
+          name: "赵六",
+          age: 100,
+        },
+      ]);
+    });
+    return {
+      jsonData,
+    };
+  },
+};
+</script>
+```
+
+**重赋值对象自身**跟**重赋值对象的属性** ？？
+
+reactive ==> 是响应式的是它的属性，而不是它自身，重赋值它自身跟重赋值它的属性是两码事。
+
+ref ==> 数据具有响应式
+
+#### shallowRef 和 shallowReactive 区别
+
+使用场景： 
+
+- shallowReactive：只处理**最外层**属性的响应式（浅响应式），适用于对象结构较深，但是只会是最外层发生改变的数据
+- shallowRef：只处理基本数据类型的响应式，不进行对象的响应式处理，适用于节点引用或生成新的对象来替换的
 
 ### readonly 和 shallowReadonly
 
+开始我觉得readOnly和const 定义的变量使用场景是一样的
+
 - readonly：让一个响应式数据变为只读的（深只读，所有嵌套结构）
+
+  - 场景： 一个是保护数据不被修改，另一个是提升性能
+
+  ```javascript
+
+  <template>
+  <div>
+    <button @click="r.b.c++">count is: {{ r.b.c }}</button>
+    <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+  </div>
+  </template>
+
+  <script>
+  import { reactive, readonly } from "vue";
+  export default {
+    setup() {
+      let r = reactive({a: 1, b: {c: 2}});
+      console.log(r);
+      let s = readonly({a: 1, b: {c: 2}});
+      console.log(s);
+      return {
+        r,s
+      };
+    },
+  };
+  </script>
+  ```
+
+  第2个button点击永远不会有反应
+
 - shallowReadonly：让一个响应式数据外层属性变为只读（浅只读，深层次嵌套可以修改）
+
+```javascript
+
+<template>
+<div>
+  <button @click="r.b.c++">count is: {{ r.b.c }}</button>
+  <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+  <button @click="s.a++">count is: {{ s.a }}</button>
+</div>
+</template>
+
+<script>
+import { readonly, shallowReadonly } from "vue";
+export default {
+  setup() {
+    let r = readonly({a: 1, b: {c: 2}});
+    console.log(r);
+    let s = shallowReadonly({a: 1, b: {c: 2}});
+    console.log(s);
+    return {
+      r,s
+    };
+  },
+};
+</script>
+```
+
 - 应用场景：
   - 听起来很奇怪，竟然定义一个数据为响应式但是为什么又要包装为只读的
   - 比如一个场景：数据 A 是从别的组件传入的，但是这个数据只希望你在这个组件去引用别修改的情况，那就可以用 readonly 去处理
+- ​
 
 ### toRaw 与 markRaw
 
-- toRaw：将一个由 reactive （针对ref 缔造的响应式数据无效）生成的响应式对象转为普通对象，用于读取响应式对象对应的普通对象，对这个转换后的对象所有操作，不会引起页面更新
-- markRaw：标记一个对象，使其永远不会再成为响应式对象
-  - 有些值不应该设置为响应式的，比如复杂的第三方类库或 Vue 组件对象等
-  - 当渲染具有不可变数据源的大列表时，跳过响应式转换可以提高性能
+#### TODO toRaw()
+
+toRaw的参数只能是一个响应式的对象（可以理解为是被 reactive 处理过的数据，针对ref 缔造的响应式数据无效）
+
+返回是源数据，相当于 reactive 的逆运算，把响应式数据还原成普通对象，对这个转换后的对象所有操作，不会引起页面更新
+
+#### markRaw
+
+标记一个对象，使其永远不会再成为响应式对象
+
+**使用场景**
+
+- 有些值不应该设置为响应式的，比如复杂的第三方类库或 Vue 组件对象等
+- 当渲染具有不可变数据源的大列表时，跳过响应式转换可以提高性能
 
 ### watch 和 watchEffect()
 
 #### watch()
 
-watch 方法一般用于侦听一个或多个响应式数据源，并在数据源变化时调用所给的回调函数。
+watch 一般用于侦听一个或多个响应式数据源，并在数据源变化时调用所给的回调函数（与vue2作用是一样的）。
 
-它本质上充当组件响应式数据的事件监听器，特别是当与异步 API 调用配合使用时
+watch 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
 
-- 当 ID 改变时，从数据库中获取一个对象
-- 当 `prop` 更改时重新运行动画
-- 监听路由变化
-- `input` 输入框值的特殊处理等
-
-`watch` 在以下情况下很有用：
-
-- 您需要控制哪些依赖项会触发该方法
-- 您需要访问之前的值
-
-`watch()` 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
-
-- watch 侦听 reactive 定义的响应式数据（因为reactive 只能定义数组或对象类型的响应式）时，oldValue 无法正确获取**，会强制开启深度监视，此时 deep 配置无效**
+- 当侦听 reactive 定义的响应式数据（因为reactive 只能定义数组或对象类型的响应式）时，oldValue 无法正确获取**，会强制开启深度监视，此时 deep 配置无效**
 - 侦听 reactive定义的响应式数据中的某个属性时，且该属性是一个对象，那么此时deep配置生效。 
 
-**watch的监听类型**
+##### **watch的监听类型**
 
 先看watch 属性的Ts类型定义 
 
@@ -216,12 +446,12 @@ type ObjectWatchOptionItem = {
 **参数信息：**
 
 - 第一个参数是侦听器的**源**。这个来源可以是以下几种：
-  - 一个返回任意值的函数（getter 函数）:（）=> xxx；
-  - 一个包装对象（响应式对象）；
-  - ...一个包含上述两种数据源的数组；
+  - 一个返回任意值的函数（**getter 函数**或者**TODO 响应式对象的某个属性**）:（）=> xxx；
+  - 一个**响应式对象** （ref、computed、reactive）；
+  - ...一个包含上述两种数据源的**数组**；
 - 第二个参数是在发生变化时要调用的回调函数。
-  - 这个回调函数接受三个参数：新值、旧值，以及一个用于注册副作用清理的回调函数。
-  - 该回调函数会在副作用下一次重新执行前调用，可以用来清除无效的副作用（同watchEffect）；
+  - 回调函数接受三个参数：新值、旧值，以及一个用于注册副作用清理的回调函数。
+  - 回调函数会在副作用下一次重新执行前调用，可以用来清除无效的副作用（同watchEffect）；
   - 当侦听多个来源时，回调函数接受两个数组，分别对应来源数组中的新值和旧值。
 - 第三个可选的参数是一个对象，支持以下这些选项：
   - **immediate**：在侦听器创建时立即触发回调。第一次调用时旧值是 `undefined`（watchEffect 自带，无须配置）
@@ -229,49 +459,29 @@ type ObjectWatchOptionItem = {
   - **flush**：调整回调函数的刷新时机（同 watchEffect ）
   - **onTrack / onTrigger**：调试侦听器的依赖（同 watchEffect ）
 
+它本质上充当组件响应式数据的事件监听器，特别是当与异步 API 调用配合使用，在项目中使用场景一般是:
+
+1. 当 ID 改变时，从数据库中获取一个对象【数据初始化】
+2. 当 `prop` 更改时重新运行动画 【数据初始化】
+3. 监听路由变化
+4. `input` 输入框值的特殊处理等
+
+##### **使用场景**
+
+- 你需要控制哪些依赖项会触发该方法（目的明确，有点类似于需要触发某些响应式数据的时机）
+- 你需要访问之前的值
+
 #### watchEffect()
 
 它立即执行传入的一个函数，同时响应式**追踪其依赖**，并在其依赖变更时重新运行该函数
 
 比watch不同的是，这个方法是默认初始化会之执行一次副作用函数，不需要添加属性 immediate: true
 
-##### [清除副作用](https://www.javascriptc.com/vue3js/guide/reactivity-computed-watchers.html#%E6%B8%85%E9%99%A4%E5%89%AF%E4%BD%9C%E7%94%A8)
-
-**无效副作用**：每当响应性依赖项发生变化时，就进行某种异步 API 调用。但是如果依赖关系在第一个 API 调用完成之前再次发生变化，会发生什么呢？**这就是无效副作用出现的原因**
-
-清楚副作用的时机
-
-- 副作用即将重新执行时
-- 侦听器被停止 (如果在 `setup()` 或生命周期钩子函数中使用了 `watchEffect`，则在组件卸载时)
-
-`watchEffect` 方法还有一个 `onInvalidate` 方法，每当该方法要再次运行或监视程序停止时，该方法就会运行。
-
-```javascript
-export default {
-  setup() {
-    watchEffect(onInvalidate => {
-      // 异步 API 调用
-      const apiCall = someAsyncMethod(props.songID)
-      onInvalidate(() => {
-        // 取消 API 调用
-        apiCall.cancel()
-      })
-    })
-  }
-}
-```
-
-**使用场景**：
-
-- 不需要持续监听，【比较适合初始化根据某部分数据执行方法】
-- 比 watch 方便，写法、immediate 方向的使用
-- 不需要关心监听的数据具体变化的值，只关注结果
-
-看下watchEffect 的ts 类型定义：
+##### Ts 类型定义
 
 ```typescript
 function watchEffect(
-  effect: (onCleanup: OnCleanup) => void,
+  effectFn: (onCleanup: OnCleanup) => void,
   options?: WatchEffectOptions
 ): StopHandle
 
@@ -279,8 +489,8 @@ type OnCleanup = (cleanupFn: () => void) => void
 
 interface WatchEffectOptions {
   flush?: 'pre' | 'post' | 'sync' // 默认：'pre'
-  onTrack?: (event: DebuggerEvent) => void
-  onTrigger?: (event: DebuggerEvent) => void
+  onTrack?: (event: DebuggerEvent) => void  // 在响应式 property 或 ref 作为依赖项被追踪时被调用
+  onTrigger?: (event: DebuggerEvent) => void // 在依赖项变更导致副作用被触发时被调用
 }
 
 type StopHandle = () => void
@@ -288,7 +498,9 @@ type StopHandle = () => void
 
 **参数信息：**
 
-- effect：要运行的副作用函数，用来注册清理回调。清理回调会在该副作用下一次执行前被调用，可以用来清理无效的副作用，例如等待中的异步请求
+- **effectFn**：要运行的副作用函数，用来注册清理回调。
+
+  清理回函数会在该副作用下一次执行前被调用，可以用来清理无效的副作用，例如等待中的异步请求
 
   ```javascript
   const CancelToken = axios.CancelToken;
@@ -308,17 +520,11 @@ type StopHandle = () => void
   })
   ```
 
-- options：一个可选的选项，一般用来调整副作用的刷新时机或调试副作用的依赖
+- **options**：一个可选的选项，一般用来调整副作用的刷新时机或调试副作用的依赖
 
-  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况 
+  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况 ​
 
-  ```
-
-  ```
-
-  ​
-
-- 返回一个用来停止该副作用的函数（停止监听）
+- **返回值**：返回一个用来停止该副作用的函数（停止监听）
 
   ```javascript
   const stop = watchEffect((onCleanup) => {
@@ -329,9 +535,39 @@ type StopHandle = () => void
   })
   ```
 
+##### 清除副作用(共享)
+
+**无效副作用**：有时副作用函数会执行一些异步的副作用，这些响应需要在其失效时清除  (即完成之前状态已改变了) 。
+
+侦听副作用传入的函数可以接收一个 `onInvalidate` 函数作入参，用来注册清理失效时的回调（每当该方法要再次运行或监视程序停止时，该方法就会运行）
+
+当以下情况发生时，这个失效回调会被触发：
+
+- 副作用即将重新执行时
+- 侦听器被停止 (如果在 `setup()` 或生命周期钩子函数中使用了watchEffect，则在组件卸载时)
+
+```javascript
+export default {
+  setup() {
+    watchEffect(onInvalidate => {
+      const apiCall = someAsyncMethod(props.songID) // 异步 API
+      onInvalidate(() => {
+        apiCall.cancel() // 取消 API 调用
+      })
+    })
+  }
+}
+```
+
+
+
+##### TODO 副作用刷新时机
+
+TODO 改到下面共享
+
 ##### watchEffect 和 watch
 
-既然已经有了 `watch` 方法，为什么这个新的 `watchEffect` 方法还会存在呢？
+既然已经有了 watch方法，为什么这个新的 watchEffect 还会存在呢？
 
 - watchEffect 将在方法的**任何**依赖项发生更改时运行，`watch` 跟踪一个或多个**特定**的响应性属性，并且仅在该属性发生更改时运行。
 - 默认情况下，`watch` 是惰性的，因此仅当依赖项更改时才会触发。`watchEffect` 在创建组件后立即运行，然后跟踪依赖关系。
@@ -346,15 +582,23 @@ warchEffect 和 watch 的功能和写法都挺好理解的，反而觉得它和 
 
 ##### watchEffect 和 useEffect（React）
 
-其实我感觉它和React中的useEffect很像（写法的问题），只是不需要传入第二个参数依赖项数组
+其实详细了解，我感觉它和React中的useEffect很像（写法的问题），只是不需要传入第二个参数依赖项数组
 
 - 初始化立即执行一次逻辑处理函数
-- 第一个参数返回一个回调函数，可以在该函数中将组件被摧毁之前和再一次触发更新时，将之前的副作用清除掉（不断循环的订阅（计时器，或者递归循环），和watchEffect写法不一样
 - 依赖的改变触发函数的执行
+- 第一个参数返回一个回调函数，可以在该函数中将组件被摧毁之前和再一次触发更新时，将之前的副作用清除掉（不断循环的订阅（计时器，或者递归循环），和watchEffect写法不一样
 
-#### 手动停止监听器（停止观察）
+##### **使用场景**
 
-如果我们想观察一个依赖项，直到它达到某个值，然后停止它，这可能很有用。如果我们在它达到目标值后继续观察，我们只是在**浪费资源**。
+1. 比 watch 方便，写法、immediate 方向的使用
+2. 不需要持续监听【比较适合初始化根据某部分数据执行方法，后面数据不需要再更改】
+3. 不需要关心监听的数据具体变化的值，只关注结果
+
+#### watch 与 watchEffect 共享的行为
+
+##### 停止侦听
+
+如果我们想观察一个依赖项直到达到某些目的，然后停止它，这可能很有用。如果我们在它达到目标值后继续观察，等于是在**浪费资源**。
 
 在异步场景下，清理失效的回调，保证当前副作用有效，不会被覆盖；
 
@@ -363,8 +607,8 @@ warchEffect 和 watch 的功能和写法都挺好理解的，反而觉得它和 
 ```javascript
 <script setup>
 import { watchEffect } from 'vue'
-// 它会自动停止
-watchEffect(() => {})
+
+watchEffect(() => {}) // 它会自动停止
 // ...这个则不会！
 setTimeout(() => {
   watchEffect(() => {})
@@ -374,68 +618,117 @@ setTimeout(() => {
 
 上段代码中我们采用异步的方式创建了一个监听器，这个时候监听器没有与当前组件绑定，所以即使组件销毁了，监听器依然存在。
 
-我们需要用一个变量接收监听器函数的返回值，其实就是返回的一个函数，然后我们调用该函数，即可关闭当前监听器。
+我们需要用一个变量接收监听器函数的返回值（函数），我们调用该函数，即可关闭当前监听器。
 
 ```javascript
 const unwatch = watchEffect(() => {})
-// ...当该侦听器不再需要时
-unwatch()
 
-watchEffect(onInvalidate => {
-  // 异步 API 调用
-  const apiCall = someAsyncMethod(props.songID)
-
-  onInvalidate(() => {
-    // 取消 API 调用
-    apiCall.cancel()
-  })
-})
+unwatch() // ...当该侦听器不再需要时
 ```
 
-#### 回调中的 DOM
+##### 副作用刷新时机
 
 如果我们在监听器的回调函数中或取 DOM，这个时候的 DOM 是更新前的，可以通过给监听器多传递一个参数选项：flush: 'post' 来调整获取对应状态的 DOM
 
-#### 使用场景区分
+Vue 的响应性系统会缓存副作用函数，并异步地刷新它们，这样可以避免同一个“tick” 中多个状态改变导致的不必要的重复调用。
 
-相比watchEffect而言，watch 可以 
-
-- **执行时机：**watch 是懒执行副作用（可配置 immediate：true），watchEffect 是默认初始化先执行一次，无需配置，如果关注这个使用 watchEffect 更方便
-- **数据源的变化：**watch 更明确、关注由哪个/哪些数据触发的侦听器执行（过程，可以访问所侦听状态的前一个值和当前值），watchEffect 只关注数据改变的状态-触发侦听器方法执行（结果）
-
-## shallowRef()
-
-场景：长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
-
-如果不是页面上需要进行视图更新的，我们可以不用reactive，ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowref) 和 [`shallowReactive()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowreactive) 浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
+在核心的具体实现中，组件的 `update` 函数也是一个被侦听的副作用。当一个用户定义的副作用函数进入队列时，默认情况下，会在所有的组件 `update` **前**执行：
 
 ```javascript
-const shallowArray = shallowRef([
-  /* 巨大的列表，里面包含深层的对象 */
-])
+export default {
+  setup() {
+    const count = ref(0)
 
-// 这不会触发更新...
-shallowArray.value.push(newObject)
-// 这才会触发更新
-shallowArray.value = [...shallowArray.value, newObject]
+    watchEffect(() => {
+      console.log(count.value)
+    })
 
-// 这不会触发更新...
-shallowArray.value[0].foo = 1
-// 这才会触发更新
-shallowArray.value = [
-  {
-    ...shallowArray.value[0],
-    foo: 1
-  },
-  ...shallowArray.value.slice(1)
-]
+    return {
+      count
+    }
+  }
+}
 ```
 
-###  Effect 作用域 API（v2.3）
+- `count` 会在初始运行时同步打印出来
+- 更改 `count` 时，将在组件**更新前**执行副作用。
 
-## effectScope
+如果需要在组件更新**后**重新运行侦听器副作用，我们可以传递带有 flush 选项的参数 (默认为 `'pre'`)：
 
-创建一个 effect 作用域，可以捕获其中所创建的响应式副作用（computed 和  watchers），这样捕获到的副作用就可以 一起处理（直接销毁作用域）
+```javascript
+// 在组件更新后触发，这样你就可以访问更新的 DOM。
+// 注意：这也将推迟副作用的初始运行，直到组件的首次渲染完成。
+watchEffect(
+  () => {
+    /* ... */
+  },
+  {
+    flush: 'post'
+  }
+)
+```
+
+### v3.2升级的那些好用的api
+
+####  < style > v-bind
+
+该指令适用于`<script setup>`, 并支持 JavaScript 表达式（必须用引号括起来）。
+
+原理就是自定义属性将通过内联样式应用于组件的根元素，并在数值更改时进行响应更新。
+
+```javascript
+<template>
+ 	<h2>浪里行舟</h2>
+	<h1>Hello Vue3.2</h1>
+    <h2>{{ color }}</h2><button @click="color = 'red'">color red</button>
+    <button @click="color = 'yellow'">color yellow</button><button @click="color = 'blue'">color blue</button>
+    <button @click="fontSize = '40px'">fontSize 40px</button>
+</template>
+
+<script setup>
+import { ref } from "vue";
+const color = ref("pink");
+color.value = "green";
+const fontSize = ref("18px");
+</script>
+
+<style scoped>
+h1 {color: v-bind(color);
+}
+h2 {font-size: v-bind(fontSize);
+}
+</style>
+```
+
+#### TODO v-memo 指令
+
+提供了记忆一部分模板树的能力。 v-memo 指令使得这部分模板可以跳过虚拟 DOM 的 diff 比较，同时还完全跳过新 VNode 的创建。 虽然很少需要，但它提供了一种在某些情况下想要得到最大性能的方案，例如大型 v-for 列表
+
+可以用来有条件地跳过某些大型子树或者 `v-for` 列表的更新
+
+不仅允许 Vue 跳过虚拟 DOM 差异、甚至可以完全跳过新 VNode 的创建步骤
+
+```
+<div v-for="user of users" :key="user.id" v-memo="[user.name]">{{ user.name }}
+</div>
+```
+
+使用`v-memo`，不会重新创建虚拟元素，并且会重新使用前一个元素，除非`v-memo`（此处为用户名）的条件发生变化。这可能看起来是一个很小的改进，但如果您渲染大量元素，它实际上是性能的巨大改进。
+
+#### effectScope（）
+
+用于创建一个 effect 作用域，可以捕获其中所创建的响应式副作用（computed 和  watchers），这样捕获到的副作用就可以 一起处理（直接销毁作用域）
+
+**类型：**
+
+```javascript
+function effectScope(detached?: boolean): EffectScope
+
+interface EffectScope {
+  run<T>(fn: () => T): T | undefined // 如果作用域不活跃就为 undefined
+  stop(): void
+}
+```
 
 在v3.2之前，如果想要在组件中停止 computed & watch，可以把我们定义的每一个 computed 和 watch 返回值维护到统一的一个数组内，然后调用数组中的每个 stopHanlde，就可以停止所有响应【可以实现，但是麻烦】
 
@@ -466,14 +759,6 @@ vue 3.2之后，Effect Scope API 出现了（是 vue 的一个高阶API，主要
 effectScope 是一个函数，返回一个对象：其中包含了 run 函数和 stop 函数：
 
 ```javascript
-function effectScope(detached?: boolean): EffectScope
-
-interface EffectScope {
-  run<T>(fn: () => T): T | undefined // 如果作用域不活跃就为 undefined
-  stop(): void
-}
-
-// 使用示例
 const scope = effectScope()
 
 scope.run(() => {
@@ -490,18 +775,80 @@ scope.stop() // 处理掉当前作用域内的所有 effect
 - 一般我们的 computed 和 watch 这些 api 都是在组件中调用，在这期间，代码产生的 effect 是会自动收集且绑定到当前的组件实例上，在组件卸载的时候，它们也会随之 stop，无需开发手动管理清除
 - 在vue3 的项目设计时，`@vue/reactivity`这个包是可以独立引入使用的，所以只要是可以跑 js 的地方就可以调用这些 effect 函数，不必去依赖组件（所以就失去了 vue 自动管理 effect 的能力），开发就需要手动收集 effect，再在合适的时机手动 stop 
 
-## dev 调试 Api
+### TODO extends
 
-### 【组件调试钩子】onRenderTracked 状态跟踪
+要继承的“基类”组件，使一个组件可以继承另一个组件的组件选项。
+
+**类型：** 
+
+```javascript
+interface ComponentOptions {
+  extends?: ComponentOptions
+}
+```
+
+从实现角度来看，`extends` 几乎和 `mixins` 相同。通过 `extends` 指定的组件将会当作第一个 mixin 来处理。
+
+然而，`extends` 和 `mixins` 表达的是不同的目标。`mixins` 选项基本用于组合功能，而 `extends` 则一般更关注继承关系。
+
+同 `mixins` 一样，所有选项都将使用相关的策略进行合并。
+
+```
+const CompA = { ... }
+
+const CompB = {
+  extends: CompA,
+  ...
+}
+```
+
+
+
+## dev 调试钩子
+
+对应 上面 watch的 onTrack、onTrigger方法
+
+页面 renderTracked和renderTriggered 
+
+```javascript
+interface ComponentOptions {
+  renderTracked?(this: ComponentPublicInstance, e: DebuggerEvent): void
+}
+
+type DebuggerEvent = {
+  effect: ReactiveEffect
+  target: object
+  type: TrackOpTypes /* 'get' | 'has' | 'iterate' */
+  key: any
+}
+```
+
+```javascript
+interface ComponentOptions {
+  renderTriggered?(this: ComponentPublicInstance, e: DebuggerEvent): void
+}
+
+type DebuggerEvent = {
+  effect: ReactiveEffect
+  target: object
+  type: TriggerOpTypes /* 'set' | 'add' | 'delete' | 'clear' */
+  key: any
+  newValue?: any
+  oldValue?: any
+  oldTarget?: Map<any, any> | Set<any>
+}
+```
+
+
+
+### onRenderTracked 组件状态跟踪
 
 当组件渲染过程中**追踪到**响应式依赖时调用
 当组件渲染过程中追踪到响应式依赖时调用，用来调试查看哪些依赖正在被使用（这是一个**生命周期钩子**）
 
 onRenderTracked 会跟踪页面上所有响应式变量和方法的状态（可以理解为用 return 返回的值都会跟踪），只要页面有 update 的情况，就会跟踪，生成一个 event 对象
 
-
-
-### 【组件调试钩子】onRenderTriggered 状态触发
+### onRenderTriggered 组件状态触发
 
 当响应式依赖的**变更**触发了组件渲染时调用
 当响应式依赖的变更触发了组件渲染时调用，用来确定哪个依赖正在触发更新
