@@ -1,29 +1,13 @@
-- watch和watchEffect的区别？
-
-  - https://zhuanlan.zhihu.com/p/528715632?utm_id=0
-  - https://blog.csdn.net/weixin_52148548/article/details/125073998
-  - https://blog.csdn.net/weixin_52148548/article/details/125055677?spm=1001.2014.3001.5502 【reactive、ref、toRef、toRefs】
-
 - **defineProps** 在setup不能引用外部的 Ts？宏作用域
-
-- **props 稳定性**，控制传给组件的 props尽量稳定
-
-- 响应式api接收 proxy对象
-
-- 但readonly可以接受Proxy对象，而且有实际意义，它可以获取纯对象或者Proxy或者RefImpl，返回原始代理的只读代理。说白了它做2步操作，先reactive，然后另生成一个只读Proxy。
-
-- ### attrs和listeners
-
-  - Vue3中使用attrs调用父组件方法时，方法前需要加上on；如parentFun->onParentFun
-
+- **props 稳定性**，控制传给组件的 props尽量稳定（性能优化/组件优化）
+- **unref** 的作用是解包， 和 toRaw的区别??
+- 响应式api接收 proxy对象？？
+- readonly可以接受Proxy对象（有实际意义），它可以获取纯对象或者Proxy或者RefImpl，返回原始代理的只读代理。说白了它做2步操作，先reactive，然后另生成一个只读Proxy。
 - 组件通信
 
   - 在组合式API中，如果想在子组件中用其它变量接收props的值时需要使用toRef将props中的属性转为响应式。
-
 - build.polyfillDynamicImport ？？？ 已经废弃（会兼容），新的替代方案
-
 - inheritAttrs 属性
-
 - `Attribute`强制策略
 
 
@@ -47,8 +31,6 @@ watch(idValue, (id, oldId, onCleanup) => {
 ```
 
 
-
-### TODO extends 属性
 
 ## 响应式 API
 
@@ -97,41 +79,16 @@ export default {
 
 按下第2个button不会有反应，只有又去按下第1个button之后，视图刷新，第二个button才有反应。
 
-### toRef 和 toRefs
-
-#### toRef
-
-基于**响应式对象**上的一个属性，创建一个对应的 ref，创建的 ref 与其源属性保持同步，即改变源属性的值也将更新ref 的值
-
-**使用场景：**
-
-- 利用它去处理，把响应式的对象结构出来，方便在模板中使用
-
-```
-const person = reactive({
-  name： "yabby"
-})
-
-const name = toRef(person.name)
-```
-
-#### toRefs
-
-将一个响应式对象转换为一个普通对象，这个普通对象的每个属性都是指向源对象相应属性的ref
-
-相当于创建了一个普通对象，而对象中每个属性都是使用 toRefs 创建的 ref
-
-比如之前没有用 setup 时我们一般return ...toRefs(state)
-
 ### ref 和 shallowRef 
 
 #### ref
 
+ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收任意数据类型的参数，作为这个 ref 对象内部的value 的值
 
+- 生成值类型数据（String，Number，Boolean，Symbol）的响应式对象
+- 生成对象和数组类型的响应式对象 **（对象和数组一般不选用ref方式，而选用reactive方式，ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)）**
 
-ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)
-
-这里有一个问题，为什么 vue2.0 没有区分基本数据类型和引用数据类型做响应式？
+？？？ **为什么 vue2.0 没有区分基本数据类型和引用数据类型做响应式**
 
 - 因为defineproperty就是Object的静态方法，它只是为对象服务的，甚至无法对数组服务，因此Vue 2弄了一个data根对象来存放基本数据类型，这样无论什么类型，都是根对象的property，所以也就能代理基本数据类型。
 
@@ -142,14 +99,10 @@ ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)
 
 #### shallowRef
 
-shallowRef 也是把数据类型转为可响应的，如果传入的是基本数据类型，和ref 是没有区别的
+shallowRef的作用是只对value添加响应式，因此，必须是value被重新赋值才会触发响应式。shallowRef的出现主要是为了节省系统开销。
 
 - 如果传入的是基础数据类型，和ref没有区别
-- 如果传入的是对象数据类型，那么 ref 底层还是调用了reactive变成 proxy 对象，成为可响应的；而 shallowRef 传入的是对象数据类型，则不会变成响应式
-
-shallowRef 的内部值将会原样存储和暴露，并不会被深层递归地转为响应式，只处理基本数据类
-
-型的响应式，不进行对象的响应式处理
+- 如果传入的是对象数据类型，那么 ref 底层还是调用了reactive变成 proxy 对象，成为可响应的；而 shallowRef 传入的是对象数据类型，则不会变成响应式(shallowRef 的内部值将会原样存储和暴露，并不会被深层递归地转为响应式，只处理基本数据类型的响应式，不进行对象的响应式处理)
 
 可以理解为只响应式.value返回的值，打印的包裹的对象类型数据是 Object 不是 proxy，针对ref包裹的对象类型数据，结果打印是Proxy，所以是响应式的
 
@@ -186,26 +139,37 @@ shallowArray.value = [
 
 #### triggerRef
 
-强制触发依赖于一个[浅层 ref](https://cn.vuejs.org/api/reactivity-advanced.html#shallowref) 的副作用，这通常在对浅引用的内部值进行深度变更后使用，一般搭配着 shallowRef 使用
+强制触发依赖于一个shallowRef的副作用
 
 ```javascript
 function triggerRef(ref: ShallowRef): void
 ```
 
+如果既想使用shallowRef生成ref对象（为了节省开销），又想偶尔修改value指向的内部值的某个property，又希望那个ref对象得到响应，这时候可以用triggerRef。
+
 ```javascript
-const shallow = shallowRef({
-  greet: 'Hello, world'
-})
 
-watchEffect(() => {
-  console.log(shallow.value.greet)  // "Hello, world"
-})
+<template>
+<div>
+  <button @click="onClick">count is: {{ r.c }}</button>
+</div>
+</template>
 
-// 这次变更不应触发副作用，因为这个 ref 是浅层的
-shallow.value.greet = 'Hello, universe'
-
-// 打印 "Hello, universe"
-triggerRef(shallow)
+<script>
+import { shallowRef, triggerRef } from "vue";
+export default {
+  setup() {
+    let r = shallowRef({a:{b:2}, c: 4});
+    function onClick() {
+      r.value.c = 6;
+      triggerRef(r);  // 注释掉点击没有反应
+    }
+    return {
+      r, onClick
+    };
+  },
+};
+</script>
 ```
 
 #### customRef
@@ -216,13 +180,10 @@ triggerRef(shallow)
 
 - 入参是一个回调函数；
 
-- 回调函数接受 `track` 和 `trigger` 两个函数作为参数，并返回一个带有 `get` 和 `set` 方法的对象（必须）
+- 回调函数接受 track 和 trigger 两个函数作为参数，并返回一个带有 get 和 set 方法的对象（必须）
 
-  ​
 
-`customRef()` 预期接收一个工厂函数作为参数，这个工厂函数接受 `track` 和 `trigger` 两个函数作为参数，并返回一个带有 `get` 和 `set` 方法的对象。
 
-一般来说，`track()` 应该在 `get()` 方法中调用，而 `trigger()` 应该在 `set()` 中调用。
 
 比如我们有一个值会频繁刷新调用，我们想手动控制它的刷新时机，创建一个防抖 ref
 
@@ -251,9 +212,54 @@ export function useDebouncedRef(value, delay = 200) {
 const text = useDebouncedRef('text')
 ```
 
-#### ref 和 reactive 的区别
+使用场景：
 
-| 对比           | ref                | reactive |
+- **时机上说**：可以控制视图更新的时机，可以延迟更新。其他ref兄弟API都做不到
+- **内容上说**：可以修改传入的原始数据，让原始数据与返回值不相同。其他兄弟API也做不到。
+
+#### ref 和 shallowRef
+
+```javascript
+
+<template>
+  <div>
+    <button @click="r.b.c++">count is: {{ r.b.c }}</button>
+    <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+    <button @click="s = { a: 10, b: { c: 20 } }">count is: {{ s.b.c }}</button>
+  </div>
+</template>
+
+<script>
+import { ref, shallowRef } from 'vue';
+export default {
+  setup() {
+    let r = ref({ a: 1, b: { c: 2 } });
+    let s = shallowRef({ a: 1, b: { c: 2 } });
+    return {
+      r,
+      s,
+    };
+  },
+};
+</script>
+```
+
+- 点击button1会有反应
+- 点击button2不会有反应。
+- 点击button3，如果给s重新赋值，其实相当于给s.value重新赋值，由于value是响应式的，这时候button2和button3都会有变化。
+
+|        | ref                     | shallowRef                     |
+| ------ | ----------------------- | ------------------------------ |
+| 本质     | reactive({value: 原始数据}) | shallowReactive({value: 原始数据}) |
+| 区别点    | {value: 原始数据}被深层响应式     | TODO 只有value被响应式，原始数据没有响应式     |
+| 传入基本类型 | 两个API无差别                | 两个API无差别，性能考虑尽量用shallowRef     |
+| 传入引用类型 | value指向Proxy            | value指向原始数据                    |
+
+
+
+#### ref 和 reactive 
+
+|              | ref                | reactive |
 | ------------ | ------------------ | -------- |
 | **返回数据类型**   | RefImpl对象（也叫ref对象） | Proxy对象  |
 | **传入基本类型返回** | {value: 基本类型}      | 禁止这么做    |
@@ -311,47 +317,129 @@ reactive ==> 是响应式的是它的属性，而不是它自身，重赋值它�
 
 ref ==> 数据具有响应式
 
-#### shallowRef 和 shallowReactive 区别
-
-使用场景： 
+#### shallowRef 和 shallowReactive使用场景： 
 
 - shallowReactive：只处理**最外层**属性的响应式（浅响应式），适用于对象结构较深，但是只会是最外层发生改变的数据
 - shallowRef：只处理基本数据类型的响应式，不进行对象的响应式处理，适用于节点引用或生成新的对象来替换的
 
+### toRef 和 toRefs
+
+#### toRef
+
+基于**响应式对象**上的一个属性，创建一个对应的 ref，创建的 ref 与其源属性保持同步，即改变源属性的值也将更新ref 的值
+
+
+
+```javascript
+<template>
+<div>
+  <button @click="r.a++">count is: {{ r.a }}</button>
+  <button>count is: {{ s }}</button>
+</div>
+</template>
+
+<script>
+import { reactive, toRef } from "vue";
+export default {
+  setup() {
+    let r = reactive({a:1});
+    console.log(r);
+    let s = r.a;
+    console.log(s);
+    return {
+      r,s
+    };
+  },
+};
+</script>
+```
+
+当我点击button1的时候，你说button2会变吗？并不会。变量s就是个基本数据，没有任何响应式。很不爽是不是？现在我改改，把let s = r.a;改成let s = toRef(r, 'a');，
+
+**使用场景：**
+
+当一个变量指向一个对象的某个property，且这个property是基本数据类型时，必须用toRef才能变量与对象的响应式连接。如果这个property是引用数据类型，就不需要动用toRef。
+
+toRef的用途之一是用于传参，可传递一个响应式的基本数据类型
+
+#### toRefs
+
+将一个响应式对象转换为一个普通对象（破坏响应式对象），并把这个对象的每个属性都是指向源对象相应属性的ref（可以理解为toRefs可以看做批量版本的toRef）
+
+toRefs的一大用途是变相解构Proxy：
+
+- 比如之前没有用 setup 时我们一般return {...toRefs(Proxy)}
+
+#### toRef 和 toRefs
+
+|      | toRef               | toRefs                   |
+| ---- | ------------------- | ------------------------ |
+| 用法   | toRef(Proxy, 'xxx') | toRefs(Proxy)            |
+| 返回   | ObjectRefImpl对象     | ObjectRefImpl对象          |
+| 作用   | 创建变量到Proxy属性的响应式连接  | 创建变量每个属性到Proxy每个属性的响应式连接 |
+| 连接关系 | 一对一                 | 多对多                      |
+
+```javascript
+<template>
+<div>
+  <button @click="r.c = 3">count is: {{ r.c }}</button>
+  <button>count is: {{ s }}</button>
+  TODO <button>count is: {{ t.c.value }}</button>
+</div>
+</template>
+
+<script>
+import { reactive, toRef, toRefs } from "vue";
+export default {
+  setup() {
+    let r = reactive({a:{b:2}, c: 4});
+    console.log(r);
+    let s = toRef(r, 'c');
+    console.log(s);
+    let t = toRefs(r);
+    console.log(t.c)
+    return {
+      r,s,t
+    };
+  },
+};
+</script>
+```
+
 ### readonly 和 shallowReadonly
 
-开始我觉得readOnly和const 定义的变量使用场景是一样的
+readonly 不允许被修改，但已经被代理
 
-- readonly：让一个响应式数据变为只读的（深只读，所有嵌套结构）
+readonly：让一个响应式数据变为只读的（深只读，所有嵌套结构），不允许被修改，但已经被代理
 
-  - 场景： 一个是保护数据不被修改，另一个是提升性能
+- 场景： 一个是保护数据不被修改，另一个是提升性能
 
-  ```javascript
+```javascript
 
-  <template>
-  <div>
-    <button @click="r.b.c++">count is: {{ r.b.c }}</button>
-    <button @click="s.b.c++">count is: {{ s.b.c }}</button>
-  </div>
-  </template>
+<template>
+<div>
+  <button @click="r.b.c++">count is: {{ r.b.c }}</button>
+  <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+</div>
+</template>
 
-  <script>
-  import { reactive, readonly } from "vue";
-  export default {
-    setup() {
-      let r = reactive({a: 1, b: {c: 2}});
-      console.log(r);
-      let s = readonly({a: 1, b: {c: 2}});
-      console.log(s);
-      return {
-        r,s
-      };
-    },
-  };
-  </script>
-  ```
+<script>
+import { reactive, readonly } from "vue";
+export default {
+  setup() {
+    let r = reactive({a: 1, b: {c: 2}});
+    console.log(r);
+    let s = readonly({a: 1, b: {c: 2}});
+    console.log(s);
+    return {
+      r,s
+    };
+  },
+};
+</script>
+```
 
-  第2个button点击永远不会有反应
+第2个button点击永远不会有反应
 
 - shallowReadonly：让一个响应式数据外层属性变为只读（浅只读，深层次嵌套可以修改）
 
@@ -381,10 +469,13 @@ export default {
 </script>
 ```
 
-- 应用场景：
-  - 听起来很奇怪，竟然定义一个数据为响应式但是为什么又要包装为只读的
-  - 比如一个场景：数据 A 是从别的组件传入的，但是这个数据只希望你在这个组件去引用别修改的情况，那就可以用 readonly 去处理
-- ​
+- 按下button1会有报错提示：Set operation on key "c" failed: target is readonly.，因为r是深层只读的。
+- 按下button2没有任何反应，因为shallowReadonly的深层是指向原始值的，修改原始对象不会反映到视图上。
+- 按下button3也会有报错提示：Set operation on key "a" failed: target is readonly.，因为shallowReadonly是浅层只读的，a恰好是浅层property。
+
+？？？ 那为什么定义一个数据为响应式但是为什么又要包装为只读的
+
+**比如一个场景**：数据 A 是从别的组件传入的，但是这个数据只希望你在这个组件去引用别修改的情况，那就可以用 readonly 去处理
 
 ### toRaw 与 markRaw
 
@@ -392,16 +483,96 @@ export default {
 
 toRaw的参数只能是一个响应式的对象（可以理解为是被 reactive 处理过的数据，针对ref 缔造的响应式数据无效）
 
-返回是源数据，相当于 reactive 的逆运算，把响应式数据还原成普通对象，对这个转换后的对象所有操作，不会引起页面更新
+返回是proxy的原始对象，相当于 reactive 的逆运算，把响应式数据还原成普通对象，对这个转换后的对象所有操作，不会引起页面更新
+
+2个作用：可用于临时读取而不会引起proxy访问/跟踪开销，也可用于写入而不会触发视图更新
+
+官方又说，不建议保留对原始对象的持久引用。请谨慎使用。
+
+1. 尽量不要把原始对象赋值给变量，尽量减少中间变量；
+2. 将原始对象转换为Proxy之后，如果你临时打算操作一下原始对象，那么也不要因为这个目的就早早的把原始对象赋值给变量，而是应该用toRaw(proxy)，以获取原始对象，比如得到一个变量R，然后你可以操作R，操作完成之后就不要再碰R，而应继续操作Proxy。
+
+```javascript
+
+<template>
+<div>
+  <button @click="r.b.c++">count is: {{ r.b.c }}</button>
+  <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+</div>
+</template>
+
+<script>
+import { reactive, toRaw } from "vue";
+export default {
+  setup() {
+    let r = reactive({a: 1, b: {c: 2}});
+    console.log(r);
+    let s = toRaw(r);
+    console.log(s);
+    return {
+      r,s
+    };
+  },
+};
+</script>
+```
+
+- 按下button1，会发现button2也跟着变，这表明Proxy的基本原理：操作Proxy会反映到原始对象身上。
+- 按下button2，没有任何反应，操作原始对象不会反映到视图上。这时候重新按下button1，会发现数字跳跃了几个数，这表明直接修改原始对象之后，Proxy对原始对象继续代理，并不需要重新reactive。
 
 #### markRaw
 
-标记一个对象，使其永远不会再成为响应式对象
+标记一个对象，使其永远不会再成为响应式对象（允许被修改，但不允许被代理）
+
+markRaw是操作原始对象的，它的是将原始对象或者原始对象的某个浅层或深层property标记为“永远不允许被代理”。
+
+Vue3会给对象的第一层或某深层加一个标记__v_skip: true，这样即便原始对象被reactive之后，得到的该层和更深层就不会被代理。
+
+
+
+**markRaw的用途：**
+
+先说结论：直接给某个对象全盘markRaw是没有意义的，markRaw的用途应该是允许对象被reactive，但是阻止对象的部分内容被reactive
+
+```javascript
+
+<template>
+<div>
+  <button @click="s.b.c++">count is: {{ s.b.c }}</button>
+</div>
+</template>
+
+<script>
+import { markRaw, reactive } from "vue";
+export default {
+  setup() {
+    let x = {a:1, b: {c: 2}};
+    x.b = markRaw(x.b);
+    let s = reactive(x);
+    console.log(isReactive(s)); // true
+    console.log(isReactive(s.b)); // false
+    return {
+      s
+    };
+  },
+};
+</script>
+```
 
 **使用场景**
 
 - 有些值不应该设置为响应式的，比如复杂的第三方类库或 Vue 组件对象等
 - 当渲染具有不可变数据源的大列表时，跳过响应式转换可以提高性能
+
+#### markRow 和 shallowReactive 的区别
+
+|            | markRow | shallowReactive              |
+| ---------- | ------- | ---------------------------- |
+| 作用         | 阻止响应式   | 让浅层property响应式，不操作深层property |
+| 浅层property | 阻止响应式   | 执行响应式                        |
+| 深层property | 阻止响应式   | 不执行响应式，也不阻止                  |
+
+
 
 ### watch 和 watchEffect()
 
@@ -412,7 +583,8 @@ watch 一般用于侦听一个或多个响应式数据源，并在数据源变�
 watch 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
 
 - 当侦听 reactive 定义的响应式数据（因为reactive 只能定义数组或对象类型的响应式）时，oldValue 无法正确获取**，会强制开启深度监视，此时 deep 配置无效**
-- 侦听 reactive定义的响应式数据中的某个属性时，且该属性是一个对象，那么此时deep配置生效。 
+- 侦听 reactive定义的响应式数据中的某个属性时，且该属性是一个对象，那么此时deep配置生效
+  - 如果是使用的 getter 函数返回响应式对象的形式，那么响应式对象的属性值发生变化，是不会触发 watch 的回调函数的
 
 ##### **watch的监听类型**
 
@@ -635,19 +807,25 @@ Vue 的响应性系统会缓存副作用函数，并异步地刷新它们，这�
 在核心的具体实现中，组件的 `update` 函数也是一个被侦听的副作用。当一个用户定义的副作用函数进入队列时，默认情况下，会在所有的组件 `update` **前**执行：
 
 ```javascript
-export default {
-  setup() {
-    const count = ref(0)
+<template>
+  <p ref="msgRef">{{ message }}</p>
+  <button @click="changeMsg">更改 message</button>
+</template>
+<script setup lang="ts">
+import { computed, reactive, ref, watch, watchEffect } from "vue";
 
-    watchEffect(() => {
-      console.log(count.value)
-    })
 
-    return {
-      count
-    }
-  }
-}
+const message = ref("0");
+const msgRef = ref<any>(null);
+const changeMsg = () => {
+  message.value = "1"
+};
+watch(message, (newValue, oldValue) => {
+  console.log("DOM 节点", msgRef.value.innerHTML);
+  console.log("新的值:", newValue);
+  console.log("旧的值:", oldValue);
+});
+</script>
 ```
 
 - `count` 会在初始运行时同步打印出来
@@ -802,8 +980,6 @@ const CompB = {
 }
 ```
 
-
-
 ## dev 调试钩子
 
 对应 上面 watch的 onTrack、onTrigger方法
@@ -863,3 +1039,9 @@ onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，�
 - target 目前页面中的响应变量和函数
 
 感觉和watch 很像，而且是 immidate= true 的时候
+
+
+
+
+
+https://mp.weixin.qq.com/s?__biz=MjM5MDA2MTI1MA==&mid=2649116447&idx=3&sn=92b8c56a00ed88545d3b6983de1e8310&chksm=be5868b2892fe1a4dfc2ad8bfd82f478d55fb70485c104ae4dfc7eb0cd2c2ab4a10d0b064906&scene=27
