@@ -9,6 +9,7 @@
 - build.polyfillDynamicImport ？？？ 已经废弃（会兼容），新的替代方案
 - inheritAttrs 属性
 - `Attribute`强制策略
+- 3.3 的属性？？代码设计层面的区别？？
 
 
 ## watch
@@ -53,7 +54,6 @@ Vue 3的根基。返回对象的响应式副本，响应式转换是“深层”
 **场景**：如果一个对象的深层不可能变化，那么就没必要深层响应，这时候用shallowReactive可以节省系统开销
 
 ```javascript
-
 <template>
 <div>
   <button @click="r.b.c++">count is: {{ r.b.c }}</button>
@@ -87,6 +87,10 @@ ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收�
 
 - 生成值类型数据（String，Number，Boolean，Symbol）的响应式对象
 - 生成对象和数组类型的响应式对象 **（对象和数组一般不选用ref方式，而选用reactive方式，ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)）**
+
+
+
+`Ref`是这样的一种数据结构：它有个key为`Symbol`的属性做类型标识，有个属性`value`用来存储数据。这个数据可以是任意的类型，**唯独不能是被嵌套了Ref类型的类型**
 
 ？？？ **为什么 vue2.0 没有区分基本数据类型和引用数据类型做响应式**
 
@@ -251,7 +255,7 @@ export default {
 |        | ref                     | shallowRef                     |
 | ------ | ----------------------- | ------------------------------ |
 | 本质     | reactive({value: 原始数据}) | shallowReactive({value: 原始数据}) |
-| 区别点    | {value: 原始数据}被深层响应式     | TODO 只有value被响应式，原始数据没有响应式     |
+| 区别点    | {value: 原始数据}被深层响应式     | 只有value被响应式，原始数据没有响应式          |
 | 传入基本类型 | 两个API无差别                | 两个API无差别，性能考虑尽量用shallowRef     |
 | 传入引用类型 | value指向Proxy            | value指向原始数据                    |
 
@@ -370,6 +374,35 @@ toRefs的一大用途是变相解构Proxy：
 
 - 比如之前没有用 setup 时我们一般return {...toRefs(Proxy)}
 
+```
+<template>
+<div>
+  <button @click="r.c = 3">count is: {{ r.c }}</button>
+  <button>count is: {{ s }}</button>
+  <button>count is: {{ t.c.value }}</button>
+</div>
+</template>
+
+<script>
+import { reactive, toRef, toRefs } from "vue";
+export default {
+  setup() {
+    let r = reactive({a:{b:2}, c: 4});
+    console.log(r);
+    let s = toRef(r, 'c');
+    console.log(s);
+    let t = toRefs(r);
+    console.log(t.c)
+    return {
+      r,s,t
+    };
+  },
+};
+</script>
+```
+
+
+
 #### toRef 和 toRefs
 
 |      | toRef               | toRefs                   |
@@ -407,8 +440,6 @@ export default {
 ```
 
 ### readonly 和 shallowReadonly
-
-readonly 不允许被修改，但已经被代理
 
 readonly：让一个响应式数据变为只读的（深只读，所有嵌套结构），不允许被修改，但已经被代理
 
@@ -572,7 +603,10 @@ export default {
 | 浅层property | 阻止响应式   | 执行响应式                        |
 | 深层property | 阻止响应式   | 不执行响应式，也不阻止                  |
 
+#### markRaw与readonly的区别
 
+- markRaw允许被修改，但不允许被代理。这里尽管说允许修改，但是修改的意义不大，毕竟Vue的核心思想是响应式，在添加响应式之前修改意义不大。
+- readonly不允许被修改，但已经被代理
 
 ### watch 和 watchEffect()
 
@@ -694,7 +728,8 @@ type StopHandle = () => void
 
 - **options**：一个可选的选项，一般用来调整副作用的刷新时机或调试副作用的依赖
 
-  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况 ​
+  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况 
+  - ​
 
 - **返回值**：返回一个用来停止该副作用的函数（停止监听）
 
@@ -711,7 +746,7 @@ type StopHandle = () => void
 
 **无效副作用**：有时副作用函数会执行一些异步的副作用，这些响应需要在其失效时清除  (即完成之前状态已改变了) 。
 
-侦听副作用传入的函数可以接收一个 `onInvalidate` 函数作入参，用来注册清理失效时的回调（每当该方法要再次运行或监视程序停止时，该方法就会运行）
+侦听副作用传入的函数可以接收一个 onCleanup函数作入参，用来注册清理失效时的回调（每当该方法要再次运行或监视程序停止时，该方法就会运行）
 
 当以下情况发生时，这个失效回调会被触发：
 
@@ -721,7 +756,7 @@ type StopHandle = () => void
 ```javascript
 export default {
   setup() {
-    watchEffect(onInvalidate => {
+    watchEffect(onCleanup => {
       const apiCall = someAsyncMethod(props.songID) // 异步 API
       onInvalidate(() => {
         apiCall.cancel() // 取消 API 调用
@@ -878,7 +913,7 @@ h2 {font-size: v-bind(fontSize);
 </style>
 ```
 
-#### TODO v-memo 指令
+####  v-memo 指令
 
 提供了记忆一部分模板树的能力。 v-memo 指令使得这部分模板可以跳过虚拟 DOM 的 diff 比较，同时还完全跳过新 VNode 的创建。 虽然很少需要，但它提供了一种在某些情况下想要得到最大性能的方案，例如大型 v-for 列表
 
