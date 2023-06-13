@@ -1,8 +1,6 @@
 ## Prettier
 
-> Prettier 是一个专注于代码格式化的工具，美化代码；
-
-Preitter 通过解析代码并匹配自己的一套规则，来强制执行一致的代码展示格式；
+Preitter 是一个代码格式化的工具；
 
 ### 配置
 
@@ -60,36 +58,33 @@ $ npm install --save-dev eslint-plugin-prettier
 
 ## ESlint
 
-> ESlint 是一个作代码质量检测、编码风格约束等；
+ESlint 是一个作代码质量检测、编码风格约束的工具，“Find and fix problems in your JavaScript code”，翻译过来就是辅助检查你的 javaScript 代码，比如:
 
-### 作用&优势
+- **统一团队代码风格问题**：将运算符两边的空、语句末尾的分号...
+- **检查语法错误，避免一些低级的代码错误**： 使用了未定义的变量、修改 const 定义的变量...
+-  **确保代码遵循最佳实践**：可以借助 eslint-config-standard 配置包扩展社区中流行的最佳实践的风格指南
 
-1. 检查语法错误，避免低级 bug；
-   - 比如 api 语法错误、使用了未定义的变量、修改 const 变量；
-2. 统一团队代码风格；
-   - 比如使用 tab 还是空格，使用单引号还是双引号；
-3. 确保代码遵循最佳实践；
-   - 比如可以借助 eslint-config-standard 配置包扩展社区中流行的最佳实践的风格指南；
-
-### 配置
+### 配置文件格式说明
 
 ESlint 支持配置几种格式的配置文件：
 
-1. Javascript：使用 .eslintrc.js 然后输出一个配置对象；
-2. YAML：使用 .eslintrc.yaml 或 .eslintrc.yml 去定义配置的结构；
-3. JSON：使用 .eslintrc.json 去定义配置的结构，ESLint 的 JSON 文件允许 JavaScript 风格的注释；
-4. package.json：在 package.json 里创建一个 eslintConfig 属性定义你的配置；
+- Javascript：使用 .eslintrc.js 然后输出一个配置对象；
+- YAML：使用 .eslintrc.yaml 或 .eslintrc.yml 去定义配置的结构；
+- JSON：使用 .eslintrc.json 去定义配置的结构，ESLint 的 JSON 文件允许 JavaScript 风格的注释；
+- package.json：在 package.json 里创建一个 eslintConfig 属性定义你的配置；
 
 如果在项目内有多个层叠配置，ESlint 只会使用一个，优先级如下：
 
-1. .eslintrc.js
-2. .eslintrc.yaml
-3. .eslintrc.yml
-4. .eslintrc.json
+1. .eslintrc**.js**
+2. .eslintrc**.yaml**
+3. .eslintrc**.yml**
+4. .eslintrc**.json**
 5. .eslintrc
 6. package.json
 
 ### 配置项解析
+
+**ESlint 是一个高度配置化的工具**，尤其是要注意 extends 和 rules 字段，它们定义了在项目中采用哪种风格（一段代码有没有问题，取决于项目中应用了哪些规则）
 
 #### parser-解析器
 
@@ -266,12 +261,66 @@ extends 属性值可以是：
 
    ```
 
-### 比较 Prettier
+### 在VScode中使用
 
-1. ESLint 主要是检查代码质量并给出提示，比如未使用的变量、三等号、全局变量声明等；
-2. Preitter 在格式化代码方面具有更大的优势，比如代码长度、空格等；
+ESLint 原本是一个命令行工具，如果在 VSCode 中使用需要安装 ESLint 插件。
 
-## VSCode集成
+**插件实现的原理也很简单**：
+
+- 在我们写代码的时候，插件在后台自动执行 eslint 命令分析代码，并根据结果实时回显到编辑器中
+- 使用插件需要我们当前项目内安装了 ESLint，如果目录中没有安装，插件会尝试使用全局安装的（插件本身并不包含 ESLint 核心库，而是读取本地或全局安装的 ESLint，并使用查找读取项目内的 eslintrc.* 配置文件
+- 所以当使用本地安装运行ESlint 程序时，每个项目都是独立的，不会冲突
+
+### 启用编辑器的保存自动修复功能
+
+开发者可以在编辑器保存的时，自动修复一些问题，而不用执行额外的  `eslint \--fix files`
+
+在 VSCode，需要添加设置来启用自动修复功能：
+
+```javascript
+{
+  // ...
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}
+```
+
+##  Prettier vs ESLint
+
+ESLint 和 Prettier 都会对代 AST（语法树）进行检查，
+
+- 但 Prettiter 只会进行语法分析（只能检查并归正代码的**格式问题**）
+- 而 ESLint 还会进一步对代码进行语义分析，能发现格式问题和代码模式问题（比如用 let 定义了一个变量，后面这个变量没有重新赋值，Preitter 会通过，ESLint 会检查出这里用 const 声明更好）
+
+**上面说到 ESLint 也能做格式化工具，那为什么还需要 Prettier?**
+
+因为 ESLint 只能检查 JavaScript 代码以及 TypeScript、JSX 等衍生代码（需要配置解析器），无法检查项目中的 CSS、HTML 等代码
+
+Prettier 则天然支持对大多数项目文件的格式化，包括 JSX、Vue、TypeScript、CSS、HTML、JSON、Markdown、YAML 等
+
+## 同时使用 Prettier 和 ESLint
+
+仔细了解就会发现，这两种工具在某些文件上的格式化功能是会有所重合的，那如果在项目中同时启用了这两种工具，我们需要保证这些文件只采用其中一种进行格式化，避免这两个工具的风格配置相互冲突，导致一个校验通过一个校验不通过
+
+如果需要同时使用二者，就需要关闭 ESLint 中可能和 Prettier 冲突的规则，这时 **eslint-config-prettier** 就派上用场了
+
+```javascript
+npm i eslint-config-prettier --save-dev
+```
+
+然后在 .eslintrc.js 配置 extends 属性：
+
+```javascript
+extends: [
+	// 覆盖eslint格式配置, 需要写在extends最后面
+	'prettier',
+],
+```
+
+
+
+## VSCode集成 
 
 1. 安装 Preitter - Code formatter 插件；
 2. 打开 setting.json 文件；

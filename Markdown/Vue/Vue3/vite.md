@@ -1,12 +1,10 @@
+- ​
 
 
-~~https://www.cnblogs.com/mlzzen/p/15730345.html~~
+## 问题与思考
 
+- 为什么 setup 里面 defindProps 不能使用 import 的 ts，在3.3更新了，之前是因为 宏编辑器
 
-
-## 问题
-
-为什么 setup 里面 defindProps 不能使用 import 的 ts
 
 
 
