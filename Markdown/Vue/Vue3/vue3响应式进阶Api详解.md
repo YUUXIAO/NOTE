@@ -891,10 +891,10 @@ watchEffect(
 
 ```javascript
 <template>
- 	<h2>浪里行舟</h2>
-	<h1>Hello Vue3.2</h1>
-    <h2>{{ color }}</h2><button @click="color = 'red'">color red</button>
-    <button @click="color = 'yellow'">color yellow</button><button @click="color = 'blue'">color blue</button>
+    <h2>{{ color }}</h2>
+	<button @click="color = 'red'">color red</button>
+    <button @click="color = 'yellow'">color yellow</button>
+	<button @click="color = 'blue'">color blue</button>
     <button @click="fontSize = '40px'">fontSize 40px</button>
 </template>
 
@@ -926,7 +926,9 @@ h2 {font-size: v-bind(fontSize);
 </div>
 ```
 
-使用`v-memo`，不会重新创建虚拟元素，并且会重新使用前一个元素，除非`v-memo`（此处为用户名）的条件发生变化。这可能看起来是一个很小的改进，但如果您渲染大量元素，它实际上是性能的巨大改进。
+使用`v-memo`，不会重新创建虚拟元素，并且会重新使用前一个元素，除非`v-memo`（user.name）的条件发生变化。
+
+这个用来渲染大量元素，在性能上来说应该是比前面响应式API再大的改进。
 
 #### effectScope（）
 
@@ -988,7 +990,7 @@ scope.stop() // 处理掉当前作用域内的所有 effect
 - 一般我们的 computed 和 watch 这些 api 都是在组件中调用，在这期间，代码产生的 effect 是会自动收集且绑定到当前的组件实例上，在组件卸载的时候，它们也会随之 stop，无需开发手动管理清除
 - 在vue3 的项目设计时，`@vue/reactivity`这个包是可以独立引入使用的，所以只要是可以跑 js 的地方就可以调用这些 effect 函数，不必去依赖组件（所以就失去了 vue 自动管理 effect 的能力），开发就需要手动收集 effect，再在合适的时机手动 stop 
 
-### TODO extends
+### extends
 
 要继承的“基类”组件，使一个组件可以继承另一个组件的组件选项。
 
