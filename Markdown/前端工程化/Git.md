@@ -27,6 +27,32 @@ git status
 
 ## 常见命令
 
+### 修改提交信息
+
+#### 修改最近一次的提交
+
+**方式一**：
+
+- 输入命令： `git commit --amend` ，会进入对最后一次提交信息编辑的 vim 编辑器界面
+- 修改为正确的提交信息后，按 `ESC`  退出到普通模式
+- 普通模式下按 :  进入命令模式
+- 输入 wq 即可保存修改并退出 vim 编辑器
+
+**方式二：**
+
+通过命令行直接修改：
+
+```git
+git commit --amend --message="new commit message"
+git commit --amend --author="xxx@xx.com"
+```
+
+【如果修改是已经提交到远程仓库的commit 信息】上面两种方式都必须要用 `git push --force` 将修改提交到远程仓库，不然会报错
+
+#### 修改最近两个或者两次以上的 commit 信息
+
+- 输入命令：`git rebase -i HEAD~｛N｝` ，其中 N 为
+
 ### 配置命令
 
 - 列出当前配置
