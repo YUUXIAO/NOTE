@@ -47,6 +47,47 @@ reactive 的响应式转换是深层的，会影响到所有嵌套的属性
 
 Vue 3的根基。返回对象的响应式副本，响应式转换是“深层”的——它影响所有嵌套property。返回Proxy对象，不等于原始对象。建议只操作Proxy对象，不要操作原始对象。
 
+```javascript
+import { mutableHandlers,shallowReactiveHandlers } from './baseHandlers'
+export const reactiveMap = new WeakMap()
+export const shallowReactiveMap = new WeakMap()
+export const reactiveMap = new WeakMap() // 定义一个reactive对象地图
+
+export function reactive(target) {
+    return createReactiveObject(target, reactiveMap, mutableHandlers)
+}
+
+function createReactiveObject(target, proxyMap, proxyHandlers) {
+    if (typeof target !== 'object') {
+        console.warn('reactive ${target} 必须是一个对象')
+        return target
+    }
+    //在reactive对象地图中查找是否有target，防止重复注册同一个reactive对象
+    const existingProxy = proxyMap.get(target)
+    if (existingProxy) {
+        return existingProxy
+    }
+
+    // 通过Proxy 创建代理，不同的Map存储不同类型的reactive依赖关系
+    const proxy = new Proxy(target, proxyHandlers)
+    proxyMap.set(target, proxy) // 把从未注册过的reactive对象放入reactive地图中
+    return proxy // 返回的是一个一个Proxy实例对象
+}
+// 浅层的代理
+export function shallowReactive(target) {
+    return createReactiveObject(
+        target,
+        shallowReactiveMap,
+        shallowReactiveHandlers
+    )
+}
+```
+
+从上面可以知道：
+
+- 通过 reactive 包裹的 obj 对象，返回一个 Proxy 实例对象
+- reactive 只处理 object 数据类型，不接收原始数据类型
+
 #### shallowReactive
 
  shallowReactive 就是把数据转为浅层次（第一层）的响应式数据，假设对象里是对象B，对象B就不是响应式的（有点类比浅拷贝）
@@ -83,10 +124,54 @@ export default {
 
 #### ref
 
+```javascript
+export function ref(val) {
+      if (isRef(val)) {
+        return val
+      }
+      return new RefImpl(val)
+    }
+    export function isRef(val) {
+      return !!(val && val.__isRef)
+    }
+
+    // ref就是利用面向对象的getter和setters进行track和trigget
+    class RefImpl {
+      constructor(val) {
+        this.__isRef = true
+        this._val = convert(val)
+      }
+      get value() {
+        track(this, 'value')
+        return this._val
+      }
+
+      set value(val) {
+        if (val !== this._val) {
+          this._val = convert(val)
+          trigger(this, 'value')
+        }
+      }
+    }
+
+    // ref也可以支持复杂数据结构
+    function convert(val) {
+      return isObject(val) ? reactive(val) : val
+    }
+
+```
+
+从上面可以发现 ：
+
+- ref 不需要使用 Proxy 代理语法，直接使用对象语法的 getter 和 setter 配置，监听 value 属性即可
+- ref 函数只是利用 对象的 getter 和 setter 拦截了 value 属性的读写（也是为什么操作 ref 数据需要.value），ref 包裹复杂的数据结构时，内部是使用的 reactive 实现
+
 ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收任意数据类型的参数，作为这个 ref 对象内部的value 的值
 
 - 生成值类型数据（String，Number，Boolean，Symbol）的响应式对象
 - 生成对象和数组类型的响应式对象 **（对象和数组一般不选用ref方式，而选用reactive方式，ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)）**
+
+
 
 
 
@@ -98,6 +183,8 @@ ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收�
 
 
 - Proxy能对所有引用类型代理，Vue 3也不再用data根对象，而是一个个的变量，所以带来了新问题，如何代理基本数据类型呢？并没有原生办法，只能构建一个{value: Proxy Object}结构的对象，这样Proxy也就能代理了。
+
+
 
 
 
