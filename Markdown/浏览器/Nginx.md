@@ -1,5 +1,7 @@
 > Nginx 是一个高性能的 HTTP 和 反向代理 web 服务器；
 
+https://mp.weixin.qq.com/s?__biz=Mzg3NjgzOTg5NA==&mid=2247484689&idx=1&sn=d0b9a22452cc581526d1c91c2e0837a6&chksm=cf2d53a8f85adabe0044c6d376083594e3d5dd50c529b7ffe6f339d9cbfe12a0fbd1b96edc04&scene=132#wechat_redirect
+
 ## 什么是Nginx
 
 1. 在性能上，Nginx 占用很少的系统资源，能支持更多的并发连接，达到更高效的访问效率；

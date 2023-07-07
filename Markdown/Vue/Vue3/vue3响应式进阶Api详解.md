@@ -165,6 +165,7 @@ export function ref(val) {
 
 - ref 不需要使用 Proxy 代理语法，直接使用对象语法的 getter 和 setter 配置，监听 value 属性即可
 - ref 函数只是利用 对象的 getter 和 setter 拦截了 value 属性的读写（也是为什么操作 ref 数据需要.value），ref 包裹复杂的数据结构时，内部是使用的 reactive 实现
+- ​
 
 ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收任意数据类型的参数，作为这个 ref 对象内部的value 的值
 
