@@ -1,12 +1,26 @@
 - ​
 
 
+## 
+
 ## 问题与思考
 
 - 为什么 setup 里面 defindProps 不能使用 import 的 ts，在3.3更新了，之前是因为 宏编辑器
 
 
 
+
+
+
+## Vite的优点
+
+- 基于 ES Modules 实现
+- 解决了 webpack-dev-server 冷启动时间过长，HMR反应速度过慢的问题
+
+使用 webpack 打包的原因
+
+- 浏览器环境不支持模块化，webpack支持 esModule、requrire、等模块化方式
+- 打包成 bundles 的概念-解决零散的模块文件会产生大量的 HTTP请求 - HTTP2解决（复用链接）
 
 
 
