@@ -83,3 +83,8 @@ xhr.responseType = 'blob';
 xhr.send();
 ```
 
+
+
+## fetch
+
+https://www.cnblogs.com/WindrunnerMax/p/13024711.html
