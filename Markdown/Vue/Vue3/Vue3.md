@@ -3,6 +3,37 @@
 - setup 同步还是异步，使用异步的 customRef
 
 
+## 组件相关内容
+
+### $attrs（Object）
+
+$attr 对象不包含的有：
+
+- vue 内置的特殊的 attribute： key、ref
+- vue 所有的内置指令（v-on、v-bind 除外）
+- 所有自定义的 directive 指令
+- 当前组件的 props 内声明的所有 prop 名称 
+- 当前组件的 emits 内声明的所有自定义事件名、
+
+
+
+### inheritAttrs（Boolean）
+
+这个属性感觉继承的概念比较像，主要与子组件单、多节点影响，
+
+会被继承的有：
+
+
+
+当template 有根元素的时候，绑定到组件上的属性和事件会自动继承到根元素上
+
+当组件返回单个根节点时，非
+
+
+
+
+
+
 
 ## vue3 响应式主要功能
 
@@ -31,6 +62,22 @@
 
   - 源码管理：monorepo 的方式维护，可以根据功能模块的不同拆分到 packages 目录下的子目录中，模块拆分更细化，职责更明确，一些package 是可以单独引入使用的（reactive库）
   - Typesctipt：基于 typeScript 编写的，提供了更好的类型检查，能支持复杂的类型推导
+
+### 打包体积
+
+vue2 官方说明运行时打包 23k，这个是没有安装依赖的时候，随着依赖包和框架特性的增多，有时候不必要的、未使用的代码文件都被打包进去，后期项目大了，打包文件会很大
+
+在 vue3 中，通过将大多数全局 API 和内部帮助程序移动到 javascript 的 module.exports 属性上实现这一点，module bundler 能够静态地分析模块依赖关系，并删除与未使用的 module.exports 属性相关的代码，模板编译器还生成了对 Tree Shaking 摇树优化友好的代码，只有在模板中实际使用某个特性时，该代码才导入该特性的帮助程序，尽管增加了许多新特性，但 Vue3 被压缩后的基线大小约为 10k
+
+### diff算法
+
+vue2 通过深度递归遍历两个虚拟 Dom 树，并比较每个节点上的每个属性，来确定实际 DOM 的哪些部分需要更新，这种方法比较暴力但快速，但是 DOM 的更新仍然设计许多不必要的 CPU 工作
+
+vue3 通过编译器在分析模版并生成带有可优化提示的代码，这样在运行时尽可能获取提示并采用“快速路径”，主要有以下三个优化：
+
+- 在 DOM 树级别，在没有动态改变节点结构的模板指令（比如  v-if 或者 v-for ）的情况下，节点结构保持完全静态，如果我们把一个模板分成由这些结构指令分隔的嵌套块，则每个块中的节点结构将再次完全静态，当我们更新块中的节点时，不需要再遍历递归 DOM 树，该块内的动态绑定可以在一个平面数组中跟踪，这种优化通过将需要执行的树遍历量减少了一个数量级
+- 编译器积极地检测模版中的静态节点、子树或者数据对象，并在生成代码中将它们提升到渲染函数之外，这样可以避免在每次渲染时重新创建这些对象，从而大大提高内存使用率并减少垃圾回收的频率
+- 在元素级别，编译器根据需要执行的更新类型 ，为每个具有动态绑定的元素生成一个优化标志，比如具有动态类绑定和许多静态属性的元素打上标志，提示只需要进行类检查，运行时将获取这些提示并采用专用的快速路径
 
 - 性能
 
@@ -67,37 +114,41 @@
       }
       ```
 
-  - 数据劫持优化：
+    ​
 
-    - 使用 proxy 监听整个对象，Proxy 并不能监听到内部深层次的对象变化，而 `Vue3` 的处理方式是在` getter` 中去递归响应式，这样的好处是真正访问到的内部对象才会变成响应式，而不是无脑递归
+    ​
 
-    - Proxy 代理的是整个对象而不是对象的属性（区分 Object.defineProperty 属性），对于整个对象进行操作；可以说解决了 Object.defineProperty 的痛点
+### 数据劫持优化（proxy 代替 defindProperty）
 
-      - 用 Proxy 对 对象动态添加的属性也会被拦截到；
-      - 可以监听数组变化；
+- 使用 proxy 监听整个对象，Proxy 并不能监听到内部深层次的对象变化，而 `Vue3` 的处理方式是在` getter` 中去递归响应式，这样的好处是真正访问到的内部对象才会变成响应式，而不是无脑递归
 
-      ```javascript
-      const targetObj = { id: '1', name: 'zhagnsan' };
-      const proxyObj = new Proxy(targetObj, {
-        get: function (target, propKey, receiver) {
-          console.log(`getting key：${propKey}`);
-          return Reflect.get(...arguments);
-        },
-        set: function (target, propKey, value, receiver) {
-          console.log(`setting key：${propKey}，value：${value}`);
-          return Reflect.set(...arguments);
-        }
-      });
-      proxyObj.age = 18;
-      // setting key：age，value：18
-      ```
+- Proxy 代理的是整个对象而不是对象的属性（区分 Object.defineProperty 属性），对于整个对象进行操作；可以说解决了 Object.defineProperty 的痛点
 
-- 语法API（主要指 composition  Api）
+  - 用 Proxy 对 对象动态添加的属性也会被拦截到；
+  - 可以监听数组变化；
 
-  - 优化逻辑组织：相同功能可以先在一块地方
-  - 优化逻辑复用：
-    - 对比 vue2 的mixins 复用会发现：一般业务重、逻辑复杂且繁琐，多功能重合的情况下会抽离 mixins 来实现代码复用，但是在后期的维护和修改成本其实是增加的（命名冲突、数据/方法来源不明确，牵一发而动全身（好处也是坏处））
-    - vue3 setup 里面更像是主逻辑抽离，把逻辑功能做成方法复用，使用的时候直接调用
+  ```javascript
+  const targetObj = { id: '1', name: 'zhagnsan' };
+  const proxyObj = new Proxy(targetObj, {
+    get: function (target, propKey, receiver) {
+      console.log(`getting key：${propKey}`);
+      return Reflect.get(...arguments);
+    },
+    set: function (target, propKey, value, receiver) {
+      console.log(`setting key：${propKey}，value：${value}`);
+      return Reflect.set(...arguments);
+    }
+  });
+  proxyObj.age = 18;
+  // setting key：age，value：18
+  ```
+
+### 语法API（主要指 composition  Api）
+
+- 优化逻辑组织：相同功能可以先在一块地方
+- 优化逻辑复用：
+  - 对比 vue2 的mixins 复用会发现：一般业务重、逻辑复杂且繁琐，多功能重合的情况下会抽离 mixins 来实现代码复用，但是在后期的维护和修改成本其实是增加的（命名冲突、数据/方法来源不明确，牵一发而动全身（好处也是坏处））
+  - vue3 setup 里面更像是主逻辑抽离，把逻辑功能做成方法复用，使用的时候直接调用
 
 ## Tree-shaking
 

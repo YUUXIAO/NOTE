@@ -8,6 +8,7 @@
   - 在组合式API中，如果想在子组件中用其它变量接收props的值时需要使用toRef将props中的属性转为响应式。
 - build.polyfillDynamicImport ？？？ 已经废弃（会兼容），新的替代方案
 - inheritAttrs 属性
+  - ​
 - `Attribute`强制策略
 - 3.3 的属性？？代码设计层面的区别？？
 
