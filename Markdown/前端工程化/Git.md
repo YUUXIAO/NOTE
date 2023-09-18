@@ -9,8 +9,9 @@ https://blog.csdn.net/u012244479/article/details/130049929
   - **暂存区：**介于工作区和本地仓库之间，暂时存放文件的地方，主要是标记修改的内容，（通过 add 命令将工作区的文件添加到缓冲区）；
   - **本地仓库（.git）：**一般我们的项目根目录下有个隐藏目录 `.git` ，使用 commit 命令可以将暂存区的文件添加到本地仓库；
   - **远程仓库：**当我们使用 gitHub 托管我们的项目时，它就是一个远程仓库；
-
-- **HEAD：** 有一个 HEAD 指针指向当前分支（只有一个分支的情况下会指向 masetr，master 会指向最新提交）
+- **HEAD：** 这是当前分支版本顶端（最近一个提交）的别名，（只有一个分支的情况下会指向 masetr，master 会指向最新提交）
+- **Index：**也被叫做 staging area，指的是一整套即将被下一个提交的文件的集合，它也可以理解为是即将成为 HEAD 的那个commit
+- **Working Copy：**代表你正在工作的那个文件集
 
 ## 文件状态
 
@@ -80,30 +81,48 @@ git reset -hard <需要回滚的commit-id> // 文件不会保留在工作区，�
 
 #### reset 和 revert 的差异
 
-| 命令       | 是否抹掉历史                                                 | 适用场景                                                     | 颗粒度             |     |
-| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------ | --- |
-| git reset  | **是**，回滚的历史将消失                                     | 本地提交的改动，但是还未 push 到远端的提交（不介意抹去历史） | 可以作用于特定文件 |     |
-| git revert | **否**，历史提交记录不受影响，回滚后还会生成一次新的提交记录 | 已经提交到远端的改动（需要留痕）                             | 不可作用城文件层面 |     |
+| 命令         | 是否抹掉历史                           | 适用场景                              | 颗粒度       |      |
+| ---------- | -------------------------------- | --------------------------------- | --------- | ---- |
+| git reset  | **是**，回滚的历史将消失                   | 本地提交的改动，但是还未 push 到远端的提交（不介意抹去历史） | 可以作用于特定文件 |      |
+| git revert | **否**，历史提交记录不受影响，回滚后还会生成一次新的提交记录 | 已经提交到远端的改动（需要留痕）                  | 不可作用城文件层面 |      |
 
-### git reset 回滚某次提交、
+### git branch
 
-使用 git reset 是不会产生 commits 的，它只是更新一个 branch 指向另一个 commit，说白了它就是将一个分支的 HEAD 指向了之前某一次的提交，一般用来移除当前分支的一些提交
+### git reset（回滚某次提交）
 
-使用 git reset （代码回滚）进行强制回滚，约等于重置 HEAD （当前分支的版本顶端）到另一个 commit 上，所有在该 commit 之后的提交记录会被丢弃！
+说白了它就是重置 HEAD  到之前某一次的commit，所有在该 commit 之后的提交记录会被丢弃！一般用来移除当前分支的一些提交（代码回滚）
+
+比如你当前分支master 的提交是这样的：
+
+```
+- A - B - C (HEAD, master)
+```
+
+HEAD 和 master branch tip 是在一起的，此时我们希望 master指向 B，那么执行
+
+```
+git reset B
+
+- A - B (HEAD, master) 
+```
+
+也可以根据回退xxx次来执行
 
 ```
 git reset --hard HEAD~2 (数字代表要回退几个版本)
 ```
 
-**--hard 和 --soft 和 mixed（默认）的区别 **
+总之：git reset 不会产生 commits ，它仅仅是更新一个branch（branch 本身就是一个指向一个commit 的指针）指向另一个 commit （HEAD 和 branch  Tip同时移动保持一致）
+
+#### --hard 、 --soft 、 mixed
 
 - --hard：就是删除提交记录并不保存所删除记录所做的更改（暂存区和工作区都同步到你指定的提交）
-- --soft：虽然重置了最近两次的提交，但是还是保存了提交所做的更改，所有的在 original HEAD 到你重置的那个 commit 之前所有的变更都放在暂存区中（缓存区和工作区都不会被改变)
-- --mixed：默认参数，所以在该分支上从 original HEAD 到重置的那个 commit 之间的所有变更都作为 local modifications 保存在工作区中（未 staged），我们可以重新修改再做 commit（暂存区和指定的提交同步，工作区不受影响）
+- --soft：就是将 HEAD 到你重置的那个 commit ，index（缓存区）和 working copy（工作区） 都不会有任何变化，所有在HEAD 到重置的 commit 之间的所有变更都放在暂存区（stage）中
+- --mixed：默认参数，在该分支上从 original HEAD 到重置的那个 commit 之间的所有变更都作为 local modifications 保存在工作区中（未 staged），我们可以重新修改再做 commit（暂存区和指定的提交同步，工作区不受影响）
 
-### 复制 A 分支上某些提交记录到 B 分支上（git rebase）
+### git rebase（重建提交顺序）
 
-如果我们想把在 A 分支上提交过的某些记录也复制到 B 分支上，使用命令如下：
+rebase 就是把在 A 分支上提交过的某些记录也复制到 B 分支上，使用命令如下：
 
 ```
  git rebase [startpoint] [endpoint]  --onto  [branchName]
@@ -111,7 +130,7 @@ git reset --hard HEAD~2 (数字代表要回退几个版本)
 
 **说明：**
 
-- `[startpoint]  [endpoint]` ` 指定一个区间（和 git rebase 使用方法相同）
+- `[startpoint]  [endpoint]` ` 指定一个区间
 
 - `--onto` 是指将指定的区间（**前**）的提交要复制到哪个分支（**后**）上
 
@@ -122,7 +141,6 @@ git reset --hard HEAD~2 (数字代表要回退几个版本)
   git reset --hard [commitID]
   ```
 
-- 、
 
 ### 找回合流后删除的分支
 
@@ -178,7 +196,9 @@ git commit --amend --author="xxx@xx.com"
 
 - 输入命令：`git rebase -i HEAD~｛N｝` ，其中 N 表示最近 N 次的提交
 
-### rebase 命令
+
+
+### git rebase
 
 rebase 一般使用场景如下：
 
