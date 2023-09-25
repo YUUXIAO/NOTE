@@ -4,26 +4,30 @@
 
 https://blog.csdn.net/qq_34621851/article/details/123535975?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-1-123535975-blog-124456738.pc_relevant_3mothn_strategy_and_data_recovery&spm=1001.2101.3001.4242.2&utm_relevant_index=4
 
+## vite 工作机制
+
+用户向vite请求资源时，vite 内部启了一个开发服务器 vite devServer ，这个服务器内部有个工作机制（相当于一个流水线），用户请求过来必定经过所有插件去处理一下，处理完成之后把转换的结果返回给用户
+
 ## 插件钩子
 
 ### 通用钩子
 
 在开发中，Vite 开发服务器会创建一个插件容器来调用 [Rollup 构建钩子](https://rollupjs.org/plugin-development/#build-hooks)，与 Rollup 如出一辙
 
-在服务器启动时被调用：[`options`](https://rollupjs.org/plugin-development/#options) 、[`buildStart`](https://rollupjs.org/plugin-development/#buildstart)
+在**服务器启动时**被调用：
 
 - options：在收集 rollup 配置前，Vite 服务器启动时调用，可以和 rollup 配置进行合并
 
 
 - buildStart：在 rollup 构建中，vite 服务启动时调用，在这里可以访问 rollup 的配置
 
-在每个传入模块请求时被调用：[`resolveId`](https://rollupjs.org/plugin-development/#resolveid) 、[`load`](https://rollupjs.org/plugin-development/#load) 、[`transform`](https://rollupjs.org/plugin-development/#transform)
+在**每个传入模块请求时**被调用：
 
 - transform：代码转译，这个函数的功能类似于 webpack 的 loader功能
 - resolveId：在解析模块时调用，可以返回一个特殊的 resolveId 来指定某个 import 语句来加载特定的模块
 - load：在解析模块时调用，可以返回代码块来指定某个 `import` 语句加载特定的模块
 
-在服务器关闭时被调用：[`buildEnd`](https://rollupjs.org/plugin-development/#buildend) 、[`closeBundle`](https://rollupjs.org/plugin-development/#closebundle)
+在**服务器关闭时**被调用：
 
 - buildEnd：在 `vite` 本地服务关闭前，`rollup` 输出文件到目录前调用
 - closeBundle：在 `vite` 本地服务关闭前，`rollup` 输出文件到目录前调用
