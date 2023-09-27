@@ -62,9 +62,9 @@ ESlint 是一个作代码质量检测、编码风格约束的工具，“Find an
 
 - **统一团队代码风格问题**：将运算符两边的空、语句末尾的分号...
 - **检查语法错误，避免一些低级的代码错误**： 使用了未定义的变量、修改 const 定义的变量...
--  **确保代码遵循最佳实践**：可以借助 eslint-config-standard 配置包扩展社区中流行的最佳实践的风格指南
+- **确保代码遵循最佳实践**：可以借助 eslint-config-standard 配置包扩展社区中流行的最佳实践的风格指南
 
-### 配置文件格式说明
+### 配置文件
 
 ESlint 支持配置几种格式的配置文件：
 
@@ -202,9 +202,11 @@ ESLint 的插件与有固定的命名格式，以 eslint-plugin- 开头，使用
 }
 ```
 
-#### extends-扩展
+#### extends（扩展）
 
-> extends 可以理解为是一份配置好的 plugin 和 rules；
+> extends 可以理解为是一份配置好的 plugin 和 rules
+
+要注意 ESlint 的解析顺序是按照 **从下往上** 的顺序来加载的
 
 extends 属性值可以是：
 
@@ -224,6 +226,8 @@ extends 属性值可以是：
     }
 }
 ```
+
+
 
 ### 在注释中使用 ESLint
 
@@ -285,6 +289,93 @@ ESLint 原本是一个命令行工具，如果在 VSCode 中使用需要安装 E
   }
 }
 ```
+
+### vue组件选项自动排序
+
+前提在我们项目的 eslint 配置文件中的 extends属性中加入： `"plugin:vue/recommended"`
+
+#### vue/order-in-components
+
+这个主要是用于处理script**选项式排序**比如data，watch，methods等，但是不处理vue3 setup里面的排序
+
+这个规则在 `"plugin:vue/vue3-recommended"` and `"plugin:vue/recommended"` 是自带的，需要在 eslint 的配置文件里的 rules 属性加上下面的配置，我们也可以按照自己的项目风格手动调整顺序
+
+```javascript
+rules: {
+  // ...
+  {
+    "vue/order-in-components": ["error", {
+      "order": [
+        "el",
+        "name",
+        "key",
+        "parent",
+        "functional",
+        ["delimiters", "comments"],
+        ["components", "directives", "filters"],
+        "extends",
+        "mixins",
+        ["provide", "inject"],
+        "ROUTER_GUARDS",
+        "layout",
+        "middleware",
+        "validate",
+        "scrollToTop",
+        "transition",
+        "loading",
+        "inheritAttrs",
+        "model",
+        ["props", "propsData"],
+        "emits",
+        "setup",
+        "asyncData",
+        "data",
+        "fetch",
+        "head",
+        "computed",
+        "watch",
+        "watchQuery",
+        "LIFECYCLE_HOOKS",
+        "methods",
+        ["template", "render"],
+        "renderError"
+      ]
+    }]
+  }
+}
+```
+
+#### [vue/attributes-order](https://eslint.vuejs.org/rules/attributes-order.html)
+
+这个主要是用于处理template 里面attrebute的排序，比如class、:xxx、v-if、filterable这种
+
+这个规则在 `"plugin:vue/vue3-recommended"` and `"plugin:vue/recommended"` 是自带的，需要在 eslint 的配置文件里的 rules 属性加上下面的配置，我们也可以按照自己的项目风格手动调整顺序
+
+```json
+rules: {
+  // ...
+  {
+    "vue/attributes-order": ["error", {
+      "order": [
+        "DEFINITION", // 比如is、
+        "LIST_RENDERING", // 比如 v-for
+        "CONDITIONALS", // 比如 v-if、v-show
+        "RENDER_MODIFIERS", // 比如 v-once、v-pre
+        "GLOBAL", // 比如 id
+        ["UNIQUE", "SLOT"], // 比如 ref、key
+        "TWO_WAY_BINDING", // 比如 v-model
+        "OTHER_DIRECTIVES", // 比如 v-custom-directive
+        "OTHER_ATTR", // 比如 :customProp='xxx'
+        "EVENTS", // 比如 @click
+        "CONTENT"// 比如 v-html
+      ],
+      "alphabetical": false // 是否按照字母顺序排列
+    }]
+  }
+}
+```
+
+
 
 ##  Prettier vs ESLint
 
@@ -350,3 +441,34 @@ typescriptreact;
 json;
 graphql;
 ```
+## Editor Config
+
+Editor Config 主要是用来解决项目成员之间使用了不同的 IDE 编辑器导致的代码风格不统一的问题
+
+在项目根目录中创建 `editorconfig` 文件，一般这份文件主要是处理字符集、缩进、换行等基础风格
+
+```javascript
+# 表示是最顶层的 EditorConfig 配置文件
+root = true
+
+# 表示所有文件适用
+[*]
+charset = utf-8 # 设置文件字符集为 utf-8
+indent_style = space # 缩进风格（tab | space）
+indent_size = 2 # 缩进大小
+end_of_line = lf # 控制换行类型(lf | cr | crlf)
+trim_trailing_whitespace = true # 去除行首的任意空白字符
+insert_final_newline = true # 始终在文件末尾插入一个新行
+
+[*.{yml,yaml,json}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+max_line_length = off
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
+```
+

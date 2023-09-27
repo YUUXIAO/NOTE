@@ -145,6 +145,14 @@ Promise.prototype.finally = function(callback) {
 
 ## Async 与 Await
 
+async 函数就是 generator 函数的语法糖：就是将 generator 函数的 * 换成 async ，将 yield 替换成 await 
+
+async 函数对 generator 的改进：
+
+- 内置执行器，不需要使用 next() 手动执行
+- await 命名后面可以是 Promise 对象或者原始类型的值，yield命令后面只能是Thunk函数或Promise对象
+- 返回值是 Promise ，返回非 Promise 时，async 函数会把它包装成 Promise 返回：`Promise.resolve(value)`
+
 ### async 函数
 
 1. 返回值为 Promise 对象；
@@ -153,12 +161,74 @@ Promise.prototype.finally = function(callback) {
 ### await 表达式
 
 1. await 右侧的表达式一般为 Promise 对象，但也可以是其它的值 ；
-2. 如果表达式是 Promise 对象，await 返回的是 Promise 成功的值；
-3. 如果表达式是其它的值，直接将此值作为 await 的返回值 ；
-4. await 必须写在 async 函数中, 但 async 函数中可以没有 await；
-5. 如果 await 的 Promise 失败了, 就会抛出异常, 需要通过 try...catch 来捕获处理；
+   - 如果表达式是 Promise 对象，await 返回的是 Promise 成功的值；
+   - 如果表达式是其它的值，直接将此值作为 await 的返回值 ；
+2. await 必须写在 async 函数中, 但 async 函数中可以没有 await；
+3. 如果 await 的 Promise 失败了, 就会抛出异常,可以通过 try...catch 来捕获处理；
 
 ## 关键问题
+
+### promise 和 try catch
+
+先说结论：
+
+如果我们需要捕获 Promise 的错误，需要使用 promise-catch 方法来捕获
+
+如果使用 async await 可以使用 try-catch 来捕获错误
+
+```javascript
+try {
+    new Promise((resolve,reject)=>{
+        throw Error('promise 内部错误1')
+    }).catch(e=>{
+        console.error('promise catch 错误')  // 能捕获错误
+    })
+} catch (e) {
+    console.error('try catch 错误', e) // 捕获不到错误
+}
+
+new Promise(r=>{
+    try{
+      throw Error('promise 内部错误2')
+    } catch(e){
+      console.warn(e) // 能捕获错误
+	}
+})
+
+
+// 使用 async await 捕获
+async function getData(){
+  throw new Error('error')
+}
+async function test(){
+  try{
+    const value = await getData()
+  } catch (error){
+    console.error(error)  // 能捕获
+  }
+}
+```
+
+> 为什么正常使用 promise 不能够使用 try catch 捕获异常呢，使用 async await 确可以捕获呢？
+
+首先我们要明白一点：try catch 是只能捕获同步代码的异常，异步操作的异常是不能被直接捕获的
+
+- 在Promise 设计中，executir 默认有个try catch，有异常时内部已经捕获了，并且将其封装成 reject 状态的 promise ，可以通过 Promise.catch 方法来捕获
+
+  ```javascript
+  console.log(1)
+  new Promise((resolve) => {
+    console.log(2)
+    throw Error(4)
+  }).then((e) => { console.log(e) })
+  console.log(3)
+  ```
+
+  熟悉 js 的 event loop 机制就知道，上面代码 log 顺序是 1、2、3、4，捕获异常 4 的时候其实是在 promise 里面抛出，调用 reject 的，reject 是加到微任务里的，此时 try catch 已经执行完了，所以捕获不了
+
+- 使用 async await 封装了，实现了同步的方式 ，所以try catch 可以捕获异常
+
+
 
 ### 异常传透
 
@@ -196,17 +266,17 @@ Promise.prototype.finally = function(callback) {
 
 ##### promise、async和await在事件循环中的执行过程
 
-![promise1](/images/promise1.jpg)
+![promise1](../images/promise1.jpg)
 
-![promise2](/images/promise2.jpg)
+![promise2](../images/promise2.jpg)
+
+
 
 ### 缺点
 
-1. Promise 一旦新建就会立即执行，无法中途取消；
-2. 如果不设置回调函数，Promise 内部的错误就无法反映到外部；
-3. 当处于pending状态时，无法得知当前处于哪一个状态，是刚刚开始还是刚刚结束；
-
-## 应用
+- Promise 一旦新建（new Promise）就会立即执行，无法中途取消；
+- 如果不设置回调函数，Promise 内部的错误就无法反映到外部；
+- 当处于pending状态时，无法得知当前处于哪一个状态，是刚刚开始还是刚刚结束；应用
 
 ### 加载图片
 
@@ -215,13 +285,11 @@ function loadImg(url){
   return new Promise((resolve, reject) => {
     var imgDom = document.createElement("img");
     imgDom.src = url;
-    //图片加载成功回调
     imgDom.onload = ()=>{
-      resolve(imgDom);
+      resolve(imgDom);  //图片加载成功回调
     }
-    //图片加载失败回调
     imgDom.onerroe = (error)=>{
-      reject(error)
+      reject(error) //图片加载失败回调
     }
     document.body.appendChild(imgDom);
   })
