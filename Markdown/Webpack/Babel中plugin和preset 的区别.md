@@ -2,9 +2,28 @@
 >
 > 原始代码 --> [ Babel Plugin ] --> 转换后的代码；
 
-## Babel Plugin
+## 插件（babel-plugin-xx）
 
-Babel插件一般尽可能拆成小的力度，开发者可以按需引进：比如对ES6转ES5的功能，Babel官方拆成了20+个插件，比如开发者想要体验ES6的箭头函数特性，那他只需要引入transform-es2015-arrow-functions插件就可以，而不是加载ES6全家桶；
+> Babel 插件一般分为两种：语法插件和转换插件
+>
+> 
+>
+> 
+
+
+
+**语法插件：**允许 babel 解析（parse）特定类型的语法（注意这里是语法，不包含新出的 api），可以在 AST 转换时使用，以支持解析新语法 
+
+```javascript
+import * as babel from "@babel/core";
+const code = babel.transformFromAstSync(ast, {
+    // 支持箭头函数
+    plugins: ["@babel/plugin-transform-es2015-arrow-functions"],
+    babelrc: false
+}).code;
+```
+
+Babel 插件一般尽可能拆成小的力度，开发者可以按需引进：比如对ES6转ES5的功能，Babel官方拆成了20+个插件，比如开发者想要体验ES6的箭头函数特性，那他只需要引入transform-es2015-arrow-functions插件就可以，而不是加载ES6全家桶；
 
 比如将 ES6 代码转成 ES5：
 
@@ -64,9 +83,17 @@ preset可以分为下面几种：
 
 ## Babel-preset-env
 
-babel-preset-env 可以根据开发者的配置，按需加载插件，配置项大致包括：
+在Babel 7以后，@babel/preset-env舍弃了Stage presets（@babel/preset-stage-x）这种预设
+@babel/preset-env只提供TC39大于stage-3的提案（即只包含stage-4阶段），因此如果要用小于stage 4的提案语法，则必须先安装再手动引入对应插件
 
-- 需要支持的平台：比如 node、浏览器等；
+
+@babel/preset-env 可以根据开发者的配置，按需加载插件，主要是对我们项目中所使用且目标浏览器中不支持的功能进行代码转换和加载 polyfill
+
+在不进行任何配置的情况下，@babel/preset-env 所包含的插件将支持所有最新的JS特性（不包含 stage 阶段），将其转换成 ES5 代码
+
+配置项大致包括：
+
+- 需要支持的平台：比如 node、浏览器等，如果不是项目需要适用所有平台，建议指定目标环境，这样可以保证编译代码最小
 - 需要支持的平台的版本：比如支持 node@6.1等；
 
 默认配置的情况下，它跟babel-preset-latest是等同的，会加载从es2015开始的所有preset：
@@ -76,13 +103,6 @@ babel-preset-env 可以根据开发者的配置，按需加载插件，配置项
 {
   "presets": ["env"]
 }
-```
-
-示例代码：
-
-```javascript
-// index.js
-async function foo () {}
 ```
 
 #### 针对node版本的配置

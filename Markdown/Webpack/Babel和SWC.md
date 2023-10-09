@@ -1,9 +1,13 @@
+参考：
+
+https://blog.csdn.net/sinat_27049175/article/details/128940096?spm=1001.2101.3001.6650.11&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-11-128940096-blog-126388841.235%5Ev38%5Epc_relevant_anti_vip_base&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-11-128940096-blog-126388841.235%5Ev38%5Epc_relevant_anti_vip_base&utm_relevant_index=18
+
 > Babel 是一个 JavaScript 编译器，主要用于将 ECMAScript 2015+ 版本代码向后兼容 Javascript 语法，以便可以运行到旧版本浏览器或其它环境中；
 
 ## Babel的作用 
 
 - 语法转换（ES6转ES5，转 JSX 语法）
-- 通过 Polyfill 方式在目标环境中添加缺失的特性（通过引入第三方polyfill模块，比如 core-js）
+- 通过 Polyfill 方式在目标环境中添加缺失的特性：比如旧版浏览器不支持的 Promise、a
 - Babel 支持 Source map，可以调试编译后的代码
 
 ### 处理步骤
@@ -96,9 +100,12 @@ console.log(test.toString()); //通过toString方法，看看控制台输出的�
 */
 ```
 
-#### babel-polyfill
+#### [babel-polyfill](https://babeljs.io/docs/options#passperpreset)
 
 > babel-polyfill 主要是用已经存在的语法和 api 实现一些浏览器还没有实现的 api，对浏览器的一些缺陷做一些修补；
+
+- 这个包由core-js（版本为2.x.x）与regenerator-runtime两个包组成
+- 这个包在Babel 7.4.0以后就废弃了，所以在Babel 7.4.0以后，我们想让一些不支持ES6+ API的旧版本浏览器支持这些API，应该直接安装core-js@3.x.x的包（不要安装2.x.x的版本，已经不维护了，目前最新版本为3.x.x；并且只有3.x.x的版本才有stable这个文件夹）
 
 ### 项目使用
 

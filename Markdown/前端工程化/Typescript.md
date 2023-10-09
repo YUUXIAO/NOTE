@@ -1,3 +1,73 @@
+参考： https://blog.csdn.net/qq_43869822/article/details/121664818
+
+## 内置工具类型
+
+### Record
+
+> Record 接收两个泛型参数，表示对象键和值的类型，主要是用来定义一个对象的 key 和 value 的类型
+
+先看下 Record 的源码
+
+```javascript
+/**
+ * Construct a type with a set of properties K of type T
+ */
+type Record<K extends keyof any, T> = {
+    [P in K]: T;
+};
+
+// 使用
+type recordType = Record<K,T>
+```
+
+对象的键的类型都为 K，值的类型为 T，并返回一个新的类型 recordType
+
+## Partial
+
+> Partial 生成一个新类型，该类型拥有与 T 相同的属性，但是所有属性都是可选的
+
+看下源码：
+
+```javascript
+type Partial<T> = {
+    [P in keyof T]?: Partial<T[P]>
+}
+```
+
+实际使用有点类似于从对象 A 复制属性，并且生成一个新的类型
+
+```javascript
+interface Person {
+  name: string
+  age: string
+  job: string
+}
+
+type Child = Partial<Person>
+// 等同于
+type Child = {
+  name?: string
+  age?: string
+  job?: string
+}
+```
+
+### Required
+
+> Required 生成一个新类型，该类型与 T 拥有相同的属性，但是所有属性都是必选项
+
+看下源码：
+
+```javascript
+type Require<T> = {
+    [P in keyof <T>]-?: T[P]
+}
+```
+
+使用起来是和  Partial 一样的，只是生成的类型属性是必选的
+
+
+
 ## TS类型
 
 ### 基础类型

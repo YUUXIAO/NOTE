@@ -56,12 +56,87 @@ $attr 对象不包含的有：
 - 更快：diff算法更新；静态提升；事件监听缓存；SSR优化
 - 更友好：增加了 composition API，增加了代码的逻辑组织和复用能力（更像是逻辑方法化）；基于 typescript 编写，可以享受自动的类型定义提示
 
+## 项目结构
+
+![vue1](F:\Yabby\NOTE\images\vue\vue1.png)
+
+V3 源码主要由下面几个模块组成：
+
+### Compiler 模块
+
+主要用来解析 Vue 模板，将其转换为渲染函数
+
+首先将 vue 模版编译成渲染函数，其中调用了 parse 函数将模版解析成 AST 语法树，再调用了 generate 函数将 AST 转换成 js 代码
+
+### Renderer 模块
+
+主要将组件渲染为真实的 Dom 元素，这里会区分**浏览器渲染器**（Dom API）还是**服务端渲染器** （Node.js 的流式渲染），两种渲染器的实现方式不同，但是主要渲染流程差不多：
+
+- **创建根组建实例：** 创建根组件实例，并将其挂载到指定的 DOM 元素上
+- **渲染组件：** 从根组件开始，递归渲染组件树，会先执行组件的 setup 函数，然后 render 函数，再生成虚拟Dom 树
+- **更新虚拟 DOM：** 当组件状态发生变化时，会重新执行 render 函数，生成新的虚拟 DOM
+- **比较新旧虚拟 DOM：**进行比较，找出需要更新的 DOM 元素
+- **更新 DOM**
+
+在 V3 中，Renderer 模块的实现主要使用了以下功能：
+
+1. Diff 算法
+
+2. [**PatchFlag：**](https://github.com/vuejs/core/blob/main/packages/shared/src/patchFlags.ts)在虚拟节点上添加 PatchFlag 标记，用于标记节点需要更新的类型，减少一定的比较时间
+
+   ![vue_2](F:\Yabby\NOTE\images\vue\vue_2.png)
+
+3. **静态提升：**将静态节点提升到父组件的渲染函数中，避免重复渲染静态节点的性能问题
+
+4. **缓存事件处理函数：** 将事件处理函数缓存起来，避免会重复创建函数
+
+5. **内置组件的优化：** 对内置组件（slot、keep-alive等）进行优化
+
+
+
+### Reactivity 模块
+
+主要实现响应式数据绑定，将，并在对象属性发生变化时自动更新相关视图
+
+- reactive 函数用于将普通的 js 对象转化成响应式对象，其中使用了 createReactiveObject 函数来创建响应式对象
+- createReactiveObject 函数使用了 Proxy 对象来监听对象属性的读写操作，同时根据 isReadonly 参数来选择不同的处理器（mutableHandlers 或 readonlyHandlers）
+- mutableHandlers 使用了 get 和 set 函数来监听对象属性的读写，并在其中调用了 track 和 trigger 函数来进行依赖收集和派发更新
+- readonlyHandlers 使用了 readonlyGet 和 readonlySet 函数来监听对象属性的读写，其中 readonlySet 函数返回了 false，避免了对只读对象进行修改
+
+### Runtime-core 模块
+
+主要实现了 Vue 组件的实例化、生命周期、事件等核心功能，主要的作用的将组件模版编译成渲染函数，并在组件状态发生变化时自动更新相关视图
+
+- createComponentInstance 函数创建组件实例，其中包含了组件的状态、渲染函数等信息
+- setupComponent 函数初始化组件实例，其中将组件模版编译成渲染函数，并将其赋值给 instance.render属性
+- renderCompoentRoot 函数用来渲染组件的根节点，其中调用了 instance.render 来生成组件的虚拟 DOM，并将其赋值给 instance.subTree 属性
+- updateComponent 用来更新组件的视图，其中调用了 renderCompoentRoot 来生成新的虚拟Dom，并将其与旧的虚拟DOM进行对比，最终更新需要更新的节点  
+
+### Shared 模块
+
+主要包含一些公共的工具函数，链接：https://github.com/vuejs/core/blob/main/packages/shared/src/index.ts
+
+
+
 ## 优化方案
+
+V3 和 V2 在设计上的主要区别：
+
+- **响应式系统：**使用 Proxy 替换了 defineProperty
+- **组件实现：**采用编译时优化组件
+- **编译器：** 将编译器独立出来，减少项目的体积，支持渲染函数以及Typescript类型声明
+- **项目构建：** 默认使用了浏览器原生支持的 ES 模块，在打包时使用 Tree Sharking 去掉无用代码，减少项目体积
+
+
 
 - 源码
 
-  - 源码管理：monorepo 的方式维护，可以根据功能模块的不同拆分到 packages 目录下的子目录中，模块拆分更细化，职责更明确，一些package 是可以单独引入使用的（reactive库）
-  - Typesctipt：基于 typeScript 编写的，提供了更好的类型检查，能支持复杂的类型推导
+  - **源码管理：**monorepo 的方式维护，可以根据功能模块的不同拆分到 packages 目录下的子目录中，模块拆分更细化，职责更明确，一些package 是可以单独引入使用的（reactive库）
+  - **Typesctipt：**基于 typeScript 编写的，提供了更好的类型检查，能支持复杂的类型推导，其实感觉V3加入这个对于开发者也更容易阅读源码
+
+
+
+
 
 ### 打包体积
 
@@ -85,20 +160,24 @@ vue3 通过编译器在分析模版并生成带有可优化提示的代码，这
 
   - 编译优化：
 
-    - **静态提升 vdom**： Vue3 优化了 vdom 的更新性能，静态提升包含静态节点和静态属性的提升，把一些静态的不会变的节点用变量缓存起来，提供下次 re-render 直接调用（不会再参与 diff 计算，vue2 是进行标记，但是还是要计算）；针对只是 class 等样式的响应式也会单独处理
+    - [**静态标记：**](https://github.com/vuejs/core/blob/main/packages/shared/src/patchFlags.ts) vue2 都是从根节点开始一层一层进行全量对比（不会区分静动态），vue3 新增了静态标记，在与上次虚拟dom 对比的时候，只对比带有 patchFlags 的节点，这样就可以跳过一些静态标记
+
+    - **静态提升 vdom**： Vue3 优化了 vdom 的更新性能，静态提升包含静态节点和静态属性的提升，把一些不更新的节点用变量缓存起来，提供下次 re-render 直接调用（不会再参与 diff 计算，vue2 是进行标记，但是还是要计算）；针对只是 class 等样式的响应式也会单独处理
+
+      这里推荐一个网站可以直接看到 tempalte 到编译后的内容： https://template-explorer.vuejs.org/
 
       ```javascript
       // template
       <div class="div">
-        <div>content</div>
-        <div>{{message}}</div>
+        <div class="line">静态文字1</div>
+        <div class="text">{{ text }}</div>
       </div>
 
       // 没有静态提升
       function render(_ctx, _cache, $props, $setup, $data, $options) {
         return (_openBlock(), _createBlock("div", { class: "div" }, [
-          _createVNode("div", null, "content"),
-          _createVNode("div", null, _toDisplayString(_ctx.message), 1 /* TEXT */)
+          _createElementVNode("div", { class: "line" }, "静态文字1"),
+          _createElementVNode("div", { class: "text" }, _toDisplayString(_ctx.text), 1 /* TEXT */)
         ]))
       }
 
@@ -109,14 +188,29 @@ vue3 通过编译器在分析模版并生成带有可优化提示的代码，这
       function render(_ctx, _cache, $props, $setup, $data, $options) {
         return (_openBlock(), _createBlock("div", _hoisted_1, [
           _hoisted_2,
-          _createVNode("div", null, _toDisplayString(_ctx.message), 1 /* TEXT */)
+          _createElementVNode("div", { class: "text" }, _toDisplayString(_ctx.text), 1 /* TEXT */)
         ]))
       }
       ```
 
-    ​
+    - **cacheHandles 事件缓存：** V2 里绑定事件都要重新生成新的 function 去更新；V3 会自动生成一个内联函数，同时生成一个静态节点，onClick 时会读取缓存，如果已有缓存，就更新
 
-    ​
+      ```vue
+      <template>
+        <div @click="triggerClick()">按钮1</div>
+      </template>
+
+      // 编译后
+      import { createElementVNode as _createElementVNode, openBlock as _openBlock, createElementBlock as _createElementBlock } from "vue"
+
+      export function render(_ctx, _cache, $props, $setup, $data, $options) {
+        return (_openBlock(), _createElementBlock("template", null, [
+          _createElementVNode("div", {
+            onClick: _cache[0] || (_cache[0] = $event => (_ctx.triggerClick()))
+          }, "按钮1")
+        ]))
+      }
+      ```
 
 ### 数据劫持优化（proxy 代替 defindProperty）
 
@@ -152,9 +246,14 @@ vue3 通过编译器在分析模版并生成带有可优化提示的代码，这
 
 ## Tree-shaking
 
-tree-sharking 的目的是在构建后消除程序中无用的代码，来减少包的体积；
+tree-sharking 的目的是在打包时去掉多余的代码，只保留项目中用到的代码，V3 中采用了基于静态分析和 ES 模块的机制来进行摇树优化：
 
-1. 基于函数的 API 每一个函数都可以作为 named ES export 被单独引入，使得它们对 tree-shaking 非常友好；
+- 首先：使用  ESLint 和 Typescript 在编译期间进行静态分析，检测出没有被使用的代码，并删除这些代码
+- 其次：使用 ES 模块（支持 Tree Shaking）实现按需加载的效果，仅加载需要的特定部分
+
+
+
+1. 基于函数的 API 每一个函数都可以作为 named ES export 被单独引入，使得它们对 tree-shaking 非常友好（ES Module 支持 Tree Shaking）；
 2. 没有被使用的 API 的相关代码可以在最终打包时被移除；
 3. 基于函数 API 所写的代码也有更好的压缩效率，因为所有的函数名和 setup 函数体内部的变量名都可以被压缩，但对象和 class 的属性/方法名却不可以；
 
