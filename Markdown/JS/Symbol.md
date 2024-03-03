@@ -2,11 +2,13 @@
 
 > symbol 是 ES6 新引入的一种基础数据类型，该类型具有静态属性和静态方法；
 
+Symbol 代表创建后独一无二且不可变的数据类型，它主要是为了解决可能出现的全局变量冲突的问题
+
 1. 作为构造函数来它是不完整的，所以不支持“new Symbol()”语法；
 2. 每个从 Symbol() 返回的symbol值都是唯一的；
 3. 一个 symbol 值能作为对象属性的标志符，这是该数据类型仅有的目的；
 
-###  Symbol()
+### Symbol()
 
 ```javascript
 let sym1 = Symbol("foo");
@@ -48,15 +50,15 @@ console.log(Symbol.keyFor(sym)); // foo
 
 ### 模拟私有变量
 
-symbol 不会被常规的方法，除了 Object.getOwnPropertySymbols 外的方法遍历到，可以用来模拟私有变量；
+symbol 不会被常规的方法(除了 Object.getOwnPropertySymbols 外的方法)遍历到，可以用来模拟私有变量；
 
 ```javascript
 let s_name= Symbol("name");
 
 let obj= {
-    [s_name]: "lle",
+    [s_name]: "lucy",
     age: 18,
-    title: "Engineer"
+    title: "teacher"
 };
 
 console.log(Object.keys(obj)); // ["age", "title"]
@@ -65,8 +67,7 @@ for(let key in obj) {
     console.log(key); // age, title
 }
 
-console.log(Object.getOwnPropertyNames(obj)); 
-// ["age", "title"]
+console.log(Object.getOwnPropertyNames(obj));  // ["age", "title"]
 
 JSON.stringify(obj);  // {"age":18,"title":"Engineer"}
 ```
@@ -74,12 +75,14 @@ JSON.stringify(obj);  // {"age":18,"title":"Engineer"}
 如果要获取可以用个以下三种方式：
 
 ```javascript
-obj[s_name]；// lle
+obj[s_name]；// lucy
 Object.getOwnPropertySymbols(obj); // [Symbol(name)]
 Reflect.ownKeys(obj); // ["age", "title", Symbol(name)]
 ```
 
 ### 替代常量
+
+这种一般都是全局变量声明来着
 
 ```javascript
 const NAME = Symbol();

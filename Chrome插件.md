@@ -4,7 +4,6 @@ https://zhuanlan.zhihu.com/p/634471047
 
 写法相关：
 
-- 【函数式写法&&组件写法】https://newsn.net/say/react-component.html 
 - 【React生命周期】:https://blog.csdn.net/luobo2345/article/details/122818947
 - 【props、state、refs】https://blog.csdn.net/qq_43260366/article/details/127969013
   - props 传递方法、组件、数据
@@ -18,9 +17,6 @@ https://zhuanlan.zhihu.com/p/634471047
 - https://blog.csdn.net/qq_30769437/article/details/128149273
 - https://zhuanlan.zhihu.com/p/431389907 
 
-
-
-- ​
 
 ## 初始化项目
 
@@ -133,12 +129,11 @@ npm install react-dom react-router-dom
 
 - 根目录创建router文件夹
 
-- **创建router对象**，配置路由字典，这里路由模式为历史模式，要使用 hash模式可以使用 createHashRouter
+- **创建router对象**，配置路由字典，这里路由模式为哈希模式（createHashRouter）
 
-- 注意：这里要用createHashRouter， createWebHashHistory本地可以运行但是build之后会报错404
+- 注意：这里要用createHashRouter， createBrowserRouter浏览器可以运行但是build之后在插件popup会报错404，感觉可能是默认路由路径匹配的问题
 
-- TODO : 根组件路由要 < Outlet /> 组件
-
+https://www.cnblogs.com/newBugs/p/15965558.html
 - ​
 
   注意这里的路由组件要大写开头
@@ -151,20 +146,13 @@ npm install react-dom react-router-dom
 
   const routerConfigs = createHashRouter([
     {
-      path: "/",
-      element: <Entry />,
-      children: [
-        {
-          path: "/popup",
-          element: <PopupHome />
-        },
-
-        {
-          path: "/content",
-          element: <ContentHome />
-        }
-      ]
-    }
+      path: '/',
+      element: <PopupHome />,
+    },
+    {
+      path: '/later',
+      element: <LaterPage />,
+    },
   ])
 
   export default routerConfigs
@@ -185,7 +173,7 @@ npm install react-dom react-router-dom
     
      ​
 
-6. 安装 redux、react-redux
+1. 安装 redux、react-redux
 
    ```
    npm install --save redux react-reduxredux
@@ -200,17 +188,20 @@ npm install react-dom react-router-dom
 
 - redux和react-redux的区别？？
 
-1. 安装fetch
-
 2. 配置eslint、preitter
 
    ```
    npm install eslint eslint-plugin-react-hooks eslint-config-react-app --D
    ```
 
-   ​
+- 请求
+1. 安装axios，封装
+2. background.js 只能使用 fetch 发起请求，所以 background.js 用fetch请求
 
 3. build 项目处理
+
+vite 多页面处理
+
 
 ## content.js
 

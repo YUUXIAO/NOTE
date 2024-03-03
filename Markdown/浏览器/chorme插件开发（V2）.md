@@ -41,19 +41,27 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
 ```
 
 ### background
-
-1. background 可以通过 page 指定一个网页，也可以通过 scripts 直接指定一个 JS，Chrome 会自动为这个 JS 生成一个默认的网页；
-2. background 的权限非常高，可以调用大部分的 Chrome 扩展API（除了devtools），而且可以无限制跨域。
+简单来说可以把popup理解为html，background 理解为 js，注意这里的background是和tab的生命周期无关的，它是针对整个浏览器
+要注意在background 发送网络请求要用fetch
+1. background 可以通过 page 指定一个网页，也可以通过 scripts 直接指定一个 JS，Chrome 会自动为这个 JS 生成一个默认的网页（v2是这样的,v3调整了api）；
+2. background 的权限非常高，可以调用大部分的 Chrome 扩展API（除了devtools,基本和popup差不多），而且可以无限制跨域。
 3. 它的生命周期是插件中所有类型页面中最长的，随着浏览器的打开而打开，关闭而关闭；
 4. 通常把需要一直运行的、启动就运行的、全局的代码放在 background 中；
 
 ```javascript
+// v2
 {
 	"background":{
 		"page": "background.html", // 方式一: 直接指定一个网页
 		//"scripts": ["js/background.js"]  // 方式二: 指定一个 JS，会自动生成一个背景页面
 	},
 }
+
+// v3
+"background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
 ```
 
 ### event-pages
@@ -98,6 +106,7 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
   ],
 }
 ```
+
 
 ### injected-script
 
@@ -196,17 +205,21 @@ chrome.runtime.onInstalled.addListener(function(){
 
 ### contexMenus
 
+
 > chrome.contextMenus API 可以实现自定义浏览器的右键菜单；
+一般创建右键菜单是在初始化扩展的时候在background初始化,
 
 1. 右键菜单可以出现在不同的上下文中，比如普通页面、选中的文字、图片、链接等；
 2. 如果有同一个插件定义了多个菜单，Chrome 会自动组合放到以插件命名的二级菜单里；
 
 ```javascript
+
 chrome.contextMenus.create(createProperties, function callback)
 
 chrome.contextMenus.remove(menuItemId)；  // 删除某一个菜单项
 chrome.contextMenus.removeAll();  	// 删除所有自定义右键菜单
 chrome.contextMenus.update(menuItemId, updateProperties);	 // 更新某一个菜单项
+
 ```
 
 createProperties 参数：
@@ -225,15 +238,15 @@ createProperties 参数：
 }
 
 // background.js
-chrome.contextMenus.create({
-	title: '使用百度搜索：%s', // %s表示选中的文字
-	contexts: ['selection'], 
-	onclick: function(params){
-      chrome.tabs.create({
-        url: 'https://www.baidu.com/s?ie=utf-8&wd=' + encodeURI(params.selectionText)
-      });
-	}
-});
+chrome.runtime.onInstalled.addListener(function () {
+  chrome.contextMenus.create({
+    title: '使用百度搜索：%s', // %s表示选中的文字
+    contexts: ['selection'], 
+  });
+  chrome.contextMenus.onClicked.addListener((menuInfo, tabInfo) => {
+      console.error('右键点击事件', JSON.stringify(menuInfo), JSON.stringify(tabInfo))
+    })
+})
 ```
 
 ### override
@@ -391,7 +404,7 @@ Chrome插件中存在的5种 JS：injected-script、content-script、popup-js、
 ### popup和background
 
 > popup可以直接调用 background 中的 JS 方法，也可以直接访问 background 的 DOM；
-
+> background 给 popup发消息必须要popup是打开的
 ```javascript
 // popup.js 获取background页面
 var bg = chrome.extension.getBackgroundPage();
@@ -400,15 +413,16 @@ alert(bg.document.body.innerHTML); // 访问bg的DOM
 
 // background 访问 popup
 var views = chrome.extension.getViews({type:'popup'});
-if(views.length) {
+if(views.length) { // 判断popup打开
 	console.log(views[0].location.href);
 }
 ```
 
 ### popup/bg和content
+contentJS 指的是插入网页的一段代码，所以和它通信一般要先获取是哪个tab再发送消息（sendMessage），contentJS 通过 onMessage 来接受消息
 
 ```javascript
-// background.js 或 popup.js
+// background.js 或 popup.js 发送消息
 function sendMessageToContentScript(message, callback){
 	chrome.tabs.query({active: true, currentWindow: true}, function(tabs){
 		chrome.tabs.sendMessage(tabs[0].id, message, function(response){
@@ -417,14 +431,14 @@ function sendMessageToContentScript(message, callback){
 	});
 }
 sendMessageToContentScript({cmd:'test', value:'你好，我是popup！'}, function(response){
-	console.log('来自content的回复：'+response);
+	console.log('来自content的回调：'+ response);
 });
 
 
-// content-script.js接收
+// content-script.js接收消息
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 	if(request.cmd == 'test') alert(request.value);
-	sendResponse('我收到了你的消息！');
+	sendResponse('contentJSt收到了你的消息！');
 });
 ```
 
@@ -434,15 +448,15 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 2. 如果 background 和 popup 同时监听，它们可以同时收到消息，但只有一个可以 sendResponse ，一个先发送了，另一个再发送会无效； 
 
 ```javascript
-// content-script
-chrome.runtime.sendMessage({greeting: '我是content，我发消息给后台！'}, function(response) {
-	console.log('收到来自后台的回复：' + response);
+// content-script 发送消息
+chrome.runtime.sendMessage({greeting: '我是content，我发消息给background！'}, function(response) {
+	console.log('收到来自background的回复：' + response);
 });
 
-// background.js 或 popup.js：
+// background.js 或 popup.js 回复消息
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
-	console.log('收到来自content-script的消息：');
-	sendResponse('我是后台，我已收到你的消息：' + JSON.stringify(request));
+	console.log('收到来自contentJs的消息：');
+	sendResponse('我是background，我已收到你的消息：' + JSON.stringify(request));
 });
 ```
 
@@ -491,7 +505,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 1. 短连接
 
    - 指的是 chrome.tabs.sendMessage 和 chrome.runtime.sendMessage；
-   - 短连接就是我发送一下，你收到了再回复一下，如果对方不回复，只能重新发；
+   - 短连接就是我发送一下，你收到了再回复一下，如果对方不回复，只能重新发（上面我们说的那些通信方式就是短连接）；
 
 2. 长连接
 
@@ -598,7 +612,7 @@ chrome.webRequest.onBeforeRequest.addListener(details => {
 // 发送header之前触发，可以拿到请求headers，也可以添加、修改、删除headers,有一定限制，一些特殊头部可能拿不到或者存在特殊情况
 chrome.webRequest.onBeforeSendHeaders.addListener(details => {
     console.log('onBeforeSendHeaders', details);
-}, {urls: ['<all_urls>']}, ['blocking', 'extraHeaders', 'requestHeaders']);
+}, {urls: ['<all_urls>']}, ['blocking', 'extraHesaders', 'requestHeaders']);
 
 // 开始响应触发，可以拿到服务端返回的headers
 chrome.webRequest.onResponseStarted.addListener(details => {

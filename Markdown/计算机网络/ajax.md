@@ -1,27 +1,25 @@
-> ajax 是一系列技术的统称，实现向服务器发送数据接受数据而页面不刷新；
+> ajax 实现向服务器发送数据接受数据而页面不刷新，可以理解为是前后端交互的一种技术
 
-XMLHttpRequest 是浏览器提供的一个api，也就是一个构造函数；
+XMLHttpRequest 是浏览器提供的一个api，也就是一个构造函数，ajax 就是基于XMLHttpRequest 模块实现的
 
 ```javascript
-// 简单完成一个ajax请求：
 const xhr = new XMLHttpRequest()
 xhr.onreadystatechange = () => {
-    if (xhr.readystate == 4) {
-        if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
-            alert(xhr.responseText)
-        } else {
-            alert(xhr.status)
-        }
-    }
+  if (xhr.readyState !== 4) return
+
+  if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304) {
+    alert(xhr.responseText)
+  } else {
+    alert(xhr.status)
+  }
 }
-xhr.open("get", "user", true)
+xhr.open('GET', url, true)
 xhr.send(null)
 ```
 
 ## readystate
 
 > readystate 为实例的属性；
->
 
 status为响应状态码（http状态），和 readystate 不同；
 
@@ -70,7 +68,6 @@ xhr.onload = function(e){
             URL.revokeObjectURL(audio.src);
         }
         audio.src = URL.createObjectURL(data);
-         console.log(audio);
         audio.setAttribute('controls','');
         if(!music.innerHTML){
             music.appendChild(audio);
@@ -78,7 +75,7 @@ xhr.onload = function(e){
     }
 };
 //发送请求
-xhr.open('get','myocean.mp3',true);
+xhr.open('get','xxx.mp3',true);
 xhr.responseType = 'blob';
 xhr.send();
 ```
@@ -86,5 +83,28 @@ xhr.send();
 
 
 ## fetch
+> fetch 是Es6 出现的，基于 promise，比 xhr 用起来会更简洁一点，它是为了取代xhr而诞生的
+```
+fetch(url, config)
+```
+### 配置文件
+```
+{
+method: 'GET', //请求使用的方法，如GET、POST。
+headers:{}, // 请求的头信息。
+body: {}, // 请求的body信息：可能是一个Blob、BufferSource、FormData、URLSearchParams或者USVString对象，注意GET或HEAD方法的请求不能包含body信息。
+mode: '', 请求的模式，如cors、no-cors或者same-origin。
+credentials:'', // 请求的credentials，如omit、same-origin或者include，为了在当前域名内自动发送cookie，必须提供这个选项。
+cache:'', 请求的cache模式: default、no-store、reload、no-cache、force-cache或者only-if-cached。
+redirect:'', // 可用的redirect模式: follow自动重定向，error如果产生重定向将自动终止并且抛出一个错误，或者manual手动处理重定向。
+referrer: '', // 一个USVString可以是no-referrer、client或一个URL，默认是 client。
+referrerPolicy:  指定了HTTP头部referer字段的值，可能为以下值之一： no-referrer、no-referrer-when-downgrade、origin、origin-when-cross-origin、unsafe-url。
+integrity: 包括请求的subresource integrity值，例如: sha256-BpfBw7ivV8q2jLiT13fxDYAe2tJllusRSZ273h2nFSE=
+}
+```
+### 返回值
+![alt text](image.png)
+主要注意下面几个字段
 
+1. 
 https://www.cnblogs.com/WindrunnerMax/p/13024711.html
