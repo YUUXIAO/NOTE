@@ -1,8 +1,4 @@
-https://blog.csdn.net/ljinkai_ljk/article/details/125127805 【v2升级v3】
-
-
-
-Chrome 插件是一个用 Web 技术开发、用来增强浏览器功能的软件，它其实就是一个由HTML、CSS、JS、图片等资源组成的一个.crx 后缀的压缩包；
+Chrome 插件是一个用 Web 技术开发、用来增强浏览器功能的软件，它其实就是一个由HTML、CSS、JS、图片等资源组成的一个压缩包，所以这个是对前端开发很友好的
 
 ## 核心文件
 
@@ -20,6 +16,19 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
   "description": "", // 插件简介栏
 }
 ```
+
+#### Manifest V3新特性
+
+MV3新特性概要，具体详细可以查看：[https://developer.chrome.com/docs/extensions/reference/api?hl=zh-cn](https://developer.chrome.com/docs/extensions/reference/api?hl=zh-cn)
+
+- Service worker 替换 backgrounds
+- 网络请求修改使用新的 declarativent request api 来处理
+- 不再允许执行远程托管的代码;只能执行扩展包内包含的JavaScript
+- Promises 已经被添加到许多方法中，目前回调仍然支持作为一种替代方法。(最终将支持所有Promises)
+- Action API整合：Browser Action API 和Page Action APIs被统一为一个单独的Action API
+- Web可访问的资源:资源只对指定的站点和扩展可用
+- 内容安全策略([CSP](https://so.csdn.net/so/search?q=CSP&spm=1001.2101.3001.7020)):现在可以为单个对象中的不同执行上下文指定单独的CSP，并且某些特定的策略是不被允许的
+- executeScript的变化:扩展不能再执行任意字符串，只能执行脚本文件和函数。这种方法也从Tabs API迁移到新的Scripting API
 
 ### popup
 
@@ -41,8 +50,10 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
 ```
 
 ### background
-简单来说可以把popup理解为html，background 理解为 js，注意这里的background是和tab的生命周期无关的，它是针对整个浏览器
+
+简单来说可以把popup理解为html，background 理解为 js，注意这里的background是和tab的生命周期无关的，它是针对整个浏览器  
 要注意在background 发送网络请求要用fetch
+
 1. background 可以通过 page 指定一个网页，也可以通过 scripts 直接指定一个 JS，Chrome 会自动为这个 JS 生成一个默认的网页（v2是这样的,v3调整了api）；
 2. background 的权限非常高，可以调用大部分的 Chrome 扩展API（除了devtools,基本和popup差不多），而且可以无限制跨域。
 3. 它的生命周期是插件中所有类型页面中最长的，随着浏览器的打开而打开，关闭而关闭；
@@ -86,10 +97,12 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
 2. 虽然 content-script 可以向页面中注入 JS 代码，但是 DOM 不能操作它。
 3. content_scripts 注入的CSS优先级非常高，几乎仅次于浏览器默认样式，尽量避免写一些影响全局的样式；
 4. content-scripts 不能访问绝大部分 Chrome.xxx.api，除了下面4种；
+
    - chrome.extension(getURL , inIncognitoContext , lastError , onRequest , sendRequest)
    - chrome.i18n
    - chrome.runtime(connect , getManifest , getURL , id , onConnect , onMessage , sendMessage)
    - chrome.storage
+
 
 ```javascript
 {
@@ -106,7 +119,6 @@ manifest_version、name、version 三个配置项是必不可少的，descriptio
   ],
 }
 ```
-
 
 ### injected-script
 
@@ -136,21 +148,23 @@ function injectCustomJs(jsPath){
 }
 ```
 
-## 表现形式
+## 表现形式（插件在浏览器可操作范围）
 
-### browserAction
+### browserAction（v2，v3使用action API）
 
 通过配置 browser_action 可以在浏览器的右上角增加一个图标，一个 browser_action 可以拥有一个图标，一个tooltip ，一个 badge 和一个 popup；
 
 1. 图标：推荐使用宽高都为 19 像素的图片，更大的图标会被缩小，一般通过配置 manifest 中 default_icon 字段配置，也可以调用 setIcon() 方法；
 2. tooltip：一般通过配置 manifest 中 default_title 字段配置，也可以调用 setTitle() 方法；
 3. badge：就是在图标上显示一些文本，一般用来更新扩展状态提示信息；
+
    - 空间有限，只支持 4 个以下的字符（英文4个，中文2个）；
    - 无法通过配置文件指定，必须通过代码实现；
    - 设置 badge 的文字和颜色使用 setBadgeText() 和 setBadgeBackgroundColor() 方法；
 
+
 ```javascript
-// manifest.json
+// manifest.json V2
 "browser_action":{
   "default_icon": "img/icon.png",
   "default_title": "这是一个示例插件,
@@ -160,9 +174,22 @@ function injectCustomJs(jsPath){
 // 设置 badge 的文字和颜色
 chrome.browserAction.setBadgeText({text：'new'});
 chrome.browserAction.setBadgeBackgroundColor({color:[255, 0, 0, 255]);
+
+
+// manifest.json V3
+ "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "./logo.png",
+      "32": "./logo.png",
+      "48": "./logo.png",
+      "128": "./logo.png"
+    },
+    "default_title": "窗口管理器"
+  },
 ```
 
-### pageAction
+### pageAction（v2，v3使用action API）
 
 > pageAction 指的是只有当某些特定页面打开时才显示的图标；
 
@@ -177,7 +204,7 @@ chrome.pageAction.hide(tabId) // 隐藏图标
 示例(只有打开百度才显示图标)：
 
 ```javascript
-// manifest.json
+// manifest.json v3
 {
 	"page_action":
 	{
@@ -205,9 +232,9 @@ chrome.runtime.onInstalled.addListener(function(){
 
 ### contexMenus
 
-
 > chrome.contextMenus API 可以实现自定义浏览器的右键菜单；
-一般创建右键菜单是在初始化扩展的时候在background初始化,
+
+一般创建右键菜单是在初始化扩展的时候在background的生命周期里面进行初始化
 
 1. 右键菜单可以出现在不同的上下文中，比如普通页面、选中的文字、图片、链接等；
 2. 如果有同一个插件定义了多个菜单，Chrome 会自动组合放到以插件命名的二级菜单里；
@@ -320,7 +347,7 @@ chrome.devtools.panels.elements.createSidebarPane("Images", function(sidebar){
 });
 ```
 
-###  option
+### option
 
 > option 页就是插件的设置页面，有两个入口，一个是右键图标的”选项“菜单，一个是在插件管理页面；
 
@@ -341,7 +368,7 @@ chrome.devtools.panels.elements.createSidebarPane("Images", function(sidebar){
 
 > omnibox 是向用户提供搜索建议的一种方式，通过注册某个关键字以触发插件自己的搜索建议界面；
 
-1.  向地址栏注册一个关键字以提供搜索建议，只能设置一个关键字；
+1. 向地址栏注册一个关键字以提供搜索建议，只能设置一个关键字；
 
 ```javascript
 // manidest.json
@@ -403,8 +430,9 @@ Chrome插件中存在的5种 JS：injected-script、content-script、popup-js、
 
 ### popup和background
 
-> popup可以直接调用 background 中的 JS 方法，也可以直接访问 background 的 DOM；
-> background 给 popup发消息必须要popup是打开的
+> popup可以直接调用 background 中的 JS 方法，也可以直接访问 background 的 DOM；  
+background 给 popup发消息必须要popup是打开的
+
 ```javascript
 // popup.js 获取background页面
 var bg = chrome.extension.getBackgroundPage();
@@ -419,6 +447,7 @@ if(views.length) { // 判断popup打开
 ```
 
 ### popup/bg和content
+
 contentJS 指的是插入网页的一段代码，所以和它通信一般要先获取是哪个tab再发送消息（sendMessage），contentJS 通过 onMessage 来接受消息
 
 ```javascript
@@ -445,7 +474,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
 ### content 和 popup/bg
 
 1. content-scripts 向 popup 发送消息的前提是 popup 必须打开，否则需要利用 background 作中转；
-2. 如果 background 和 popup 同时监听，它们可以同时收到消息，但只有一个可以 sendResponse ，一个先发送了，另一个再发送会无效； 
+2. 如果 background 和 popup 同时监听，它们可以同时收到消息，但只有一个可以 sendResponse ，一个先发送了，另一个再发送会无效；
 
 ```javascript
 // content-script 发送消息
@@ -467,7 +496,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
    ```javascript
    // injected-script
    window.postMessage({"test": '你好！'}, '*');
-
+   
    // content-script
    window.addEventListener("message", function(e){
    	console.log(e.data);
@@ -486,7 +515,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
    	hiddenDiv.dispatchEvent(customEvent);
    }
    fireCustomEvent('你好，我是普通JS！');
-
+   
    // content-script.js
    var hiddenDiv = document.getElementById('myCustomEventDiv');
    if(!hiddenDiv) {
@@ -499,6 +528,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
    	console.log('收到自定义事件消息：' + eventData);
    });
    ```
+
 
 ### 长连接和短连接
 
@@ -516,7 +546,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
    // content-script.js
    var port = chrome.extension.connect({ name: 'knockknock' });
    port.postMessage({ answer: 'Knock knock' });
-
+   
    port.onMessage.addListener(function ({ question }) {
      setTimeout(function () {
        if (question == "Who's there?") port.postMessage({ answer: 'Madame' });
@@ -524,7 +554,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
          port.postMessage({ answer: 'Madame... Bovary' });
      }, 2000);
    });
-
+   
    // popup-js
    chrome.extension.onConnect.addListener(function (port) {
      const connectList = document.getElementById('connect_list');
@@ -537,6 +567,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse){
            port.postMessage({ question: "I don't get it." });
    });
    ```
+
 
 ## 其它
 
@@ -663,7 +694,10 @@ chrome.webRequest.onCompleted.addListener(details => {
 
 ## 打包与发布
 
-1. 在插件管理页面点击打包扩展程序，生成.crx文件。
-2. Google账号登录Chrome应用商店（首次成为开发者需要支付5美元）。
-3. 上传文件后开始填写插件的图标、说明及截图，截图将会以轮播图的形式展现。
+[具体发布和打包流程请看：https://developer.chrome.com/docs/webstore/prepare?hl=zh-cn](https://developer.chrome.com/docs/webstore/prepare?hl=zh-cn)
+
+1. **注册开发者账号：**Google账号登录Chrome应用商店（首次成为开发者需要支付5美元）。
+2. **准备拓展程序：**上传文件后开始填写插件的图标、说明及截图，截图将会以轮播图的形式展现。
+3. **填写商品信息：比如详细说明，屏幕截图、宣传视频等**
+4. **填写隐私权字端：需要列出所有权限闭关说明理由，如果您的拓展里收集了用户数据（邮箱、用户名等），需要添加一个可访问的隐私权政策说明链接**
 
