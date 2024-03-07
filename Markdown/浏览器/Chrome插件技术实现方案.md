@@ -10,7 +10,7 @@
 
 因为项目是基于 React+Vite 处理的，所以最后生成的文件夹就是我们打包的最终文件夹
 
-- 首先我们在根目录下创建public 文件夹，里面放manifest.json和logo图片
+- 首先我们在根目录下创建public 文件夹（[vite关于public文件夹的说明](https://cn.vitejs.dev/guide/assets#the-public-directory)），里面放manifest.json和logo图片
 - 在build的时候将popup.html、background.js、content.js 文件一起打包组成安装包（下面会将打包流程）
 
 ### 创建manifest
@@ -274,7 +274,7 @@ export default defineConfig({
 
 ### Less和全局css变量
 
-因为vite 自带了less，所以直接在vite.config.js 配上就好了：
+[因为vite 本身提供了对.less文件的内置支持](https://cn.vitejs.dev/guide/features#css-pre-processors)，所以直接安装包之后在vite.config.js 配上就好了：
 
 ```javascript
  css: {
@@ -468,19 +468,6 @@ export function post(url, params) {
   return new Promise((resolve, reject) => {
     axios
       .post(url, params)
-      .then(res => {
-        resolve(res.data)
-      })
-      .catch(err => {
-        reject(err)
-      })
-  })
-}
-
-export function put(url, params) {
-  return new Promise((resolve, reject) => {
-    axios
-      .put(url, params)
       .then(res => {
         resolve(res.data)
       })

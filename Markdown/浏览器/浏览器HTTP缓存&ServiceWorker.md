@@ -1,12 +1,12 @@
----
-typora-root-url: ..\..
----
-
 ## 强缓存（200 OK from cache）
-**强缓存可以理解为是浏览器层面的**，它的依据来自于缓存是否过期，而不关心服务端文件是否已经更新，这可能会导致加载的文件不是服务端最新的内容
+
 强缓存**返回的状态码是200**，直接从缓存内读取，浏览器不用询问服务器
-所以一般用来缓存一些对准确性要求不高或者长时间不修改的数据
-![浏览器缓存_强缓存](/images/浏览器缓存_强缓存.png)
+
+**强缓存可以理解为是浏览器层面的**，它的依据来自于缓存是否过期，而不关心服务端文件是否已经更新，这可能会导致加载的文件不是服务端最新的内容，所以一般用来缓存一些对准确性要求不高或者长时间不修改的数据  
+  
+![](../images/%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98_%E5%BC%BA%E7%BC%93%E5%AD%98.png)
+
+
 
 ### Expires（HTTP1.0）
 
@@ -21,9 +21,9 @@ Expires:Mon, 29 Jun 2023 11:10:23 GMT
 
 ### Cache-Control（HTTP1.1）
 
-`Cache-Control `是过期时长
+`Cache-Control` 是过期时长
 
-当 `Expires` 和 `Cache-Control `同时存在时，优先考虑` Cache-Control`；
+当 `Expires` 和 `Cache-Control` 同时存在时，优先考虑 `Cache-Control`；
 
 ```javascript
 // 资源返回后6000秒内，可以直接使用缓存
@@ -52,7 +52,7 @@ Cache-control: public // 可被任何缓存区缓存
 
 ## 协商缓存（304）
 
- **协商缓存最终由服务器来决定** 是否使用缓存，即客户端与服务器之间存在一次通信，如果命中走缓存的话，**返回的状态码是 304 (not modified)**
+**协商缓存最终由服务器来决定** 是否使用缓存，即客户端与服务器之间存在一次通信，如果命中走缓存的话，**返回的状态码是 304 (not modified)**
 
 在浏览器向服务端请求资源时，响应头会有一个`Last-Modified`的属性标记此文件在服务期端最后被修改的时间，另外会也有个`Etag`：
 
@@ -68,36 +68,54 @@ If-Modified-Since:Sat, 16 Feb 2022 07:30:07 GMT
 If-None-Match:"be15b26c29bce1:0" // 可选，这里为了准确确认资源是否变化
 ```
 
-如果服务器端的资源没有变化，则自动返回 HTTP 304 （Not Changed.）状态码，内容为空，否则重新发起请求，请求下载资源这样就节省了传输数据量。
+如果服务器端的资源没有变化，则自动返回 HTTP 304 （Not Changed）状态码内容为空，否则重新发起请求，请求下载资源这样就节省了传输数据量。
 
-![浏览器缓存_协商缓存](/images/浏览器缓存_协商缓存.png)
+![](../images/%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98_%E5%8D%8F%E5%95%86%E7%BC%93%E5%AD%98.png)
 
 ### Last-Modified
 
-` Last-Modified` 是响应头字段用来标识资源的有效性，表示的是最后修改时间
-对应浏览器再次请求时请求头带上的 `If-Modified-Since `
+ `Last-Modified` 是响应头字段用来标识资源的有效性，表示的是最后修改时间  
+对应浏览器再次请求时请求头带上的 `If-Modified-Since` 
 
-```
+```javascript
 Last-Modified:Fri, 15 Feb 2013 03:06:18 GMT
 ```
+
 ### Etag
 
-`Etag` 是响应头字段表示资源的版本，对应浏览器再次请求时请求头带上的 ` If-None-Match `
+`Etag` 是响应头字段表示资源的版本，对应浏览器再次请求时请求头带上的 `If-None-Match`
 
-Etag 是服务器根据当前文件的内容，对文件生成唯一的标识，比如MD5算法，只要里面的内容有改动，这个值就会修改；
+Etag 是服务器根据当前文件的内容，对文件生成唯一的标识，比如MD5算法，只要里面的内容有改动，这个值就会修改；  
 因为`Last-Modified` 只做到了秒级的验证，无法识别毫秒、微秒的校验，缺少精确度
 
 - 服务器接收到 If-None-Match 后，会跟服务器上该资源的 ETag 进行比对：
-   - 如果两者一样的话，直接返回304，告诉浏览器直接使用缓存；
-   - 如果不一样的话，说明内容更新了，返回新的资源；
+
+  - 如果两者一样的话，直接返回304，告诉浏览器直接使用缓存；
+  - 如果不一样的话，说明内容更新了，返回新的资源；
+
 
 ### 两者对比
 
-1. 性能上，Last-Modified 优于 ETag，Last-Modified 记录的是时间点，而Etag需要根据文件的 MD5 算法生成对应的 hash 值；
-2. 精度上，ETag 优于 Last-Modified：ETag 按照内容给资源带上标识，能准确感知资源变化，Last-Modified 某些场景并不能准确感知变化：
-  - 编辑了资源文件，但是文件内容并没有更改，也会造成缓存失效；
-  - Last-Modified 能够感知的单位时间是秒，如果文件在 1 秒内改变了多次，那么这时候的 Last-Modified 并没有体现出修改了；
-3. 如果两种方式都支持的话，服务器会优先考虑 ETag；
+1. **性能上Last-Modified 优于 ETag**：Last-Modified 记录的是时间点，而Etag需要根据文件的 MD5 算法生成对应的 hash 值；
+2. **精度上ETag 优于 Last-Modified：**ETag 按照内容给资源带上标识能准确感知资源变化，Last-Modified 某些场景并不能准确感知变化：
+
+   - 编辑了资源文件，但是文件内容并没有更改，也会造成缓存失效；
+   - Last-Modified 能够感知的单位时间是秒，如果文件在 1 秒内改变了多次，那么这时候的 Last-Modified 并没有体现出修改了；
+
+   
+
+   
+
+   
+
+   
+
+   - 如果两种方式都支持的话，服务器会优先考虑 ETag；
+
+   3. 
+
+   - 
+
 
 ## 缓存位置
 
@@ -112,6 +130,7 @@ Service worker是一个注册在**指定源和路径下的事件驱动worker**�
 它能完成的功能比如：离线缓存、消息推送和网络代理，其中离线缓存就是 Service Worker Cache；
 
 Service Worker 的特点：
+
 - 独立于主 Javascript 线程，也就是说运行时不会影响主进程的加载性能
 - 设计完全异步，大量使用 Promise
 - 不能访问 DOM，不能使用 xhr 和 localstorage（感觉有点像 web worker，脱离了浏览器的窗体）
@@ -121,7 +140,8 @@ Service Worker 的特点：
 Service Worker 实现缓存功能的三个步骤：
 
 1. 首先需要注册 Service Worker（ServiceWorkerContainer.register()）
-```javascript 
+
+```javascript
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register(‘/xxx-sw.js', {scope: '/'}).then(function(reg) {
 	// reg可以查看当前sw的状态和作用域等 
@@ -130,13 +150,14 @@ if ('serviceWorker' in navigator) {
         console.log('Registration failed with ' + error);
     });
 }
-```   
+```
+
 2. 然后监听 install 事件后就可以缓存需要的文件
 3. 最后在下次用户访问的时候，通过拦截请求的方式查询是否存在缓存，如果存在就直接读取缓存文件否则就去请求数据
 
 附上一段代码
 
-```  
+```javascript
 
 // sw.js
 const SW_VERSION = 'V1';
@@ -212,9 +233,10 @@ self.addEventListener('fetch', function(event) {
     );
   });
 
-```  
+```
 
 ### Memory Cache（内存缓存）
+
 内存缓存从效率上来讲是最快的，但是也是存活时间最短的，当浏览器或者tab页面关闭，内存就会被释放了
 
 - 这是**浏览器**为了加快读取缓存速度而进行的**自身的优化行为**，不受开发者控制，也不受 HTTP 协议头的约束
@@ -233,11 +255,10 @@ Disk Cache 将资源存储在硬盘中，读取速度次于Memory Cache。可长
 
 ### Push Cache
 
-推送缓存，它是HTTP/2的内容；
+推送缓存，它是HTTP/2的内容；  
 它只在会话（Session）中存在，一旦会话结束就被释放，并且缓存时间也很短暂。这种缓存一般用不到
 
 ### Disk Cache & Memory Cache
 
 - 内容使用率高的话，文件优先进入磁盘；
 - 比较大的JS，CSS文件会直接放入磁盘，反之放入内存；
-

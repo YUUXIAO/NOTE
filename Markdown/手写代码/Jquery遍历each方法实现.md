@@ -4,7 +4,7 @@
 
 语法为：
 
-```
+```javascript
 jQuery.each(object, [callback])；
 ```
 
@@ -30,7 +30,7 @@ $.each({ name: "John", lang: "JS" }, function(i, n) {
 
 ## 退出循环
 
-> 尽管 ES5 提供了 forEach 方法，但是 forEach 没有办法中止或者跳出 forEach 循环，除了抛出一个异常。但是对于 jQuery 的 each 函数，如果需要退出 each 循环可使回调函数返回 false，其它返回值将被忽略；
+尽管 ES5 提供了 forEach 方法，但是 forEach 没有办法中止或者跳出 forEach 循环，除了抛出一个异常。但是对于 jQuery 的 each 函数，如果需要退出 each 循环可使回调函数返回 false，其它返回值将被忽略；
 
 ```javascript
 $.each( [0, 1, 2, 3, 4, 5], function(i, n){
@@ -51,7 +51,7 @@ $.each( [0, 1, 2, 3, 4, 5], function(i, n){
 
 ```javascript
 function each(obj, callback) {
-    if ( isArrayLike(obj) ) {
+    if ( Array.isArray(obj) ) {
         for (let i=0; i < obj.length; i++ ) {
             callback(i, obj[i])
         }
@@ -109,4 +109,3 @@ function each(obj, callback) {
   return obj;
 }
 ```
-

@@ -162,7 +162,7 @@ git rebase -i HEAD~2
 
 那此时我们的分支线应该是这样的
 
-![rebase_1](F:%5CYabby%5CNOTE%5Cimages%5Crebase_1.png)
+![](../images/rebase_1.png)
 
 这个时候我们执行rebase 命令，想要把 master 分支最新的代码合并到 feature/A 分支上
 
@@ -172,7 +172,7 @@ git rebase master feature/A
 
 此时我们的节点图变成了
 
-![rebase_1](F:%5CYabby%5CNOTE%5Cimages%5Crebase_2.png)
+![](../images/rebase_2.png)
 
 在这里，master 分支称为基分支，feature/A 分支称为待变基分支
 

@@ -1,48 +1,41 @@
----
-typora-root-url: ..
----
+Promise **本质上是一个构造函数（new Promise()）**，用来封装一个异步操作并可以获取其结果，其结果在Promise对象创建时可能是未知的。
 
-> Promise 对象用来封装一个异步操作并可以获取其结果，本质上是一个构造函数；
-
-Promise 对象是一个代理对象（代理一个值），被代理的值在Promise对象创建时可能是未知的。它允许你为异步操作的成功和失败分别绑定相应的处理方法（handlers）。 这让异步方法可以像同步方法那样返回值，但并不是立即返回最终执行结果，而是一个能代表未来出现的结果的promise对象；
+它允许你为异步操作的成功和失败分别绑定相应的处理方法。 这让异步方法可以像同步方法那样返回值，但并不是立即返回最终执行结果，而是一个能代表未来出现的结果的promise对象；
 
 ## 基本特征
 
-1. Promise 有三个状态：pending，fulfilled，rejected，默认状态是 pending，状态一旦确认，就不会再改变；
-2. new Promise 时， 需要传递一个 executor（）执行器，执行器立即执行，executor 接收两个参数，分别是 resolve 和 reject；
+1. **Promise 有三个状态且不可逆：**pending，fulfilled，rejected，默认状态是 pending，状态一旦确认，就不会再改变；
+2. new Promise 时， 需要传递一个 executor（）执行器，**执行器立即执行**，executor 接收两个参数，分别是 resolve 和 reject；
 3. Promise  有一个 value 保存成功状态的值，可以是 undefined/thenable/promise；有一个 reason 保存失败状态的值；
 4. Promise 必须有一个 then 方法，then 接收两个参数，分别是 promise 成功的回调 onFulfilled 和 promise 失败的回调 onRejected；
-5. 如果调用 then 时，Promise 已经成功则执行 onFulfilled，参数是 Promise  的 value；
-6. 如果调用 then 时，Promise 已经失败则执行 onRejected，参数是 Promise  的 reason；
-7. 如果 then 中抛出了异常，那么就会把这个异常作为参数，传递给下一个 then 的失败的回调 onRejected；
 
-### 链式调用&值穿透性
+   -  onFufilled 和 onRejected 可以缺省，如果 onFufilled 和 onRejected 不是函数就将其忽略，依旧可以在后面的 then 中获取到之前返回的值；
 
-1. then 的参数 onFufilled 和 onRejected 可以缺省，如果 onFufilled 和 onRejected 不是函数就将其忽略，依旧可以在后面的 then 中获取到之前返回的值；
-2. Promise  可以 then 多次，每次执行完 Promise.then 方法后返回的都是一个新的 Promise ；
-3. 如果 then 的返回值 x 是一个普通值，就会把这个结果作为参数，传递给下一个 then 的成功回调中；
-4. 如果 then 中报出了异常，就会把这个异常作为参数，传递给下一个 then 的失败回调中；
-5. 如果 then 的返回值 x 是一个 Promise，那么会等这个 Promise  执行完，Promise  如果成功就走下一个 then 的成功否则就走下一个 then 的失败，如果抛出异常，也走下一个 then 的失败；
-6. 如果 then 的返回值 x 和 Promise 是同一个引用对象，造成循环引用，则抛出异常，把异常传递给下一个 then 的失败的回调中；
-7. 如果 then 的返回值 x 是一个 Promise，且 x 同时调用 resolve 函数和 reject 函数，则第一次调用优先，其他所有调用被忽略；
+
+5. Promise  可以 then 多次，每次执行完 Promise.then 方法后返回的都是一个新的 Promise ；
+
+- then 的返回值是一个普通值，就会把这个结果作为参数，传递给下一个 then 的成功回调中；
+- then 中报出了异常，就会把这个异常作为参数，传递给下一个 then 的失败回调中；
+- then 的返回值是一个 Promise，那么会等这个 Promise  执行完，Promise  如果成功就走下一个 then 的成功否则就走下一个 then 的失败，如果抛出异常，也走下一个 then 的失败；
+- then 的返回值和 Promise 是同一个引用对象，造成循环引用，则抛出异常，把异常传递给下一个 then 的失败的回调中；
+-  then 的返回值是一个 Promise，且值同时调用 resolve 函数和 reject 函数，则第一次调用优先，其他所有调用被忽略；
 
 ## 调用流程
 
-1. Promise 的构造方法接收一个executor（），在 new Promise（）时就立刻执行这个executor（）回调；
-2. executor（）内部的异步任务被放入宏 / 微任务队列，等待执行；
-3. then（）被执行，收集成功/失败回调，放入成功/失败队列；
-4. executor（）的异步任务被执行，触发resolve/reject，从成功/失败队列中取出回调依次执行；
+1. Promise 的构造方法接收一个executor( )，在 new Promise( )时就**立刻执行**这个executor( )回调；
+2. executor( )内部的异步任务被放入宏 / 微任务队列，等待执行；
+3. then( )被执行，收集成功/失败回调，放入成功/失败队列；
+4. executor( )的异步任务被执行，触发resolve/reject，从成功/失败队列中取出回调依次执行；
 
+   - Promise 中**只有涉及了状态变更后才需要被执行的回调才算是微任务**，例如 then、catch、finally，其它所有的代码执行都是宏任务（同步执行）；
+   - 链式调用中，只有前一个 then 的回调执行完毕后，跟着的 then 中的回调才会被加入至微任务队列 ；
 
-
-- Promise 中只有涉及了状态变更后才需要被执行的回调才算是微任务，例如 then、catch、finally，其它所有的代码执行都是宏任务（同步执行）；
-- 链式调用中，只有前一个 then 的回调执行完毕后，跟着的 then 中的回调才会被加入至微任务队列 ；
 
 ## API方法
 
 ### Promise.prototype.catch
 
->  用来捕获 promise 的异常，相当于一个没有成功的 then；
+用来捕获 promise 的异常，相当于一个没有成功的 then；
 
 ```javascript
 Promise.prototype.catch = function(errCallback){
@@ -52,14 +45,15 @@ Promise.prototype.catch = function(errCallback){
 
 ### Promise.resolve
 
-> 返回一个状态由给定value决定的Promise对象；
+返回一个状态由给定value决定的Promise对象；
 
-    1. 如果value 是thenable，返回的Promise对象的状态由 then 方法执行决定；
-    2. 如果 value为空，基本类型或者不带then方法的对象，返回的Promise对象状态为fulfilled，并且将该value传递给对应的then方法；
+
+
+
 
 ### Promise.reject
 
-> 返回一个失败的promise对象；
+返回一个失败的promise对象；
 
 ```javascript
 static reject(reason){
@@ -71,7 +65,7 @@ static reject(reason){
 
 ### Promise.all
 
-> 返回一个新的promise, 只有所有的promise都成功才成功, 只要有一个失败了就直接失败；
+返回一个新的promise, 只有所有的promise都成功才成功, 只要有一个失败了就直接失败；
 
 ```javascript
 Promise.all = function(values) {
@@ -79,6 +73,7 @@ Promise.all = function(values) {
   return new Promise((resolve, reject) => {
     let resultArr = [];
     let orderIndex = 0;
+    // 根据索引往结果数组放值
     const processResultByKey = (value, index) => {
       resultArr[index] = value;
       if (++orderIndex === values.length) {
@@ -88,6 +83,7 @@ Promise.all = function(values) {
     for (let i = 0; i < values.length; i++) {
       let value = values[i];
       if (value && typeof value.then === 'function') {
+        // 返回的是thenable，执行then方法
         value.then((value) => {
           processResultByKey(value, i);
         }, reject);
@@ -101,15 +97,16 @@ Promise.all = function(values) {
 
 ### Promise.race
 
->  返回一个新的promise, 第一个完成的promise的结果状态就是最终的结果状态；
+返回一个新的promise, 第一个完成的promise的结果状态就是最终的结果状态；
 
 ```javascript
+// 实现时不用考虑第一个，直接for循环，谁先异步执行完成resolve，记住Promise状态改变时不可逆的
 Promise.race = function(promises) {
   return new Promise((resolve, reject) => {
     for (let i = 0; i < promises.length; i++) {
       let val = promises[i];
       if (val && typeof val.then === 'function') {
-        val.then(resolve, reject);
+        val.then(resolve, reject); // 传入的值是promise，执行.then结果
       } else {
         resolve(val)
       }
@@ -120,18 +117,18 @@ Promise.race = function(promises) {
 
 ### Promise.any
 
-> 接收一个Promise对象的集合，当其中的一个promise 成功，就返回那个成功的promise的值；
+接收一个Promise对象的集合，当其中的一个promise 成功，就返回那个成功的promise的值；
 
 ### Promise.allSettled
 
-1. 等到所有promises都完成（每个promise返回成功或失败）；
-2. 返回一个promise，该promise在所有promise完成后完成，并带有一个对象数组，每个对象对应每个promise的结果；
+-  等到所有promises都完成（每个promise返回成功或失败）；
+- 返回一个promise，该promise在所有promise完成后完成，并带有一个对象数组，每个对象对应每个promise的结果；
 
 ### Promise.prototype.finally
 
-1.  如果返回一个 promise 会等待这个 promise 也执行完毕；
-2.  如果返回的是成功的 promise，会采用上一次的结果；
-3.  如果返回的是失败的 promise，会用这个失败的结果，传到 catch 中
+1. 如果返回一个 promise 会等待这个 promise 也执行完毕；
+2. 如果返回的是成功的 promise，会采用上一次的结果；
+3. 如果返回的是失败的 promise，会用这个失败的结果，传到 catch 中
 
 ```javascript
 Promise.prototype.finally = function(callback) {
@@ -145,9 +142,9 @@ Promise.prototype.finally = function(callback) {
 
 ## Async 与 Await
 
-async 函数就是 generator 函数的语法糖：就是将 generator 函数的 * 换成 async ，将 yield 替换成 await 
+async 函数就是 **generator 函数的语法糖**：就是将 generator 函数的 * 换成 async ，将 yield 替换成 await，
 
-async 函数对 generator 的改进：
+async...await 函数对 generator 的改进，感觉它的出现是为了优化.then()链的写法的
 
 - 内置执行器，不需要使用 next() 手动执行
 - await 命名后面可以是 Promise 对象或者原始类型的值，yield命令后面只能是Thunk函数或Promise对象
@@ -155,26 +152,41 @@ async 函数对 generator 的改进：
 
 ### async 函数
 
-1. 返回值为 Promise 对象；
-2. Promise 对象的结果由async函数执行的返回值决定；
+async 函数用来声明一个函数是异步的，返回一个 Promise 对象（就是是内部函数返回一个字符串，也会用promise.resolve()封装的）；
+
+Promise 对象的结果由async函数执行的返回值决定；
 
 ### await 表达式
 
-1. await 右侧的表达式一般为 Promise 对象，但也可以是其它的值 ；
-   - 如果表达式是 Promise 对象，await 返回的是 Promise 成功的值；
-   - 如果表达式是其它的值，直接将此值作为 await 的返回值 ；
-2. await 必须写在 async 函数中, 但 async 函数中可以没有 await；
-3. 如果 await 的 Promise 失败了, 就会抛出异常,可以通过 try...catch 来捕获处理；
+- await 右侧的表达式一般为 Promise 对象，但也可以是其它的值 ；
+
+  - 如果表达式是 Promise 对象，await 返回的是 Promise 成功的值；
+  - 如果表达式是其它的值，直接将此值作为 await 的返回值 ；
+
+- await 必须写在 async 函数中, 但 async 函数中可以没有 await；
+- 如果 await 的 Promise 失败了, 就会抛出异常,可以通过 **try...catch 来捕获处理**；
 
 ## 关键问题
 
-### promise 和 try catch
+### promise 怎么捕获错误
 
-先说结论：
+**try...catch 方法是同步的，所以只能捕获同步代码的错误**
 
-如果我们需要捕获 Promise 的错误，需要使用 promise-catch 方法来捕获
+- 如果我们需要捕获 Promise 的错误，需要使用 promise-catch 方法来捕获（**记得我们前面说过promise所有需要等待状态变更的方法都是微任务，除了这些方法剩下的代码才是同步的）**
+- 如果使用 async await，可以使用 try-catch 来捕获错误（因为这个时候时同步代码）
+- 在Promise 设计中，**executor 默认有个try...catch，有异常时内部已经捕获了，并且将其封装成 reject 状态**的 promise ，可以通过 Promise.catch 方法来捕获
 
-如果使用 async await 可以使用 try-catch 来捕获错误
+  ```javascript
+  console.log(1)
+  new Promise((resolve) => {
+    console.log(2)
+    throw Error(4)
+  }).then((e) => { console.log(e) })
+  console.log(3)
+  
+  // 上面的代码log顺序是 1234，异常4在promise内部已经捕获错误放到reject里面了，是微任务
+  ```
+
 
 ```javascript
 try {
@@ -204,65 +216,37 @@ async function test(){
   try{
     const value = await getData()
   } catch (error){
-    console.error(error)  // 能捕获
+    console.error(error)  // 能捕获错误
   }
 }
 ```
 
-> 为什么正常使用 promise 不能够使用 try catch 捕获异常呢，使用 async await 确可以捕获呢？
-
-首先我们要明白一点：try catch 是只能捕获同步代码的异常，异步操作的异常是不能被直接捕获的
-
-- 在Promise 设计中，executir 默认有个try catch，有异常时内部已经捕获了，并且将其封装成 reject 状态的 promise ，可以通过 Promise.catch 方法来捕获
-
-  ```javascript
-  console.log(1)
-  new Promise((resolve) => {
-    console.log(2)
-    throw Error(4)
-  }).then((e) => { console.log(e) })
-  console.log(3)
-  ```
-
-  熟悉 js 的 event loop 机制就知道，上面代码 log 顺序是 1、2、3、4，捕获异常 4 的时候其实是在 promise 里面抛出，调用 reject 的，reject 是加到微任务里的，此时 try catch 已经执行完了，所以捕获不了
-
-- 使用 async await 封装了，实现了同步的方式 ，所以try catch 可以捕获异常
-
-
-
 ### 异常传透
 
-1. 当使用 Promise 的 then 链式调用时, 可以在最后指定失败的回调；
-2. 前面任何操作出了异常, 都会传到最后失败的回调中处理；
-3. 如果要中断 Promise 链：在回调函数中返回一个pending 状态的Promise 对象；
+当使用 Promise 的 then 链式调用时, 可以在最后指定失败的回调；所以前面任何操作出了异常, 都会传到最后失败的回调中处理；
 
-### 为什么要使用Promise 
+但如果要**中断 Promise 链**：在回调函数中返回一个pending 状态的Promise 对象；
 
-1. 指定回调函数的方式更加灵活：
+### 为什么要使用Promise
+
+1. **指定回调函数的方式更加灵活：**
+
    - 旧的：必须在启动异步任务前指定；
-   - promise： 启动异步任务、返回promie对象 、 给promise对象绑定回调函数(甚至可以在异步任务结束后指定)，无论何时查询，都能得到这个状态；
-2. 支持链式调用, 可以解决回调地狱问题：
+   - promise： 启动异步任务、返回promie对象 、 给promise对象绑定回调函数(甚至可以在异步任务结束后指定)，无论何时查询，都能得到这个状态（主要还是promise状态不可逆，什么时候调用都能拿到状态）；
+
+2. **支持链式调用, 可以解决回调地狱问题：**
+
    - 回调地狱的缺点：不便于阅读 / 不便于异常处理；
-   - 解决方案：promise链式调用；
-   - 终极解决方案：async/await；
+   - 解决方案：promise链式调用；终极解决方案：async/await；
 
-### 状态改变和指定回调函数先后
 
-1. 都有可能： 正常情况下是先指定回调再改变状态, 但也可以先改状态再指定回调；
-2. 先改状态再指定回调：
-   - 在执行器中直接调用resolve() / reject()；
-   - 延迟更长时间才调用then()；
-3. 什么时候才能得到数据：
-   - 先指定的回调, 当状态发生改变时, 回调函数就会调用, 得到数据；
-   - 先改变的状态, 那当指定回调时, 回调函数就会调用, 得到数据；
+### then()返回的新promise的结果
 
-### .then()返回的新promise的结果
-
->  由then()指定的回调函数执行的结果决定；
+由then()指定的回调函数执行的结果决定；
 
 1. 如果抛出异常, 新promise变为rejected, reason为抛出的异常；
 2. 如果返回的是非promise的任意值, 新promise变为resolved, value为返回的值；
-3. 如果返回的是另一个新promise, 此promise的结果就会成为新promise的结果；
+3. 如果返回的是另一个新promise, 此promise.then的结果就会成为新promise的结果；
 
 ##### promise、async和await在事件循环中的执行过程
 
@@ -272,16 +256,18 @@ async function test(){
 
 
 
-### 缺点
+### promise缺点
 
 - Promise 一旦新建（new Promise）就会立即执行，无法中途取消；
 - 如果不设置回调函数，Promise 内部的错误就无法反映到外部；
-- 当处于pending状态时，无法得知当前处于哪一个状态，是刚刚开始还是刚刚结束；应用
+- 当处于pending状态时，无法得知当前处于哪一个状态，是刚刚开始还是刚刚结束
+
+## 应用场景
 
 ### 加载图片
 
 ```javascript
-function loadImg(url){
+function loadImg(url){s
   return new Promise((resolve, reject) => {
     var imgDom = document.createElement("img");
     imgDom.src = url;
@@ -295,8 +281,7 @@ function loadImg(url){
   })
 }
 const url = "https://xxx.com/test.jpg";
-loadImg(url).then(res=>{
-  console.log(res.width);
+loadImg(url).then(res=>{d h yy y y s z x x  console.log(res.width);
 }, error=>{
   console.log(error)
 })
@@ -311,11 +296,6 @@ function promiseGet(url) {
       xhr.open('GET', url, true);
       xhr.send();
       xhr.onreadystatechange = function () {
-        // 0：请求未初始化，还没有调用 open()
-        // 1：请求已经建立，但是还没有发送，还没有调用 send()
-        // 2：请求已发送，正在处理中（现在可以从响应中获取内容头）
-        // 3：请求在处理中
-        // 4 响应已完成;  
         if(xhr.readyState === 4){
           if(xhr.status===200){
             resolve(xhr.response);
@@ -339,7 +319,7 @@ promiseGet(url).then(res=>{
 })
 ```
 
-## 手写Promise
+## 实现一个Promise
 
 ### 基础版
 
@@ -354,9 +334,12 @@ const REJECTED = "rejected";
 class Promisee {
   constructor(executor) {
     this.status = PENDING; // 默认状态为 PENDING
+    
+    // 两个结果
     this.value = undefined; // 存放成功状态的值，默认为 undefined
     this.reason = undefined; // 存放失败状态的值，默认为 undefined
 
+    // 两个回调
     this.onResolvedCallbacks = []; // 存放成功的回调
     this.onRejectedCallbacks = []; // 存放失败的回调
 
@@ -368,9 +351,10 @@ class Promisee {
         this.value = value;
 
         // 依次将对应的函数执行
-        this.onResolvedCallbacks.forEach((fn) => fn());
+        this.onResolvedCallbacks.forEach((fn) => fn(value));
       }
     };
+    
     // 调用此方法就是失败
     let reject = (reason) => {
       // 状态为 PENDING 时才可以更新状态，防止 executor 中调用了两次 resovle/reject 方法
@@ -379,7 +363,7 @@ class Promisee {
         this.reason = reason;
 
         // 依次将对应的函数执行
-        this.onRejectedCallbacks.forEach((fn) => fn());
+        this.onRejectedCallbacks.forEach((fn) => fn(reason));
       }
     };
 
@@ -638,4 +622,3 @@ class Promisee {
   window.Promise = Promise;
 })(window);
 ```
-

@@ -1,59 +1,25 @@
-## 为什么要用this
+this是在运行时进行绑定的（这里可以参考[执行栈这篇文章](%E6%89%A7%E8%A1%8C%E4%B8%8A%E4%B8%8B%E6%96%87%E4%B8%8E%E6%89%A7%E8%A1%8C%E6%A0%88.md)，我理解的是因为执行栈是动态执行的，this指向也是在创建词法环境的创建的），不是在编写时绑定，它的上下文取决于函数调用时的各种条件；
 
-- this提供了一种更优雅的方式来隐式“传递”一个对象引用，将API设计更加简洁和易于复用；
-- 相对显示传递上下文对象更简洁，可以自动引用合适的上下文对象；
-
-全局环境&普通函数调用&普通对象
-
-```javascript
-const obj={a:this}
-obj.a===window  //true
-
-function fn(){
-    console.log(this)   //window
-}
-```
-
-## 作用域
-
-this在任何情况下都不指向函数的词法作用域【需要链接】；
-
-this和词法作用域的差别？？？
-
-## this是什么
-
-this是在运行时进行绑定的，不是在编写时绑定，它的上下文取决于函数调用时的各种条件；
-
-this的绑定的函数声明的位置没有任何关系，只取决于函数的调用方式；
-
-当一个函数被调用时：会创建一个活动记录（称为执行上下文【链接】），这个记录会包含函数在哪被调用（调用栈）、函数的调用方式、传入的参数等信息；this就是这个记录的一个属性，会在函数 执行的过程中找到；
-
-### 调用位置
-
-区分调用位置和声明位置；
-
-分析调用栈（函数调用链），就是为了到达当前执行位置所调用的所有函数；
+所以this的绑定的函数声明的位置没有任何关系，只取决于函数的调用方式；
 
 ### 绑定规则
 
 #### 默认绑定
 
-> 最常用的函数调用类型：独立函数调用；函数调用时应用的this的默认绑定，指向全局对象；
+最常用的函数调用类型：独立函数调用；函数调用时应用的this的默认绑定，指向全局对象；
 
 如果使用严格模式，则不能将全局对象用于默认绑定，this会绑定到 undefined;
 
 ```javascript
+// 严格模式
 function foo(){
   'use strict'
   console.log(this.a)
 }
 var a = 2;
 foo(); // TypeError:this is undefined;
-```
 
-只有函数 运行在非严格模式下，默认绑定才能绑定到全局对象，在严格模式下调用函数不影响默认绑定；
-
-```javascript
+// 非严格模式
 function foo(){
   console.log(this.a)
 }
@@ -62,17 +28,17 @@ var a= 2;
   'use strict'
   foo();  // 2
 })();
+
 ```
 
 #### 隐式绑定
 
-> 考虑调用位置是否有上下文对象，或者是否被某个对象拥有/包含；
->
-> 在一个对象内部包含一个指向函数的属性，并通过这个属性间接引用函数，从而把this隐式绑定在这个对象上；
+判断是否为隐式绑定一般是考虑**调用位置是否有上下文对象，或者是否被某个对象拥有/包含**；
 
-当函数引用有上下文对象时，隐式绑定会把函数调用中的this绑定到这个上下文对象；
+- 在一个对象内部包含一个指向函数的属性，并通过这个属性间接引用函数，从而把this隐式绑定在这个对象上；
 
-对象属性引用链中只有上一层或最后一层在调用位置中起作用；
+- **对象属性引用链中只有上一层或最后一层在调用位置中起作用**，比如通过obj1.obj2.fn()，只会在obj2起作用；
+- 当函数引用有上下文对象时，隐式绑定会把函数调用中的this绑定到这个上下文对象；
 
 ```javascript
 function foo(){
@@ -80,13 +46,13 @@ function foo(){
 }
 var obj2 = {
   a:42,
-  foo:foo
+  foo:foo  // 对象属性引用
 }
 var obj1 = {
   a: 2,
   obj2:obj2
 }
-obj1.obj2.foo()  // 42
+obj1.obj2.foo()  // 42， 只有在上一层调用位置起作用
 ```
 
 ##### 隐式丢失
@@ -122,21 +88,20 @@ var obj = {
   a:2,
   foo:foo
 }
-var a="oops,global";
-doFoo(obj.foo); // "oops,global"
+var a="global";
+doFoo(obj.foo); // "global"
 ```
 
 参数传递是一种隐式赋值，传入的函数会被隐式赋值，所以应用默认绑定；
 
 #### 显示绑定
 
-> 在某个对象上强制调用函数，使用call（..）和 apply（..）方法；
+在某个对象上强制调用函数，使用call（..）和 apply（..）方法；
 
-第一个参数是一个对象，给this准备，在调用函数时将其绑定到this；
+- 第一个参数是一个对象，给this准备，在调用函数时将其绑定到this；
 
-从绑定的角度来说，这两个方法没有区别；
-
-如果 传入的是一个原始值（String、Boolean、Number）来当作this绑定对象，这个原始值 就会被转换成它的对象形式（new String（...）、new Boolean（...）、new Number(...)），这通常被称为装箱；
+- 如果 传入的是一个原始值（String、Boolean、Number）来当作this绑定对象，这个原始值 就会被转换成它的对象形式（new String（...）、new Boolean（...）、new Number(...)），这通常被称为装箱；
+- 从绑定的角度来说，这两个方法没有区别；
 
 ##### 硬绑定
 
@@ -199,34 +164,37 @@ bind（...）会返回一个硬编码的新函数，会把指定的参数设置�
 
 #### new绑定
 
-【链接new实现】
+new 运算符创建一个定义的对象类型的实例或具有构造函数的内置对象类型之一；
 
 使用 new 来调用函数，或者发生构造函数调用时，会自动执行下面的操作：
 
-1. 创建一个全新的对象；
-2. 这个新对象会被执行[[Prototype]]连接；
-3. 这个新对象会绑定到函数调用的this；
-4. 如果函数没有其它返回对象，那new表达式中的函数会自动返回这个新对象；
+1. 创建了一个全新的对象
+2. 它会被执行[[Prototype]]（也就是__proto__），
+3. 把this指向新创建的对象 
+4. 通过new创建的每个对象将最终被[[Prototype]]链接到这个函数的prototype对象上
+5. 如果函数没有返回对象类型Object(包含Functoin, Array, Date, RegExg, Error)，那 么new表达式中的函数调用将返回该对象引用
 
 ```javascript
-function foo(a){
-  this.a = a;
+
+function createNew() {
+    let obj = {}  
+    let constructor = [].shift.call(arguments)   
+    obj.__proto__ = constructor.prototype  
+    let result = constructor.apply(obj, arguments)  
+    return typeof result === 'object' ? result : obj  
 }
-var bar = new foo(2)
-console.log(bar.a); // 2
 ```
 
 ### 优先级
 
 如果某个调用位置可以应用多条规则，这时就必须给规则设置优先级；
 
-默认绑定的优先级最低；
+**new > 显示绑定 > 隐式绑定 > 默认绑定**
 
-显示绑定的优先级高于隐式绑定；
-
-new绑定的优先级高于隐式绑定；
-
-new绑定的优先级大于显示绑定；
+- 默认绑定的优先级最低；
+- 显示绑定的优先级高于隐式绑定；
+- new绑定的优先级高于隐式绑定；
+- new绑定的优先级大于显示绑定；
 
 ### 绑定例外
 
@@ -251,12 +219,11 @@ var p ={
   a:4
 }
 o.foo(); // 3
+// 赋值表达式 p.foo = o.foo 的返回值是目标函数的引用，所以调用位置是 foo（），会应用默认绑定
 (p.foo = o.foo)(); // 2
 ```
 
-赋值表达式 p.foo = o.foo 的返回值是目标函数的引用，所以调用位置是 foo（），会应用默认绑定
-
-#### 软绑定 
+#### 软绑定
 
 给默认绑定指定一个全局对象和undefined以外的值，可以实现和硬绑定相同的效果，同时保留隐式绑定或显示绑定修改this的能力；
 
@@ -324,15 +291,17 @@ foo（）内部创建的箭头函数会捕获调用时 foo()的this，由于 foo
    function constant() {
        return () => arguments[0]
    }
-
+   
    var result = constant(1);
    console.log(result()); // 1
    ```
 
+   // 通过命名参数或者 rest 参数的形式访问参数  
+let nums = (...nums) => nums;
 
-   // 通过命名参数或者 rest 参数的形式访问参数
-   let nums = (...nums) => nums;
    ```javascript
+   
+   ```
 
 3. 不能通过 new 关键字调用；
 
@@ -344,20 +313,38 @@ foo（）内部创建的箭头函数会捕获调用时 foo()的this，由于 foo
 
 5. 不支持重复的命名参数；
 
-​```javascript
-obj = {
-  a: 10,
-  c: function () {
-    b = () => {
-      console.log(this)           // obj
-    }
-    b()
-  }
-}
+​```javascript  
+obj = {  
+a: 10,  
+c: function () {  
+b = () => {  
+console.log(this)           // obj  
+}  
+b()  
+}  
+}  
 obj.c()
 
-document.getElementById('app').addEventListener('click', () => {
-  console.log(this)           // window
- })
-   ```
+document.getElementById('app').addEventListener('click', () => {  
+console.log(this)           // window  
+})
 
+````
+
+````
+
+## 为什么要用this
+
+- this提供了一种更优雅的方式来隐式“传递”一个对象引用，将API设计更加简洁和易于复用；
+- 相对显示传递上下文对象更简洁，可以自动引用合适的上下文对象；
+
+全局环境&普通函数调用&普通对象
+
+```javascript
+const obj={a:this}
+obj.a===window  //true
+
+function fn(){
+    console.log(this)   //window
+}
+```

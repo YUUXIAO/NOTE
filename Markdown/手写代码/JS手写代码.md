@@ -201,60 +201,9 @@ function createNew() {
 }
 ```
 
-##  Promise（简易版）
-
-```javascript
-/*
-* 1. 自动执行函数
-* 2. 三个状态
-* 3. then 
-*/
-
-class Promise{
-  contructor(fn){
-    this.state = 'pending';
-    this.value = undefined;
-    this.reason = undefined;
-    
-    let resolve = value => {
-      if(this.state === 'pending'){
-        this.state = 'fulfilled';
-        this.value = value;
-      }
-    }
-    
-    let reject = value =>{
-      if(this.state === 'pending'){
-        this.state = 'rejected';
-        this.reason = value
-      }
-    }
-    
-    // 自动执行函数
-    try {
-      fn(resolve, reject)
-    } catch(e) {
-      reject(e)
-  	}
-  }
-  then(onFulfilled, onRejected) {
-      switch (this.state) {
-          case: 'fufulfilled:
-            onFulfilled(this.value)
-          	break
-          case: 'rejected:
-            onRejected(this.value)
-          	break
-          default:
-      }
-  }
-}
-```
-
 ## call函数
 
 > call 方法接收的是多个参数；
->
 
 ```javascript
 /*
@@ -496,41 +445,6 @@ function debounce(fn, delay) {
 
 ```
 
-## 高阶函数实现AOP（面向切面编程）
-
-```javascript
-Function.prototype.before = function (beforefn) {
-    let _self = this; // 缓存原函数的引用
-    return function () { // 代理函数
-        beforefn.apply(this, arguments); // 执行前置函数
-        return _self.apply(this, arguments); // 执行原函数
-    }
-}
-
-Function.prototype.after = function (afterfn) {
-    let _self = this;
-    return function () {
-        let set = _self.apply(this, arguments);
-        afterfn.apply(this, arguments);
-        return set;
-    }
-}
-
-let func = () => console.log('func');
-func = func.before(() => {
-    console.log('===before===');
-}).after(() => {
-    console.log('===after===');
-});
-
-func();
-
-// 输出结果：
-===before===
-func
-===after===   
-```
-
 ## 斐波那契数列
 
 > 斐波那契数列从第三项开始，每一项都等于前两项之和；
@@ -749,7 +663,6 @@ function indexOf(arr, item){
 #### 第一种方式
 
 > scrollTop + clientHeight 和offsetTop的比较 ，如果前者大于后者说明图片进入可视区域；
->
 
 ```javascript
 function lazyload() {
@@ -775,7 +688,6 @@ window.addEventListener('scroll', lazyload);
 #### 第二种方式
 
 > 使用 element.getBoundingClientRect() API 直接得到 top 值；
->
 
 ```javascript
 function lazyload() {
@@ -797,7 +709,7 @@ function lazyload() {
 window.addEventListener('scroll', lazyload);
 ```
 
-## 二分查找 
+## 二分查找
 
 ```javascript
 const bsearch = (array,target)=>{
@@ -1054,6 +966,7 @@ setTimeout(() => {
 }, 0)
 
 ```
+
 ## 计时器实现任务调度
 
 ```javascript
@@ -1113,4 +1026,3 @@ class Cron {
 
 const cron = new Cron()
 ```
-

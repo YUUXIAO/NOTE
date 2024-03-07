@@ -1,10 +1,8 @@
----
-typora-root-url: ..\..\..
----
+js 主线程是负责渲染UI，执行 js代码和处理用户交互的单个执行上下文，因为js是单线程的，所以任何耗时的任务都会阻塞线程
 
-> Web Worker 是 HTML5 提供的一个 javascript 多线程解决方案，意义在于可以将一些耗时的数据处理操作从主线程中剥离，使主线程更加专注于页面渲染和交互；
+Web Worker（工作线程） 是 HTML5 提供的一个js多线程解决方案，可以将一些耗时的数据处理操作从主线程中剥离再将结果返回，使主线程更加专注于页面渲染和交互；
 
-但是子线程完全受主线程控制，且不得操作DOM，所以，这个新标准并没有改变JavaScript单线程的本质；
+但是子线程完全受主线程控制，且不得操作DOM，所以这个新标准并没有改变js单线程的本质；
 
 ## 用途
 
@@ -80,9 +78,11 @@ onconnect = function (e) {
 
 ### 相关API
 
-1. Worker.prototype.onmessage: 用于接收另一个线程的回调函数；
-2. Worker.prototype.postMessage: 向另一个线程发送消息；
-   - 一次只能发送一个对象，如果需要发送多个参数可以将参数包装为数组或对象再进行传递；
+- Worker.prototype.onmessage: 用于接收另一个线程的回调函数；
+
+- Worker.prototype.postMessage: 向另一个线程发送消息；
+
+- 一次只能发送一个对象，如果需要发送多个参数可以将参数包装为数组或对象再进行传递；
 
 ```javascript
 // 主线程
@@ -240,58 +240,51 @@ Worker 中提供了 WorkerNavigator 和 WorkerLocation 接口，它们分别是 
 - WebSocket
 - XMLHttpRequest
 
-### 缺点
+## 缺点
 
-1.  有同源策略限制；
-2.  无法访问 DOM 节点；
-3.  运行在另一个上下文中，无法使用 Window 对象；
-4.  不是每个浏览器都支持这个新特性；
-5.  Web Worker 的运行不会影响主线程，但与主线程交互时仍受到主线程单线程的瓶颈制约，如果 Worker 线程频繁与主线程进行交互，主线程由于需要处理交互，仍有可能使页面发生阻塞；
-6.  共享线程可以被多个浏览上下文调用，所有这些浏览上下文必须同源；
+- **有同源策略限制：**共享线程可以被多个浏览上下文调用，所有这些浏览上下文必须同源；
+- 无法访问 DOM 节点；
+- 运行在另一个上下文中，无法使用 Window 对象；
+- 不是每个浏览器都支持这个新特性；
+- Web Worker 的运行不会影响主线程，但与主线程交互时仍受到主线程单线程的瓶颈制约，如果 Worker 线程频繁与主线程进行交互，主线程由于需要处理交互，仍有可能使页面发生阻塞；
+- **通信开销：**Web Worker使用postMessage 方法与主线程进行通信，所以是有通信开销的，为了最大限度的减少这种开销，应该只发送必要数据，避免频繁发数据
 
 ## 图解
 
-![web_workers](/images/事件机制/web_workers.jpg)
+![](../../images/%E4%BA%8B%E4%BB%B6%E6%9C%BA%E5%88%B6/web_workers.jpg)
 
 ## 应用场景
 
-1. 计算得到fibonacci数列中第n个数的值；
-2. 在主线程计算: 当位数较大时, 会阻塞主线程, 导致界面卡死；
-3. 在分线程计算: 不会阻塞主线程；
+### 处理网络请求
+
+当项目中需要发起大量的网络请求，在主线程中执行这些请求可能会导致界面卡顿
+
+上面说到在 worker 可以使用网络请求相关api，所以如果项目中有不限制调用时机和返回的接口，可以从这里处理：
 
 ```javascript
-// index.html
-var input = document.getElementById('number')
-document.getElementById('btn').onclick = function () {
-  var number = input.value;
+// 主线程代码
+const worker = new Worker('worker.js');
+worker.onmessage = function(event) {
+  const response = event.data;
+  console.log(response);
+};
+const ajaxurls = [...]
+worker.postMessage({ urls: ajaxurls });
 
-  //创建一个Worker对象
-  var worker = new Worker('worker.js')
-  // 绑定接收消息的监听
-  worker.onmessage = function (event) {
-    console.log('主线程接收分线程返回的数据: '+event.data)
-    alert(event.data)
-  }
 
-  // 向分线程发送消息
-  worker.postMessage(number)
-  console.log('主线程向分线程发送数据: '+number)
+// webworker.js
+function request(url) {
+  return fetch(url).then(response => response.json());
 }
 
-// worker.js
-function fibonacci(n) {
-  return n<=2 ? 1 : fibonacci(n-1) + fibonacci(n-2)  //递归调用
-}
+onmessage = async function(event) {
+  const urls = event.data.urls;
+  const results = await Promise.all(urls.map(request));
+  postMessage(results);
+};
 
-console.log(this)
-this.onmessage = function (event) {
-  var number = event.data
-  console.log('分线程接收到主线程发送的数据: '+number)
-  //计算
-  var result = fibonacci(number)
-  postMessage(result)
-  console.log('分线程向主线程返回数据: '+result)
-  // 分线程中的全局对象不再是window, 所以在分线程中不可能更新界面
-}
 ```
 
+### 并行处理
+
+这个一般是指如果有些业务场景需要大量的独立计算或处理数据量过大，如果在主线程计算过大，用户体验受到影响，这时候可以考虑Web Worker计算
