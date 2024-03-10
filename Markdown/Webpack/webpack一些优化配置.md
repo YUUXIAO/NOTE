@@ -4,26 +4,23 @@
 
 模块解析规则分三种：
 
-1. 解析相对路径
+1. **解析相对路径：**
+
    - 查找相对当前模块的路径下是否有对应文件或文件夹，是文件则直接加载；
    - 如果是文件夹则找到对应文件夹下是否有 package.json 文件；
    - 有的话就按照文件中的 main 字段的文件名来查找文件；
    - 没有 package.json 或 main，则查找 index.js 文件；
-2. 解析绝对路径
-   - 直接查找对应路径的文件；
-3. 解析模块名
-   - 查找当前文件目录，父级直至根目录下的 node_modules 文件夹，看是否有对应名称的模块；
+
+2. **解析绝对路径：**直接查找对应路径的文件；
+3. **解析模块名：**查找当前文件目录，父级直至根目录下的 node_modules 文件夹，看是否有对应名称的模块；
 
 ## source-map
 
-> source map 是将编译、打包、压缩后的代码映射回源码的过程；
+> source-map 是将编译、打包、压缩后的代码映射回源码的过程；
 
 1. 打包压缩后的代码不具备良好的可读性，想要调试源码就需要 source map，出错的时候，浏览器控制台将直接显示原始代码出错的位置；
-
 2. 避免在生产中使用 inline- 和 eval-，因为它们会增加 bundle 体积大小，并降低整体性能；
-
 3. map 文件只要不打开开发者工具，浏览器是不会加载的；
-
 
 生产环境一般有三种处理方案：
 
@@ -34,16 +31,17 @@
 ## 模块打包
 
 1. 根据 webpack.config.js 中的入口文件并识别模块依赖，自动进行分析，并通过转换、编译代码、打包成最终的文件；
-2. 最终文件中的模块实现是基于 webpack 自己实现的 webpack_require（ES5 代码），打包后的文件可以跑在浏览器上；
+2. 最终文件中的模块实现是基于 **webpack 自己实现的 webpack_require（ES5 代码）**，打包后的文件可以跑在浏览器上；
 3. 针对异步模块，webpack 实现模块的异步加载类似 jsonp 的流程；
+
    - 遇到异步模块时，使用 _ webpack_require_.e 函数把异步代码加载进来，该函数会在 html 的 head 标签中动态增加 script 标签，src 指向指定的异步模块存放的文件；
    - 加载的异步模块文件会执行 webpackJsonpCallback 函数，把异步模块加载到主文件中；
    - 后续可以像同步模块一样,直接使用 __ webpack_require__("./src/async.js") 加载异步模块；
 
-## 文件监听 
+
+## 文件监听
 
 > 在发现源码发生变化时，自动重新构建出新的输出文件；
->
 
 轮询判断文件的最后编辑时间是否变化，初次构建时把文件的修改时间储存起来，下次有修改时进行时间对比，并且先缓存起来，等 aggregateTimeout 后，把变化列表一起构建，并生成到 bundle 文件夹；
 
@@ -91,9 +89,9 @@ module.export = {
 
 当设置了 http 强缓存，比如有效期为一天：如果不使用 hash，当这个文件改变了，因为文件名没变，所以客户端使用的还是旧的缓存；如果使用了 hash，这时文件名就改变了，就会请求新的资源，而没有更改过的文件继续使用缓存；
 
-1. hash：构建的 hash，每次构建都会改变，不建议使用；
-2. chunkhash：不同的 entry  打包的 chunk 会生成不同的 chunkhash 值；
-3. contenthash：根据文件内容来定义 hash ，文件内容不变，则 contenthash 不变，推荐在 css 文件上使用；
+1. **hash：**构建的 hash，每次构建都会改变，不建议使用；
+2. **chunkhash：**不同的 entry  打包的 chunk 会生成不同的 chunkhash 值；
+3. **contenthash：**根据文件内容来定义 hash ，文件内容不变，则 contenthash 不变，推荐在 css 文件上使用；
 
 js 文件的指纹设置：
 
@@ -149,7 +147,6 @@ DCE：永远不会被用到的代码，比如引入了一个方法但是没调�
 代码分割的意义：
 
 1. 复用的代码抽离到公共模块中，解决代码冗余；
-
 2. 公共模块再按照使用的页面多少进一步拆分，用来减少文件体积，可以优化首屏加载速度；
 
 拆分原则：
@@ -159,7 +156,6 @@ DCE：永远不会被用到的代码，比如引入了一个方法但是没调�
 3. 业务代码中的公共业务模块提取打包到一个模块；
 4. 为不同入口的公共业务代码打包（为了缓存和加载速度）；
 5. 为异步加载的代码打一个公共的包；
-
 
 ### splitChunks
 
@@ -220,11 +216,9 @@ optimization: {
 
 首先将 CDN 引入的依赖加入到 externals 中；
 
-![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/693f0a72f383455baed6949136e90287~tplv-k3u1fbpfcp-zoom-1.image)
+![](../images/webpack7.jpg)
 
-然后借助 html-webpack-plugin 将 CDN 文件打入 html；
-
-![img](https://p3-juejin.byteimg.com/tos-cn-i-k3u1fbpfcp/73291870db304dcc80cd49c7d434fa9d~tplv-k3u1fbpfcp-zoom-1.image)
+然后借助 html-webpack-plugin 将 CDN 文件打入 html；![](/Users/yabby/code%20Projects/NOTE/Markdown/images/webpack6.jpg)
 
 ## DLL
 
@@ -442,4 +436,3 @@ vue.mainfest.json 用来描述动态链接库文件包含了哪些模块；
   ...
 })]);
 ```
-

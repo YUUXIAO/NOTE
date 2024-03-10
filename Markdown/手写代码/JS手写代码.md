@@ -1026,3 +1026,55 @@ class Cron {
 
 const cron = new Cron()
 ```
+
+## 瀑布流
+
+下面的代码是根据列表的总数量和几列来实现的：
+
+- 根据屏宽和列数算出单个宽度
+- 随机生成节点高度
+- 按照列数来记录每一列的总高度，这样能保证没加入一个节点就从最短的那列加入
+- 最后返回节点的位置信息
+
+```javascript
+getwallfal() {
+      const column = 3;
+      const gap = 10;
+      const contentWidth = this.$refs.content.offsetWidth;
+      const itemWidth = parseInt((contentWidth - (gap * column + 1)) / column);
+      this.itemWidth = itemWidth;
+      const dataList = document.querySelectorAll(".item");
+
+      const columnHeight = [];
+      const result = [];
+      for (var i = 0; i < dataList.length; i++) {
+        const randamHeight = Math.floor(Math.random() * 15) + 50;
+        const item = {
+          height: randamHeight,
+        };
+        if (i < column) {
+          // 第一行
+          item.left = i * (itemWidth + gap);
+          item.top = 0;
+          columnHeight.push(randamHeight + gap);
+        } else {
+          // 第二行++
+          let minheight = columnHeight[0];
+          let index = 0;
+          for (var j = 0; j < columnHeight.length; j++) {
+            if (minheight > columnHeight[j]) {
+              index = j;
+              minheight = columnHeight[j];
+            }
+          }
+          item.left = result[index].left;
+          item.top = columnHeight[index];
+          columnHeight[index] = columnHeight[index] + randamHeight + gap;
+        }
+        result.push(item);
+      }
+
+      this.resultData = result;  // 这里返回固定长度的节点信息
+    }
+```
+

@@ -138,7 +138,7 @@ l.next('芜湖！'); // 我听到你说: 芜湖！
 
 在生成器中想要实现递归调用不能直接使用 yield，因为执行生成器函数返回的值是生成器对象（value:xxx, done: false)，在实际应用中我们希望得到的生成后的值
 
-通过 yield* 实现生成器函数的递归，可以通过给对象实现 Symbol.iterator，这样我们就可以用拓展运算符或者 for..of 循环对其进行遍历
+通过 yield* 实现生成器函数的递归，可以通过给对象实现 [Symbol.iterator]，这样我们就可以用拓展运算符或者 for..of 循环对其进行遍历
 
 ```javascript
 const test = {
@@ -201,8 +201,6 @@ account.next(50);  // { value: 50, done: false }
 account.next(-10); // { value: 40, done: false }
 account.next(-60); // { value: "你破产了！", done: true }
 ```
-
-
 
 ### async
 

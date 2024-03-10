@@ -1,7 +1,7 @@
 # 前端路由
 
-1. 前端路由的出现就是为了解决单页面网站，通过切换浏览器地址路径来匹配对应的页面组件；
-2. 前端路由会根据浏览器地址栏 pathname 的变化去匹配相应的页面组件，然后将其通过创建 DOM 节点的形式，塞入根节点，达到无刷新页面切换的效果，所以在创建页面组件的时候每个组件都有自己的生命周期；
+1. 前端路由的出现：单页面网站通过切换浏览器地址路径来匹配对应的页面组件的；
+2. 前端路由会根据浏览器地址栏 pathname /hash 的变化去匹配相应的页面组件，然后将其通过创建 DOM 节点的形式，塞入根节点，达到无刷新页面切换的效果，所以在创建页面组件的时候每个组件都有自己的生命周期；
 
 ## 哈希模式
 
@@ -9,7 +9,7 @@
 
 hash 值的改变，都会在浏览器的访问历史中增加一个记录，因此能通过浏览器的回退、前进按钮控制 hash 的切换；
 
-浏览器提供了原生监听事件 hashchange，它可以监听到如下的变化：
+浏览器提供了**原生监听事件 hashchange**，它可以监听到如下的变化：
 
 1. 点击 a 标签，改变了浏览器地址；
 2. 浏览器的前进后退行为；
@@ -31,20 +31,25 @@ history 路由模式的实现主要基于存在下面几个特性：
 
 前端路由的本质就是监听URL的变化，然后匹配路由规则，显示出对应的页面，无须刷新。
 
-- _route是一个响应式的路由route对象，这个就是我们实例化Vue的时候挂载的那个vue-router实例
-
-- _router存储的就是我们从$options中拿到的vue-router对象 
-- _routerRoot指向我们的Vue根节点 
+- _route是一个响应式的**路由route对象**，这个就是我们实例化Vue的时候挂载的那个vue-router实例
+- _router存储的就是我们从$options中拿到的**vue-router对象**
+- _routerRoot指向我们的Vue根节点
 - _routerViewCache是我们对View的缓存
 - $和route和$router是定义在Vue.prototype上的两个getter,前者指向_routerRoot下的 _route,后者指向 _routerRoot下的 _router
 
 1. 首先根据Vue的插件机制安装了vue-router，封装了一个mixin，定义了两个'原型'，注册了两个组件。
+2. 然后创建了一个VueRouter的实例，并将它挂载在Vue的实例上
 
-2. 然后创建了一个VueRouter的实例，并将它挂载在Vue的实例上，这时候VueRouter的实例中的constructor初始化了各种钩子队列；初始化了matcher用于做我们的路由匹配逻辑并创建路由对象；初始化了history来执行过渡逻辑并执行钩子队列。
+   - 这时候VueRouter的实例中的constructor初始化了各种钩子队列；
+   - 初始化了matcher用于做我们的路由匹配逻辑并创建路由对象；
+   - 初始化了history来执行过渡逻辑并执行钩子队列。
 
 3. 接下来mixin中beforeCreate执行了VueRouter实例的init()方法执行初始化，这一套流程和点击RouteLink或者函数式控制路由的流程类似。
+4. 在init方法中调用了history对象的transitionTo方法'
 
-4. 在init方法中调用了history对象的transitionTo方法，然后去通过match获取当前路由匹配的数据并创建了一个新的路由对象route，接下来拿着这个route对象去执行confirmTransition方法去执行钩子队列中的事件，最后通过updateRoute更新存储当前路由数据的对象current，指向我们刚才创建的路由对象route。
+   - 通过match获取当前路由匹配的数据并创建了一个新的路由对象route
+   - 接下来拿着这个route对象去执行confirmTransition方法去执行钩子队列中的事件
+   - 最后通过updateRoute更新存储当前路由数据的对象current，指向我们刚才创建的路由对象route。
 
 
 # 路由模式
@@ -75,17 +80,12 @@ switch (mode) {
 
 ## hash模式
 
-> 
-
 hash 路由模式的实现主要是基于下面几个特性：
 
 1. URL 中 hash 值是客户端的一种状态，当向服务器发出请求时，hash 部分不会被发送；
 2. hash 值的改变，都会在浏览器的访问历史中增加一个记录，因此能通过浏览器的回退、前进按钮控制 hash 的切换；
 3. 可以通过 a 标签，并设置 href 属性，当用户点击标签后，URL 的  hash 值会发生改变，或者使用  JavaScript 来对 loaction.hash 进行赋值，改变 URL 的 hash 值；
 4. 可以使用 hashchange 事件来监听 hash 值的变化，对页面进行跳转；
-
-
-1. ​
 
 # 应用初始化
 
@@ -134,9 +134,9 @@ let a = new Vue({
 
 ## Vue.use
 
-> ```
+> ````
 > Vue.use(plugin)
-> ```
+> ````
 
 安装Vue.js插件。如果插件是一个对象，必须提供install方法。如果插件是一个函数，它会被作为install方法。调用install方法时，会将Vue作为参数传入。install方法被同一个插件多次调用时，插件也只会被安装一次。
 
@@ -234,7 +234,6 @@ export function install (Vue) {
 ## VueRouter 实例
 
 > 实例化VueRouter的核心是创建一个路由匹配对象 ，并根据mode来采取不同的路由方式；
->
 
 ```javascript
 constructor (options: RouterOptions = {}) {
@@ -598,7 +597,7 @@ export function createRoute (
 
 ## 路由初始化
 
-当根组件调用beforeCreate钩子函数时，会执行` this._router.init(this)`初始化路由;
+当根组件调用beforeCreate钩子函数时，会执行 `this._router.init(this)`初始化路由;
 
 核心就是添加路由跳转，改变URL然后渲染对应的组件
 
@@ -1495,13 +1494,13 @@ forward () {
 
 而hash上go方法调用的是history.go，它是如何更新RouteView的呢？答案是hash对象在setupListeners方法中添加了对popstate或者hashchange事件的监听。在事件的回调中会触发RoterView的更新
 
-```
+````
 // go方法调用history.go
 go (n) {
   window.history.go(n)
 }
 
-```
+````
 
 #### setupListeners
 

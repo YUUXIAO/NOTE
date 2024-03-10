@@ -1,4 +1,4 @@
-参考： https://blog.csdn.net/qq_43869822/article/details/121664818
+参考： [https://blog.csdn.net/qq_43869822/article/details/121664818](https://blog.csdn.net/qq_43869822/article/details/121664818)
 
 ## 内置工具类型
 
@@ -130,8 +130,10 @@ type Data = [number, string];
 
 1. 一个模块或功能定义份文件，命名一般与模块或功能命名，存放在src/types/productLibary文件夹下。
 2. src/types/store 文件夹用来存放 Vuex 相关结构。
+
    - modules 文件夹下对应 @Store/modules 下的模块；
    - 最基础要定义 State 中数据结构
+
 3. src/types/common.d.ts 定义了基础常用的 interface。
 4. ​
 
@@ -139,7 +141,6 @@ type Data = [number, string];
 
 1. 函数参数注意区分，必选/可选参数，可选参数必须在必选参数后面；
 2. 需要设置所有的类型，注意区分必选参数和可选参数；
-
 
 ### data类型定义
 
@@ -241,7 +242,7 @@ function addTodo(todo: Todo) {
 
 声明文件一般都是放置在src/types文件夹下
 
-```
+```javascript
 declare module 'axios'; // 这里的axios声明为any类型
 ```
 
@@ -249,7 +250,6 @@ declare module 'axios'; // 这里的axios声明为any类型
 
 1. 表单或对象数据先定义好数据结构；
 2. 尽量避免使用
-
 
 ### 注意
 
@@ -268,7 +268,6 @@ declare module 'axios'; // 这里的axios声明为any类型
    }
    ```
 
-   ​
 
 ## Vuex中使用Ts
 
@@ -461,4 +460,3 @@ function addTodo(todo: Todo) {
   todoName.value = "";
 }
 ```
-

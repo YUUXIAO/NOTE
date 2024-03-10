@@ -7,7 +7,7 @@
 ## 原理
 
 > Tree-shaking 的作用是把项目中没必要的模块全部抖掉，用于在不同的模块之间消除无用的代码；
->
+> 
 > 主要在代码执行前对代码进行静态的分析，将没有用到的代码进行注释标识，在uglify阶段进行优化
 
 Tree-shaking 的消除原理是依赖 ES6 的模块特性；
@@ -455,15 +455,4 @@ presets: [["env",
 
 Webpack 4.x 新增了一个 sideEffects 特性，通过给 package.json 加入 sideEffects：false 声明该模块是否包含 sideEffects（副作用），从而可以为 Tree Shaking 提供更大的优化空间；
 
-> 如果我们引入的包/模块被标记为 sideEffects：false，那么不管它是否真的有副作用，只要它没有被引用到，整个包/模块都会被完整的移除；
-
-## 总结
-
-如果想利用好Webpack的Tree shaking， 建议：
-
-1. 对第三方的库：
-   - 团队维护的：视情况加上 sideEffects 标记，同时更改 Babel 配置来导出 ES6模块；
-   - 第三方的：尽量使用提供 ES 模块的版本；
-2. 工具：
-   - 升级 webpack 到 4.x；
-   - 升级 Babel 到 7.x；
+如果我们引入的包/模块被标记为 sideEffects：false，那么不管它是否真的有副作用，只要它没有被引用到，整个包/模块都会被完整的移除；

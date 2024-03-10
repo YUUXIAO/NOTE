@@ -2,9 +2,9 @@
 
 [官方文档 ](https://cn.vitejs.dev/guide/api-plugin.html)
 
-https://blog.csdn.net/qq_34621851/article/details/123535975?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-1-123535975-blog-124456738.pc_relevant_3mothn_strategy_and_data_recovery&spm=1001.2101.3001.4242.2&utm_relevant_index=4
+[https://blog.csdn.net/qq_34621851/article/details/123535975?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-1-123535975-blog-124456738.pc_relevant_3mothn_strategy_and_data_recovery&spm=1001.2101.3001.4242.2&utm_relevant_index=4](https://blog.csdn.net/qq_34621851/article/details/123535975?utm_medium=distribute.pc_relevant.none-task-blog-2~default~baidujs_baidulandingword~default-1-123535975-blog-124456738.pc_relevant_3mothn_strategy_and_data_recovery&spm=1001.2101.3001.4242.2&utm_relevant_index=4)
 
-https://juejin.cn/post/7258201505336410169
+[https://juejin.cn/post/7258201505336410169](https://juejin.cn/post/7258201505336410169)
 
 ## vite 工作机制
 
@@ -18,7 +18,7 @@ ViteDevServer 主要是 createServer 方法返回的对象，主是包含一些�
 
 config.plugins 会返回所有配置的plugins信息，每个对象会说明插件信息和调用的钩子函数
 
-![vite3](F:\Yabby\NOTE\images\vite\vite3.png)
+![](../images/vite/vite3.png)
 
 createServer 方法主要处理：
 
@@ -33,9 +33,9 @@ createServer 方法主要处理：
 
 ## 处理 index.html 文件（transformIndexHtml）
 
-vite 提供了一个转换 index.html （可以利用这个钩子让相关插件向 HMTL 中加入一些自已的代码/功能）的专用钩子 [`transformIndexHtml`](https://cn.vitejs.dev/guide/api-plugin.html#transformindexhtml)，这个钩子用来接收当前的 HTML 字符串和转换上下文
+vite 提供了一个转换 index.html （可以利用这个钩子让相关插件向 HMTL 中加入一些自已的代码/功能）的专用钩子 [`transformIndexHtml`](https://cn.vitejs.dev/guide/api-plugin.html#transformindexhtml)[transformIndexHtml](https://cn.vitejs.dev/guide/api-plugin.html#transformindexhtml)，这个钩子用来接收当前的 HTML 字符串和转换上下文
 
-vite 在这一步加入了 @vite/client 文件，用来客户端客户端创建 WebSocket，接收服务端热更新传递的消息 
+vite 在这一步加入了 @vite/client 文件，用来客户端客户端创建 WebSocket，接收服务端热更新传递的消息
 
 这个钩子返回其下类型之一：
 
@@ -198,7 +198,7 @@ transformMiddleware 中间件主要处理大部分 js、vue、css 等文件资�
 
 ### transformRequest
 
-```
+````
 function transformRequest(url, server, options = {}) {
     const cacheKey = (options.ssr ? 'ssr:' : options.html ? 'html:' : '') + url;
     // This module may get invalidated while we are processing it. For example
@@ -260,7 +260,7 @@ function transformRequest(url, server, options = {}) {
     request.then(clearCache, clearCache);
     return request;
 }
-```
+````
 
 
 
@@ -271,13 +271,11 @@ doTransform 方法主要是返回模块处理后的 code 、map和 etag 对象
 主要流程：
 
 1. 去掉 url 上的时间戳，再根据 url 通过 ModuleGraph 获取 ModuleNode
-
 2. 判断该 ModuleNode 判断是否经过处理，如果是直接返回 cached
-
 3. 获取文件（code 和 map）：
 
    1. 如果是插件就调用插件的 load 方法，`pluginContainer.load(id, { ssr })`
-   2. 非插件：读取文件的内容 
+   2. 非插件：读取文件的内容
 
 4. 对文件进行监听
 
@@ -303,6 +301,7 @@ doTransform 方法主要是返回模块处理后的 code 、map和 etag 对象
 
    ​
 
+
 ## 插件钩子
 
 ### 通用钩子
@@ -312,8 +311,6 @@ doTransform 方法主要是返回模块处理后的 code 、map和 etag 对象
 在**服务器启动时**被调用：
 
 - options：在收集 rollup 配置前，Vite 服务器启动时调用，可以和 rollup 配置进行合并
-
-
 - buildStart：在 rollup 构建中，vite 服务启动时调用，在这里可以访问 rollup 的配置
 
 在**每个传入模块请求时**被调用：
@@ -372,6 +369,4 @@ export default function myVitePlugin(): Plugin {
 module.exports = myVitePlugin
 myVitePlugin['default'] = myVitePlugin
 ```
-
-
 

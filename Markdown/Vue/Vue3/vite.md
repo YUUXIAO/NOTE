@@ -1,16 +1,6 @@
-- ​
-
-
-## 
-
 ## 问题与思考
 
 - 为什么 setup 里面 defindProps 不能使用 import 的 ts，在3.3更新了，之前是因为 宏编辑器
-
-
-
-
-
 
 ## Vite的优点
 
@@ -35,14 +25,14 @@ Vite Server的所有逻辑基本都依赖于中间件，这些中间件，拦截
 - 对 Sass/Less 等需要编译的模块进行编译
 - 和浏览器端建立 Socket 连接（文件wather），实现 HMR
 
-
 ## Vite为什么那么快
 
 - 在开发环境，vite是一个开发服务器，它会根据浏览器的请求来编译源文件
+
   - 无需提前打包编译，做到真正的按需使用（type=module属性，支持ESM模块引入，所以不支持低版本浏览器），不会加载无相关的文件
+
 - 没有修改的文件返回304状态码（浏览器缓存），所以浏览器不会再请求，直接使用缓存
 - 通过 esbuild 来支持 .(t|j)sx？ 文件，打包编译速度更快
-
 
 ## Vite如何做到按需加载
 
@@ -50,9 +40,10 @@ Vite Server的所有逻辑基本都依赖于中间件，这些中间件，拦截
 
   - 在文件中插入 script 标签，注入环境变量，定义 process：
 
-    ```
+    ````
      window.process = { env: { NODE_ENV: 'DEV' } }
-    ```
+    ````
+
 
 - 在 index.html 中会请求 /src/main.js 文件
 
@@ -60,11 +51,10 @@ Vite Server的所有逻辑基本都依赖于中间件，这些中间件，拦截
 
 - 请求 node_modules 中的文件
 
-  - 浏览器向开发服务器请求 /@modules/vue，./App.vue，./index.css 
+  - 浏览器向开发服务器请求 /@modules/vue，./App.vue，./index.css
   - 后台收到以上文件请求，会去读取项目 node_modules/vue/package.json 中的 module 字段，拿到  "dist/vue.runtime.esm-bundler.js"，接着去请求这个文件
 
 - main.js 文件中 import 了 ./App.vue 文件（相对路径），浏览器向后台请求 /src/App.vue
-
 - 后台处理.vue 的代码，主要是处理 template 的内容
 
   - 页面引用路径调整成 ${url}?type=template
@@ -107,6 +97,7 @@ Vite Server的所有逻辑基本都依赖于中间件，这些中间件，拦截
     }
     ```
 
+
 - 后台处理 style 的代码
 
   ```css
@@ -134,31 +125,33 @@ Vite Server的所有逻辑基本都依赖于中间件，这些中间件，拦截
 
 1. vite 天然支持引入 .ts 文件，但仅执行 .ts 文件的转译工作，并不执行任何的类型检查；
 
-   - 可以在构建脚本中运行 tsc --noEmit 或 安装 vue-tsc 然后运行 vue-tsc --noEmit 来对 .vue 文件做类型检查 
+   - 可以在构建脚本中运行 tsc --noEmit 或 安装 vue-tsc 然后运行 vue-tsc --noEmit 来对 .vue 文件做类型检查
 
 2. vite 默认的类型定义是写给 Node.js API 的，要将其补充到一个 vite 应用的客户端环境中；
 
    - 添加一个 d.ts 声明文件；
 
-      ```javascript
-      /// <reference types="vite/client" />
-      ```
+     ```javascript
+     /// <reference types="vite/client" />
+     ```
 
    - 将 vite/client 添加到 tsconfig 中的 compilerOptions.types 下；
 
-      ```javascript
-      {
-        "compilerOptions": {
-          "types": ["vite/client"]
-        }
-      }
-      ```
+     ```javascript
+     {
+       "compilerOptions": {
+         "types": ["vite/client"]
+       }
+     }
+     ```
 
    - 会提供以下类型定义的补充：
 
-      1. 资源导入 (例如：导入一个 .svg 文件)；
-      2. import.meta.env 上 Vite 注入的在 的环境变量的类型定义；
-      3. import.meta.hot 上的 HMR API 类型定义
+     1. 资源导入 (例如：导入一个 .svg 文件)；
+     2. import.meta.env 上 Vite 注入的在 的环境变量的类型定义；
+     3. import.meta.hot 上的 HMR API 类型定义
+
+
 
 ## CSS
 
@@ -319,18 +312,23 @@ export default {
 
 
 
-1. <script setup>
+1. 
+   <script setup>
    - 减少组件声明和导出 
    - import 直接导入组件，无需声明
    - defineProps 声明 props
    - defineEmit 声明 emit
    - 获取上下文： useContext()，挂载了 attrs、slots、emit、expose
    - ctx.expose 向外暴露
+   
+   
 2. Mock插件： vite-plugin-mock
-3. vue-router@4.x和vuex@4.x
-4. 样式管理 
+3. [vue-router@4.x](mailto:vue-router@4.x)和[vuex@4.x](mailto:vuex@4.x)
+4. 样式管理
 5. 引入 element3
+
    - plugins 插件形式
    - export default function (app)
    - app.use(element3)
+
 6. 基础布局

@@ -1,18 +1,3 @@
-- **defineProps** 在setup不能引用外部的 Ts？宏作用域
-- **props 稳定性**，控制传给组件的 props尽量稳定（性能优化/组件优化）
-- **unref** 的作用是解包， 和 toRaw的区别??
-- 响应式api接收 proxy对象？？
-- readonly可以接受Proxy对象（有实际意义），它可以获取纯对象或者Proxy或者RefImpl，返回原始代理的只读代理。说白了它做2步操作，先reactive，然后另生成一个只读Proxy。
-- 组件通信
-
-  - 在组合式API中，如果想在子组件中用其它变量接收props的值时需要使用toRef将props中的属性转为响应式。
-- build.polyfillDynamicImport ？？？ 已经废弃（会兼容），新的替代方案
-- inheritAttrs 属性
-  - ​
-- `Attribute`强制策略
-- 3.3 的属性？？代码设计层面的区别？？
-
-
 ## watch
 
 这个 api  提供了**基于观察状态**的变化来执行副作用的能力；
@@ -32,15 +17,13 @@ watch(idValue, (id, oldId, onCleanup) => {
 })
 ```
 
-
-
 ## 响应式 API
 
-https://cn.vuejs.org/api/reactivity-advanced.html 【官方组件】
+[https://cn.vuejs.org/api/reactivity-advanced.html](https://cn.vuejs.org/api/reactivity-advanced.html) 【官方组件档】
 
-### reactive 和 shallowReactive 
+### reactive 和 shallowReactive
 
-#### reactive 
+#### reactive
 
 reactive 的响应式转换是深层的，会影响到所有嵌套的属性
 
@@ -91,7 +74,7 @@ export function shallowReactive(target) {
 
 #### shallowReactive
 
- shallowReactive 就是把数据转为浅层次（第一层）的响应式数据，假设对象里是对象B，对象B就不是响应式的（有点类比浅拷贝）
+shallowReactive 就是把数据转为浅层次（第一层）的响应式数据，假设对象里是对象B，对象B就不是响应式的（有点类比浅拷贝）
 
 **场景**：如果一个对象的深层不可能变化，那么就没必要深层响应，这时候用shallowReactive可以节省系统开销
 
@@ -121,7 +104,7 @@ export default {
 
 按下第2个button不会有反应，只有又去按下第1个button之后，视图刷新，第二个button才有反应。
 
-### ref 和 shallowRef 
+### ref 和 shallowRef
 
 #### ref
 
@@ -182,8 +165,6 @@ ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收�
 ？？？ **为什么 vue2.0 没有区分基本数据类型和引用数据类型做响应式**
 
 - 因为defineproperty就是Object的静态方法，它只是为对象服务的，甚至无法对数组服务，因此Vue 2弄了一个data根对象来存放基本数据类型，这样无论什么类型，都是根对象的property，所以也就能代理基本数据类型。
-
-
 - Proxy能对所有引用类型代理，Vue 3也不再用data根对象，而是一个个的变量，所以带来了新问题，如何代理基本数据类型呢？并没有原生办法，只能构建一个{value: Proxy Object}结构的对象，这样Proxy也就能代理了。
 
 
@@ -202,12 +183,11 @@ shallowRef的作用是只对value添加响应式，因此，必须是value被重
 **可优化场景**：
 
 - refs 组件引用，项目中典型的 ref.value.validate()（表单、表格引用）
-
 - 如果数据是服务器返回的 LIST 数据，而且只显示、不变更，那么最好是使用 shallowRef 来包装数据，可以节能。如果会有变更，那么应该用 ref
-
 - 长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
 
-  如果不是页面上需要进行视图更新的，我们可以不用reactive、ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowref) 和 [`shallowReactive()`](https://links.jianshu.com/go?to=https%3A%2F%2Fcn.vuejs.org%2Fapi%2Freactivity-advanced.html%23shallowreactive) 浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
+  如果不是页面上需要进行视图更新的，我们可以不用reactive、ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowref)[shallowRef()](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowref) 和 [`shallowReactive()`](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowreactive)[shallowReactive()](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowreactive) 浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
+
 
 ```javascript
 const shallowArray = shallowRef([
@@ -272,9 +252,7 @@ export default {
 参数说明：
 
 - 入参是一个回调函数；
-
 - 回调函数接受 track 和 trigger 两个函数作为参数，并返回一个带有 get 和 set 方法的对象（必须）
-
 
 
 
@@ -341,22 +319,22 @@ export default {
 - 点击button2不会有反应。
 - 点击button3，如果给s重新赋值，其实相当于给s.value重新赋值，由于value是响应式的，这时候button2和button3都会有变化。
 
-|        | ref                     | shallowRef                     |
-| ------ | ----------------------- | ------------------------------ |
-| 本质     | reactive({value: 原始数据}) | shallowReactive({value: 原始数据}) |
-| 区别点    | {value: 原始数据}被深层响应式     | 只有value被响应式，原始数据没有响应式          |
-| 传入基本类型 | 两个API无差别                | 两个API无差别，性能考虑尽量用shallowRef     |
-| 传入引用类型 | value指向Proxy            | value指向原始数据                    |
+|              | ref                           | shallowRef                              |
+| ------------ | ----------------------------- | --------------------------------------- |
+| 本质         | reactive({value: 原始数据})   | shallowReactive({value: 原始数据})      |
+| 区别点       | {value: 原始数据}被深层响应式 | 只有value被响应式，原始数据没有响应式   |
+| 传入基本类型 | 两个API无差别                 | 两个API无差别，性能考虑尽量用shallowRef |
+| 传入引用类型 | value指向Proxy                | value指向原始数据                       |
 
 
 
-#### ref 和 reactive 
+#### ref 和 reactive
 
-|              | ref                | reactive |
-| ------------ | ------------------ | -------- |
-| **返回数据类型**   | RefImpl对象（也叫ref对象） | Proxy对象  |
-| **传入基本类型返回** | {value: 基本类型}      | 禁止这么做    |
-| **传入引用类型返回** | {value: Proxy对象}   | Proxy对象  |
+|                      | ref                        | reactive   |
+| -------------------- | -------------------------- | ---------- |
+| **返回数据类型**     | RefImpl对象（也叫ref对象） | Proxy对象  |
+| **传入基本类型返回** | {value: 基本类型}          | 禁止这么做 |
+| **传入引用类型返回** | {value: Proxy对象}         | Proxy对象  |
 
 **TODO 那么对于引用类型，什么时候用ref，什么时候用reactive？**
 
@@ -410,7 +388,7 @@ reactive ==> 是响应式的是它的属性，而不是它自身，重赋值它�
 
 ref ==> 数据具有响应式
 
-#### shallowRef 和 shallowReactive使用场景： 
+#### shallowRef 和 shallowReactive使用场景：
 
 - shallowReactive：只处理**最外层**属性的响应式（浅响应式），适用于对象结构较深，但是只会是最外层发生改变的数据
 - shallowRef：只处理基本数据类型的响应式，不进行对象的响应式处理，适用于节点引用或生成新的对象来替换的
@@ -463,7 +441,7 @@ toRefs的一大用途是变相解构Proxy：
 
 - 比如之前没有用 setup 时我们一般return {...toRefs(Proxy)}
 
-```
+````
 <template>
 <div>
   <button @click="r.c = 3">count is: {{ r.c }}</button>
@@ -488,18 +466,18 @@ export default {
   },
 };
 </script>
-```
+````
 
 
 
 #### toRef 和 toRefs
 
-|      | toRef               | toRefs                   |
-| ---- | ------------------- | ------------------------ |
-| 用法   | toRef(Proxy, 'xxx') | toRefs(Proxy)            |
-| 返回   | ObjectRefImpl对象     | ObjectRefImpl对象          |
-| 作用   | 创建变量到Proxy属性的响应式连接  | 创建变量每个属性到Proxy每个属性的响应式连接 |
-| 连接关系 | 一对一                 | 多对多                      |
+|          | toRef                           | toRefs                                      |
+| -------- | ------------------------------- | ------------------------------------------- |
+| 用法     | toRef(Proxy, 'xxx')             | toRefs(Proxy)                               |
+| 返回     | ObjectRefImpl对象               | ObjectRefImpl对象                           |
+| 作用     | 创建变量到Proxy属性的响应式连接 | 创建变量每个属性到Proxy每个属性的响应式连接 |
+| 连接关系 | 一对一                          | 多对多                                      |
 
 ```javascript
 <template>
@@ -686,11 +664,11 @@ export default {
 
 #### markRow 和 shallowReactive 的区别
 
-|            | markRow | shallowReactive              |
-| ---------- | ------- | ---------------------------- |
-| 作用         | 阻止响应式   | 让浅层property响应式，不操作深层property |
-| 浅层property | 阻止响应式   | 执行响应式                        |
-| 深层property | 阻止响应式   | 不执行响应式，也不阻止                  |
+|              | markRow    | shallowReactive                          |
+| ------------ | ---------- | ---------------------------------------- |
+| 作用         | 阻止响应式 | 让浅层property响应式，不操作深层property |
+| 浅层property | 阻止响应式 | 执行响应式                               |
+| 深层property | 阻止响应式 | 不执行响应式，也不阻止                   |
 
 #### markRaw与readonly的区别
 
@@ -707,11 +685,13 @@ watch 默认是懒侦听的，即仅在侦听源发生变化时才执行回调�
 
 - 当侦听 reactive 定义的响应式数据（因为reactive 只能定义数组或对象类型的响应式）时，oldValue 无法正确获取**，会强制开启深度监视，此时 deep 配置无效**
 - 侦听 reactive定义的响应式数据中的某个属性时，且该属性是一个对象，那么此时deep配置生效
+
   - 如果是使用的 getter 函数返回响应式对象的形式，那么响应式对象的属性值发生变化，是不会触发 watch 的回调函数的
+
 
 ##### **watch的监听类型**
 
-先看watch 属性的Ts类型定义 
+先看watch 属性的Ts类型定义
 
 ```typescript
 interface ComponentOptions {
@@ -741,18 +721,24 @@ type ObjectWatchOptionItem = {
 **参数信息：**
 
 - 第一个参数是侦听器的**源**。这个来源可以是以下几种：
+
   - 一个返回任意值的函数（**getter 函数**或者**TODO 响应式对象的某个属性**）:（）=> xxx；
   - 一个**响应式对象** （ref、computed、reactive）；
   - ...一个包含上述两种数据源的**数组**；
+
 - 第二个参数是在发生变化时要调用的回调函数。
+
   - 回调函数接受三个参数：新值、旧值，以及一个用于注册副作用清理的回调函数。
   - 回调函数会在副作用下一次重新执行前调用，可以用来清除无效的副作用（同watchEffect）；
   - 当侦听多个来源时，回调函数接受两个数组，分别对应来源数组中的新值和旧值。
+
 - 第三个可选的参数是一个对象，支持以下这些选项：
+
   - **immediate**：在侦听器创建时立即触发回调。第一次调用时旧值是 `undefined`（watchEffect 自带，无须配置）
   - **deep**：如果源是对象，强制深度遍历，以便在深层级变更时触发回调
   - **flush**：调整回调函数的刷新时机（同 watchEffect ）
   - **onTrack / onTrigger**：调试侦听器的依赖（同 watchEffect ）
+
 
 它本质上充当组件响应式数据的事件监听器，特别是当与异步 API 调用配合使用，在项目中使用场景一般是:
 
@@ -800,7 +786,7 @@ type StopHandle = () => void
   ```javascript
   const CancelToken = axios.CancelToken;
   let cancel;
-
+  
   const getData = ()=>{
     axios.get('xxx', {
       cancelToken: new CancelToken(function executor(c) {
@@ -808,7 +794,7 @@ type StopHandle = () => void
       },params:{})
     });
   }
-
+  
   watchEffect((onCleanup) => {
     onCleanup(cancel)  // 先取消上一次的请求
     if(props.id) getData(id) 
@@ -817,7 +803,7 @@ type StopHandle = () => void
 
 - **options**：一个可选的选项，一般用来调整副作用的刷新时机或调试副作用的依赖
 
-  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况 
+  - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况
   - ​
 
 - **返回值**：返回一个用来停止该副作用的函数（停止监听）
@@ -830,6 +816,7 @@ type StopHandle = () => void
     }
   })
   ```
+
 
 ##### 清除副作用(共享)
 
@@ -972,7 +959,7 @@ watchEffect(
 
 ### v3.2升级的那些好用的api
 
-####  < style > v-bind
+#### < style > v-bind
 
 该指令适用于`<script setup>`, 并支持 JavaScript 表达式（必须用引号括起来）。
 
@@ -1002,7 +989,7 @@ h2 {font-size: v-bind(fontSize);
 </style>
 ```
 
-####  v-memo 指令
+#### v-memo 指令
 
 提供了记忆一部分模板树的能力。 v-memo 指令使得这部分模板可以跳过虚拟 DOM 的 diff 比较，同时还完全跳过新 VNode 的创建。 虽然很少需要，但它提供了一种在某些情况下想要得到最大性能的方案，例如大型 v-for 列表
 
@@ -1010,10 +997,10 @@ h2 {font-size: v-bind(fontSize);
 
 不仅允许 Vue 跳过虚拟 DOM 差异、甚至可以完全跳过新 VNode 的创建步骤
 
-```
+````
 <div v-for="user of users" :key="user.id" v-memo="[user.name]">{{ user.name }}
 </div>
-```
+````
 
 使用`v-memo`，不会重新创建虚拟元素，并且会重新使用前一个元素，除非`v-memo`（user.name）的条件发生变化。
 
@@ -1077,13 +1064,13 @@ scope.stop() // 处理掉当前作用域内的所有 effect
 ```
 
 - 一般我们的 computed 和 watch 这些 api 都是在组件中调用，在这期间，代码产生的 effect 是会自动收集且绑定到当前的组件实例上，在组件卸载的时候，它们也会随之 stop，无需开发手动管理清除
-- 在vue3 的项目设计时，`@vue/reactivity`这个包是可以独立引入使用的，所以只要是可以跑 js 的地方就可以调用这些 effect 函数，不必去依赖组件（所以就失去了 vue 自动管理 effect 的能力），开发就需要手动收集 effect，再在合适的时机手动 stop 
+- 在vue3 的项目设计时，`@vue/reactivity`这个包是可以独立引入使用的，所以只要是可以跑 js 的地方就可以调用这些 effect 函数，不必去依赖组件（所以就失去了 vue 自动管理 effect 的能力），开发就需要手动收集 effect，再在合适的时机手动 stop
 
 ### extends
 
 要继承的“基类”组件，使一个组件可以继承另一个组件的组件选项。
 
-**类型：** 
+**类型：**
 
 ```javascript
 interface ComponentOptions {
@@ -1097,20 +1084,20 @@ interface ComponentOptions {
 
 同 `mixins` 一样，所有选项都将使用相关的策略进行合并。
 
-```
+````
 const CompA = { ... }
 
 const CompB = {
   extends: CompA,
   ...
 }
-```
+````
 
 ## dev 调试钩子
 
 对应 上面 watch的 onTrack、onTrigger方法
 
-页面 renderTracked和renderTriggered 
+页面 renderTracked和renderTriggered
 
 ```javascript
 interface ComponentOptions {
@@ -1145,21 +1132,21 @@ type DebuggerEvent = {
 
 ### onRenderTracked 组件状态跟踪
 
-当组件渲染过程中**追踪到**响应式依赖时调用
+当组件渲染过程中**追踪到**响应式依赖时调用  
 当组件渲染过程中追踪到响应式依赖时调用，用来调试查看哪些依赖正在被使用（这是一个**生命周期钩子**）
 
 onRenderTracked 会跟踪页面上所有响应式变量和方法的状态（可以理解为用 return 返回的值都会跟踪），只要页面有 update 的情况，就会跟踪，生成一个 event 对象
 
 ### onRenderTriggered 组件状态触发
 
-当响应式依赖的**变更**触发了组件渲染时调用
+当响应式依赖的**变更**触发了组件渲染时调用  
 当响应式依赖的变更触发了组件渲染时调用，用来确定哪个依赖正在触发更新
 
 onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，并且新值和旧值都会给你明确的展示出来。
 
 可以理解为就是跟踪渲染页面的变量，js 变量不会跟踪，更精准，会返回：
 
-- 变化变量的 key 
+- 变化变量的 key
 - newValue 更新后变量的值
 - oldValue 更新前变量的值
 - target 目前页面中的响应变量和函数
@@ -1170,4 +1157,4 @@ onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，�
 
 
 
-https://mp.weixin.qq.com/s?__biz=MjM5MDA2MTI1MA==&mid=2649116447&idx=3&sn=92b8c56a00ed88545d3b6983de1e8310&chksm=be5868b2892fe1a4dfc2ad8bfd82f478d55fb70485c104ae4dfc7eb0cd2c2ab4a10d0b064906&scene=27
+[https://mp.weixin.qq.com/s?__biz=MjM5MDA2MTI1MA==&mid=2649116447&idx=3&sn=92b8c56a00ed88545d3b6983de1e8310&chksm=be5868b2892fe1a4dfc2ad8bfd82f478d55fb70485c104ae4dfc7eb0cd2c2ab4a10d0b064906&scene=27](https://mp.weixin.qq.com/s?__biz=MjM5MDA2MTI1MA==&mid=2649116447&idx=3&sn=92b8c56a00ed88545d3b6983de1e8310&chksm=be5868b2892fe1a4dfc2ad8bfd82f478d55fb70485c104ae4dfc7eb0cd2c2ab4a10d0b064906&scene=27)

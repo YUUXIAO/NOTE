@@ -2,8 +2,8 @@
 
 强缓存**返回的状态码是200**，直接从缓存内读取，浏览器不用询问服务器
 
-**强缓存可以理解为是浏览器层面的**，它的依据来自于缓存是否过期，而不关心服务端文件是否已经更新，这可能会导致加载的文件不是服务端最新的内容，所以一般用来缓存一些对准确性要求不高或者长时间不修改的数据  
-  
+**强缓存可以理解为是浏览器层面的**，它的依据来自于缓存是否过期，而不关心服务端文件是否已经更新，这可能会导致加载的文件不是服务端最新的内容，所以一般用来缓存一些对准确性要求不高或者长时间不修改的数据
+
 ![](../images/%E6%B5%8F%E8%A7%88%E5%99%A8%E7%BC%93%E5%AD%98_%E5%BC%BA%E7%BC%93%E5%AD%98.png)
 
 
@@ -74,8 +74,8 @@ If-None-Match:"be15b26c29bce1:0" // 可选，这里为了准确确认资源是�
 
 ### Last-Modified
 
- `Last-Modified` 是响应头字段用来标识资源的有效性，表示的是最后修改时间  
-对应浏览器再次请求时请求头带上的 `If-Modified-Since` 
+`Last-Modified` 是响应头字段用来标识资源的有效性，表示的是最后修改时间  
+对应浏览器再次请求时请求头带上的 `If-Modified-Since`
 
 ```javascript
 Last-Modified:Fri, 15 Feb 2013 03:06:18 GMT
@@ -101,15 +101,6 @@ Etag 是服务器根据当前文件的内容，对文件生成唯一的标识，
 
    - 编辑了资源文件，但是文件内容并没有更改，也会造成缓存失效；
    - Last-Modified 能够感知的单位时间是秒，如果文件在 1 秒内改变了多次，那么这时候的 Last-Modified 并没有体现出修改了；
-
-   
-
-   
-
-   
-
-   
-
    - 如果两种方式都支持的话，服务器会优先考虑 ETag；
 
    3. 
@@ -139,7 +130,7 @@ Service Worker 的特点：
 
 Service Worker 实现缓存功能的三个步骤：
 
-1. 首先需要注册 Service Worker（ServiceWorkerContainer.register()）
+1. 首先需要**注册 Service Worker（ServiceWorkerContainer.register()）**
 
 ```javascript
 if ('serviceWorker' in navigator) {

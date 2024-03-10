@@ -1,14 +1,11 @@
 1. webpack 构建的项目，分为 server 端和 client 端（浏览器），项目启动时，双方会保持一个 scoket 连接，用于通话；
-2. 当本地资源发生变化时，server 向浏览器发送新资源的 hash 值，浏览器调用 reloadApp 方法，检查是否有变化，有差异是会向 server 发起 Ajax 获取更改内容（文件列表、hash）,这样浏览器继续借助这些信息向 server 端发起请求，通过 jsonp 的方式获取 chunk 的增量更新；
+2. 当本地资源发生变化时，Dev Server 向浏览器发送新资源的 hash 值，浏览器调用 reloadApp 方法，检查是否有变化，有差异是会向 Dev Server 发起 Ajax 获取更改内容（文件列表、hash）,这样浏览器继续借助这些信息向 server 端发起请求，通过 jsonp 的方式获取 chunk 的增量更新；
 
 ## webpack 文件监听
 
-> 文件监听是在发现源码发生改变时，自动重新构建新的输出文件；
->
+文件监听是在发现源码发生改变时，自动重新构建新的输出文件；
 
-缺陷：每次需要手动刷新浏览器；
-
-webpack 开启监听模式，有两种方法：
+webpack 开启监听模式，有两种配置：
 
 1. 启动 webpack 命令时，加上 --watch 参数；
 2. 在配置 webpack.config.js 中 设置 watch: true；
@@ -23,12 +20,9 @@ module.exports = {
 	watch: true,
 	// 只有开启监听模式的时候，watchOptions 才有意义
 	watchOptions: {
-		// 默认为空，不监听的文件或文件夹，支持正则匹配
-		ignored: /node_modules/,
-		// 监听到变化后会等 300ms 再去执行，默认 300ms
-		aggregateTimeout: 300,
-		// 判断文件是否发生变化是通过不停询问系统指定文件有没有变化实现的，默认每秒问 1000 次
-		poll: 1000
+		ignored: /node_modules/, // 默认为空，不监听的文件或文件夹，支持正则匹配
+		aggregateTimeout: 300, // 监听到变化后会等 300ms 再去执行，默认 300ms
+		poll: 1000 // 判断文件是否发生变化是通过不停询问系统指定文件有没有变化实现的，默认每秒问 1000 次
 	}
 }
 ```
@@ -39,31 +33,25 @@ module.exports = {
 
 ![img](https://img2020.cnblogs.com/blog/1735070/202009/1735070-20200910094229881-465690773.png)
 
-1. Webpack Compiler：将 JS 编译成 Bundle；
-
-2. HMR Server：将热更新的文件输出给 HMR Runtime；
-
-3. Bundle Server：提供文件在浏览器的访问；
-
-   > 比如说编译好的 bundle.js，其实在浏览器里面正常访问是以文件目录的形式来访问的，然后使用 BundleServer 可以让我们以类似于服务器的方式来访问，比如说 localhost:8080
-
-4. HMR Runtime：会被注入到浏览器，更新文件的变化；
-
-   > 开发阶段，打包阶段，会注入到浏览器中的 bundle.js 里面，这样浏览器端的 bundle.js 会和服务器建立一个链接，通常是 websocket；这样就能动态更新了；
-
-5. bundle.js：构建输出的文件；
+1. **Webpack Compiler：**将 JS 编译成 Bundle；
+2. **HMR Server：**将热更新的文件输出给 HMR Runtime；
+3. **Bundle Server：**提供文件在浏览器的访问：比如说编译好的 bundle.js，其实在浏览器里面正常访问是以文件目录的形式来访问的，然后使用 BundleServer 可以让我们以类似于服务器的方式来访问，比如说 localhost:8080
+4. **HMR Runtime：**会被注入到浏览器，更新文件的变化：开发阶段，打包阶段，会注入到浏览器中的 bundle.js 里面，这样浏览器端的 bundle.js 会和服务器建立一个链接，通常是 websocket；这样就能动态更新了；
+5. **bundle.js：**构建输出的文件；
 
 ### webpack的编译构建过程
 
 1. 在项目启动后，进行构建打包，控制台会输出构建过程同时会生成 一个 hash 值；
 2. 每次修改代码保存后，会生成 一个 新的 hash 值、新的 json 文件、新的 js 文件；
+
    - hash：代表每次编译的标志，本次输出的 hash 会被作为下次热更新的标志；
    - json 文件：返回结果中，h 代表本次新生成的 hash，用于下次文件热更新的标志； c 代表当前要热更新的文件对应的模块；
    - js 文件：就是本次修改的代码，重新打包编译后的；
 
+
 ### 热更新原理
 
-####  webpack-dev-server启动本地服务
+#### webpack-dev-server启动本地服务
 
 ```javascript
 // node_modules/webpack-dev-server/bin/webpack-dev-server.js
@@ -205,9 +193,11 @@ setFs(context, compiler);
 ```
 
 1. 调用 compiler.watch 方法，这个方法只要做了2件事：
+
    - 对本地文件代码进行编译打包，也就是 webpack 的一系列编译流程；
    - 编译结束后，开启对本地文件的监听，当文件发生变化，重新编译，编译完成后继续监听；
    - 监听本地文件的变化主要是通过文件的生成时间是否有变化；
+
 2. 执行 setFs 方法，这个方法主要就是将编译后的文件打包到内存，因为访问内存中的代码比访问文件系统中的文件更快，而且也减少了代码写入文件的开销，这一切都归功于memory-fs；
 
 ### 浏览器接收到热更新的通知
@@ -251,8 +241,10 @@ function reloadApp() {
 ```
 
 1. scoket 方法建立了 webscoket 和服务端的连接，并注册了2个监听事件：
+
    - hash 事件：更新最新一次打包后的 hash 值；
    - ok 事件：进行热更新检查；
+
 2. 热更新检查是调用 reloadApp 方法，利用 node.js的 EventEmitter，发出webpackHotUpdate 消息；
 3. webscoket 仅仅有于客户端和服务端进行通信，而真正的检查交给了 webpack；
 
@@ -408,11 +400,11 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
 
 ![img](https://pic1.zhimg.com/80/v2-f7139f8763b996ebfa28486e160f6378_720w.jpg)
 
-```
+````
 绿色的方框是 webpack 代码控制的区域;
 蓝色方框是 webpack-dev-server 代码控制的区域;
 洋红色的方框是文件系统，文件修改后的变化就发生在这，而青色的方框是应用本身;
-```
+````
 
 1. 第一步：在 webpack 的 watch 模式下， 监听到文件变化，根据配置文件对模块重新编译打包，并将打包后的代码保存在内存中；
 2. 第二步：是 webpack-dev-server 和 webpack 之间的接口交互，主要是 dev-server 的中间件 webpack-dev-middleware 和 webpack 之间的交互， webpack-dev-middleware 调用 webpack 暴露的 API 对代码变化进行监控，并且告诉 webpack，将代码打包到内存中；
@@ -479,9 +471,11 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
    - webpack-dev-server 修改了webpack 配置中的 entry 属性，在里面添加了 webpack-dev-client 的代码，这样在最后的 bundle.js 文件中就会有接收 websocket 消息的代码；
    - webpack-dev-server/client 当接收到 type 为 hash 消息后会将 hash 值暂存起来，当接收到 type 为 ok 的消息后对应用执行 reload 操作，hash 消息是在 ok 消息之前；
    - 在 reload 操作中，webpack-dev-server/client 会根据 hot 配置决定是刷新浏览器还是对代码进行热更新（HMR）：
+
      1. 首先将 hash 值暂存到 currentHash 变量，当接收到 ok 消息后，对 App 进行 reload；
      2. 如果配置了模块热更新，就调用 webpack/hot/emitter 将最新 hash 值发送给 webpack，将控制权交给 webpack 客户端代码；
      3. 如果没有配置模块热更新，就直接调用 location.reload 方法刷新页面；
+
 
    ```javascript
    // webpack-dev-server/client/index.js
@@ -569,6 +563,7 @@ for (i = 0; i < outdatedSelfAcceptedModules.length; i++) {
        })
    }
    ```
+
 
 ### 热更新流程总结
 
