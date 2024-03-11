@@ -50,7 +50,7 @@
      //暴露行为
      window.myModule = { foo, bar } //ES6写法
    })(window)
-
+   
    // index.html文件
    myModule.foo()
    myModule.bar()
@@ -208,8 +208,10 @@ module.exports = function (x){ console.log(x);};
 2. require( ) 的路径可以是表达式：require（’/app' + '/index'）;
 3. require 导出的是 module.exports 对象指向的内存块内容；
 4. require返回对应 module.exports 对象的浅拷贝；
+
    - 如果 module.exports 里的基本类型的值，会得到该值的副本；
    - 如果 module.exports 里的对象类型的值，会得到该值的引用；
+
 5. Node.js 会自动缓存经过 require 引入的文件，使得下次再引入不需要经过文件系统而是直接从缓存中读取；不过这种缓存方式是经过文件路径定位的；
 6. 可以通过 require.cache 获取目前在缓存中的所有文件；
 
@@ -275,7 +277,6 @@ console.log(counter); // 3
 ## AMD
 
 > AMD 是 ”Asynchronous Module Definition” 的缩写，就是”异步模块定义”，AMD 是非同步加载模块，允许指定回调函数，浏览器端一般采用AMD规范；
->
 
 AMD规范使用 define 方法定义模块：
 
@@ -393,7 +394,6 @@ define(function (require) {
 两者都是异步加载，只是执行时机不一样：
 
 1. AMD 依赖前置，提前执行：js 可以方便知道依赖模块是谁，立即加载；
-
 2. CMD就近依赖，延迟执行：要使用把模块应为字符串解析一遍才知道依赖了哪些模块（牺牲性能带来开发的遍历性，实际上解析模块用的时间短到可以忽略）；
 
 ## UMD
@@ -433,7 +433,6 @@ ES6 Module默认目前还没有被浏览器支持，需要使用 babel；
 ### import
 
 > 静态的 import 语句用于导入由另一个模块导出的绑定，返回一个 Promise 对象；
->
 
 无论是否声明了 strict mode，导入的模块都运行在严格模式下。
 
@@ -442,8 +441,10 @@ ES6 Module默认目前还没有被浏览器支持，需要使用 babel；
 3. import 会被提升到文件的最顶部；
 4. 导入的变量是只读的；
 5. import 导入的是值引用，而不是值拷贝；
+
    - 模块内部值发生变化，会对应影响到引用的地方；
    - import 导入与导出需要有一一映射关系，类似于解构赋值；
+
 
 ```javascript
 // 报错
@@ -479,7 +480,6 @@ import "module-name";
 ### export
 
 > export 语句用于从模块中导出函数、对象或原始值；
->
 
 #### 导出方式
 
@@ -510,32 +510,26 @@ export { import1 as name1, import2 as name2, …, nameN } from …;
 
    - CommonJS 模一旦输出一个值，模块内部的变化就影响不到这个值;
    - ES6 模块是动态引用，不会缓存值，模块里面的变量绑定其所在的模块：当 JS 引擎遇到 ES6 模块加载命令import，就会生成一个只读引用，等到脚本真正执行时，再根据这个只读引用，到被加载的那个模块里面去取值。；
+
 2. CommonJS 模块无论加载多少次，都只会在第一次加载时运行一次，以后返回的都是第一次运行结果的缓存，除非手动清除系统缓存；
 3. CommonJs 可以动态加载语句，代码发生在运行时，ES6 是静态，只能声明在该文件的最顶部，代码发生在编译时；
 
 ## require&import
 
-1.  import 是ES6标准中的模块化解决方案，require 是 node 中遵循CommonJS 规范的模块化解决方案；
+1. import 是ES6标准中的模块化解决方案，require 是 node 中遵循CommonJS 规范的模块化解决方案；
+2. import 语句导入同一个模块如果加载多次只执行一次，require 语句导入次数和实际执行次数相同；
+3. import 必须用在当前模块的顶层，如果在局部作用域内，会报错，es6这样的设计可以提高编译器效率，但没法实现运行时加载；require 可以用在代码的任何地方；
+4. require 支持动态引入，也就是require(${path}/xx.js)，import 目前不支持，但是已有提案；
+5. import 可以使用 import * 引入全部的export，也可以使用 import aaa, { bbb} 的方式分别引入 default 和非 default 的export，相比 require 更灵活；
+6. ES6模块之中，顶层的 this 关键字返回 undefined，而不是指向 window；
 
-2.  import 语句导入同一个模块如果加载多次只执行一次，require 语句导入次数和实际执行次数相同；
+- 利用顶层的 this 等于 undefined 这个语法点，可以侦测当前代码是否在 ES6 模块之中；
 
-3.  import 必须用在当前模块的顶层，如果在局部作用域内，会报错，es6这样的设计可以提高编译器效率，但没法实现运行时加载；require 可以用在代码的任何地方；
+````
+const isNotModuleScript = this !== undefined
+````
 
-4.  require 支持动态引入，也就是require(${path}/xx.js)，import 目前不支持，但是已有提案；
-
-5.  import 可以使用 import * 引入全部的export，也可以使用 import aaa, { bbb} 的方式分别引入 default 和非 default 的export，相比 require 更灵活；
-
-6.  ES6模块之中，顶层的 this 关键字返回 undefined，而不是指向 window；
-
-  - 利用顶层的 this 等于 undefined 这个语法点，可以侦测当前代码是否在 ES6 模块之中；
-
-
-  ```
-  const isNotModuleScript = this !== undefined
-  ```
-
-  - require的模块中 this 指向 window；
-
+- require的模块中 this 指向 window；
 
 ## 总结
 

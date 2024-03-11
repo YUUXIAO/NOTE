@@ -1,5 +1,3 @@
-参考： [https://blog.csdn.net/qq_43869822/article/details/121664818](https://blog.csdn.net/qq_43869822/article/details/121664818)
-
 ## 内置工具类型
 
 ### Record
@@ -68,7 +66,7 @@ type Require<T> = {
 
 
 
-## TS类型
+## vue3中使用TS类型
 
 ### 基础类型
 
@@ -135,7 +133,6 @@ type Data = [number, string];
    - 最基础要定义 State 中数据结构
 
 3. src/types/common.d.ts 定义了基础常用的 interface。
-4. ​
 
 ### 函数的类型
 

@@ -1,4 +1,4 @@
-vuex 的使用基本真的分为以下几个部分：
+1. vuex 的使用基本真的分为以下几个部分：
 
 - state：数据定义层，一个返回所有数据的函数
 - gettters：定义获取 state 状态数据的计算属性，可以认为定义在这里的值都是 state 的派生值
@@ -201,4 +201,3 @@ dispatch方法返回的是一个Promise对象，而commit方法没有返回值�
 
 - createStore() 方法，接收一个包含 state、mutations、actions 和 getters  函数的对象 options，然后将它们保存到实例属性中，此时 state 中的值都会转换成响应式对象，同时遍历所有的 getters 函数，将它们封装成 comuted 属性，并保存到实例属性 getters 上，
 - vue 项目在 main.js 文件中调用了 app.use（Store），install 方法自动执行，将当前 store 实例注册到 VUE.js 应用程序中，只需要调用 useStore( ) 就可以拿到全局状态管理的 Store 实例，可以靠 inject 和 provide 实现全局共享
-
