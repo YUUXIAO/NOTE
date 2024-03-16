@@ -1,22 +1,3 @@
-## watch
-
-这个 api  提供了**基于观察状态**的变化来执行副作用的能力；
-
-第二个参数是回调函数，回调函数只有当数据源发生变动时才会被触发
-
-有时当观察的数据源变化后可能需要对之前所执行的副作用进行清理，比如 接口请求要取消上一次的，watcher 的回调会接收到第三个参数是一个用来注册清理操作的函数，调用这个函数可以注册一个清理函数；
-
-```javascript
-watch(idValue, (id, oldId, onCleanup) => {
-  const token = performAsyncOperation(id)
-  onCleanup(() => {
-    // id 发生了变化，或是 watcher 即将被停止.
-    // 取消还未完成的异步操作。
-    token.cancel()
-  })
-})
-```
-
 ## 响应式 API
 
 [https://cn.vuejs.org/api/reactivity-advanced.html](https://cn.vuejs.org/api/reactivity-advanced.html) 【官方组件档】
@@ -25,11 +6,9 @@ watch(idValue, (id, oldId, onCleanup) => {
 
 #### reactive
 
-reactive 的响应式转换是深层的，会影响到所有嵌套的属性
+reactive 的响应式转换是深层的，会影响到所有嵌套的属性，虽然内部实现是先只处理第一层属性，后续如果取到子属性的值再用reactive包装返回
 
-**TODO** 试试原始对象
-
-Vue 3的根基。返回对象的响应式副本，响应式转换是“深层”的——它影响所有嵌套property。返回Proxy对象，不等于原始对象。建议只操作Proxy对象，不要操作原始对象。
+reactive可以算作是Vue 3的根基。返回对象的响应式副本，响应式转换是“深层”的——它影响所有嵌套property。返回Proxy对象，不等于原始对象。建议只操作Proxy对象，不要操作原始对象。
 
 ```javascript
 import { mutableHandlers,shallowReactiveHandlers } from './baseHandlers'
@@ -108,6 +87,11 @@ export default {
 
 #### ref
 
+ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收任意数据类型的参数，作为这个 ref 对象内部的value 的值
+
+- 生成值类型数据（String，Number，Boolean，Symbol）的响应式对象
+- 生成对象和数组类型的响应式对象 **（对象和数组一般不选用ref方式，而选用reactive方式，ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)）**
+
 ```javascript
 export function ref(val) {
       if (isRef(val)) {
@@ -149,16 +133,6 @@ export function ref(val) {
 
 - ref 不需要使用 Proxy 代理语法，直接使用对象语法的 getter 和 setter 配置，监听 value 属性即可
 - ref 函数只是利用 对象的 getter 和 setter 拦截了 value 属性的读写（也是为什么操作 ref 数据需要.value），ref 包裹复杂的数据结构时，内部是使用的 reactive 实现
-- ​
-
-ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收任意数据类型的参数，作为这个 ref 对象内部的value 的值
-
-- 生成值类型数据（String，Number，Boolean，Symbol）的响应式对象
-- 生成对象和数组类型的响应式对象 **（对象和数组一般不选用ref方式，而选用reactive方式，ref 内部是由 reactive 实现的，等价于 reactive(value: xxx)）**
-
-
-
-
 
 `Ref`是这样的一种数据结构：它有个key为`Symbol`的属性做类型标识，有个属性`value`用来存储数据。这个数据可以是任意的类型，**唯独不能是被嵌套了Ref类型的类型**
 
@@ -167,16 +141,12 @@ ref  函数用来将一项数据包装成一个响应式 ref 对象。它接收�
 - 因为defineproperty就是Object的静态方法，它只是为对象服务的，甚至无法对数组服务，因此Vue 2弄了一个data根对象来存放基本数据类型，这样无论什么类型，都是根对象的property，所以也就能代理基本数据类型。
 - Proxy能对所有引用类型代理，Vue 3也不再用data根对象，而是一个个的变量，所以带来了新问题，如何代理基本数据类型呢？并没有原生办法，只能构建一个{value: Proxy Object}结构的对象，这样Proxy也就能代理了。
 
-
-
-
-
 #### shallowRef
 
 shallowRef的作用是只对value添加响应式，因此，必须是value被重新赋值才会触发响应式。shallowRef的出现主要是为了节省系统开销。
 
 - 如果传入的是基础数据类型，和ref没有区别
-- 如果传入的是对象数据类型，那么 ref 底层还是调用了reactive变成 proxy 对象，成为可响应的；而 shallowRef 传入的是对象数据类型，则不会变成响应式(shallowRef 的内部值将会原样存储和暴露，并不会被深层递归地转为响应式，只处理基本数据类型的响应式，不进行对象的响应式处理)
+- 如果传入的是对象数据类型，那么 ref 底层还是调用了reactive变成 proxy 对象，成为可响应的；而 shallowRef 传入的是对象数据类型，则不会变成响应式(shallowRef 的内部值将会原样存储和暴露，并不会被深层递归地转为响应式，**只处理基本数据类型的响应式，不进行对象的响应式处理**)
 
 可以理解为只响应式.value返回的值，打印的包裹的对象类型数据是 Object 不是 proxy，针对ref包裹的对象类型数据，结果打印是Proxy，所以是响应式的
 
@@ -186,7 +156,7 @@ shallowRef的作用是只对value添加响应式，因此，必须是value被重
 - 如果数据是服务器返回的 LIST 数据，而且只显示、不变更，那么最好是使用 shallowRef 来包装数据，可以节能。如果会有变更，那么应该用 ref
 - 长列表数据，常常用于对大型数据结构的性能优化或是与外部的状态管理系统集成
 
-  如果不是页面上需要进行视图更新的，我们可以不用reactive、ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowref)[shallowRef()](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowref) 和 [`shallowReactive()`](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowreactive)[shallowReactive()](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowreactive) 浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
+  如果不是页面上需要进行视图更新的，我们可以不用reactive、ref更进行声明，可以使用[`shallowRef()`](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowref)和 [`shallowReactive()`](https://links.jianshu.com/go?to=https://cn.vuejs.org/api/reactivity-advanced.html#shallowreactive)浅层式响应进行声明（浅层式顶部是响应的，底部都不是响应数据）
 
 
 ```javascript
@@ -253,8 +223,6 @@ export default {
 
 - 入参是一个回调函数；
 - 回调函数接受 track 和 trigger 两个函数作为参数，并返回一个带有 get 和 set 方法的对象（必须）
-
-
 
 比如我们有一个值会频繁刷新调用，我们想手动控制它的刷新时机，创建一个防抖 ref
 
@@ -326,8 +294,6 @@ export default {
 | 传入基本类型 | 两个API无差别                 | 两个API无差别，性能考虑尽量用shallowRef |
 | 传入引用类型 | value指向Proxy                | value指向原始数据                       |
 
-
-
 #### ref 和 reactive
 
 |                      | ref                        | reactive   |
@@ -336,11 +302,9 @@ export default {
 | **传入基本类型返回** | {value: 基本类型}          | 禁止这么做 |
 | **传入引用类型返回** | {value: Proxy对象}         | Proxy对象  |
 
-**TODO 那么对于引用类型，什么时候用ref，什么时候用reactive？**
+**那么对于引用类型，什么时候用ref，什么时候用reactive？**
 
-如果你只打算修改引用类型的一个属性，那么推荐用reactive，如果你打算变量重赋值，那么一定要用ref。
-
-TODO 换成ref试试
+如果你只打算修改引用类型的一个属性，那么推荐用reactive，如果你打算变量重赋值，那么一定要用ref
 
 ```javascript
 
@@ -425,7 +389,7 @@ export default {
 </script>
 ```
 
-当我点击button1的时候，你说button2会变吗？并不会。变量s就是个基本数据，没有任何响应式。很不爽是不是？现在我改改，把let s = r.a;改成let s = toRef(r, 'a');，
+当我点击button1的时候，你说button2会变吗？并不会。变量s就是个基本数据
 
 **使用场景：**
 
@@ -441,7 +405,7 @@ toRefs的一大用途是变相解构Proxy：
 
 - 比如之前没有用 setup 时我们一般return {...toRefs(Proxy)}
 
-````
+```javascript
 <template>
 <div>
   <button @click="r.c = 3">count is: {{ r.c }}</button>
@@ -466,7 +430,7 @@ export default {
   },
 };
 </script>
-````
+```
 
 
 
@@ -577,9 +541,9 @@ export default {
 
 ### toRaw 与 markRaw
 
-#### TODO toRaw()
+#### toRaw()
 
-toRaw的参数只能是一个响应式的对象（可以理解为是被 reactive 处理过的数据，针对ref 缔造的响应式数据无效）
+toRaw的参数只能是一个响应式的对象（可以理解为是**被 reactive 处理过的数据，针对ref 缔造的响应式数据无效**）
 
 返回是proxy的原始对象，相当于 reactive 的逆运算，把响应式数据还原成普通对象，对这个转换后的对象所有操作，不会引起页面更新
 
@@ -625,8 +589,6 @@ export default {
 markRaw是操作原始对象的，它的是将原始对象或者原始对象的某个浅层或深层property标记为“永远不允许被代理”。
 
 Vue3会给对象的第一层或某深层加一个标记__v_skip: true，这样即便原始对象被reactive之后，得到的该层和更深层就不会被代理。
-
-
 
 **markRaw的用途：**
 
@@ -679,15 +641,10 @@ export default {
 
 #### watch()
 
-watch 一般用于侦听一个或多个响应式数据源，并在数据源变化时调用所给的回调函数（与vue2作用是一样的）。
-
-watch 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
+watch 一般用于侦听一个或多个响应式数据源，并在数据源变化时调用所给的回调函数（与vue2作用是一样的），watch 默认是懒侦听的，即仅在侦听源发生变化时才执行回调函数。
 
 - 当侦听 reactive 定义的响应式数据（因为reactive 只能定义数组或对象类型的响应式）时，oldValue 无法正确获取**，会强制开启深度监视，此时 deep 配置无效**
-- 侦听 reactive定义的响应式数据中的某个属性时，且该属性是一个对象，那么此时deep配置生效
-
-  - 如果是使用的 getter 函数返回响应式对象的形式，那么响应式对象的属性值发生变化，是不会触发 watch 的回调函数的
-
+- 如果是使用的 getter 函数返回响应式对象的形式，那么响应式对象的属性值发生变化，是不会触发 watch 的回调函数的
 
 ##### **watch的监听类型**
 
@@ -722,13 +679,13 @@ type ObjectWatchOptionItem = {
 
 - 第一个参数是侦听器的**源**。这个来源可以是以下几种：
 
-  - 一个返回任意值的函数（**getter 函数**或者**TODO 响应式对象的某个属性**）:（）=> xxx；
+  - 一个返回任意值的函数（**getter 函数**或者**响应式对象的某个属性**）:（）=> xxx；
   - 一个**响应式对象** （ref、computed、reactive）；
   - ...一个包含上述两种数据源的**数组**；
 
 - 第二个参数是在发生变化时要调用的回调函数。
 
-  - 回调函数接受三个参数：新值、旧值，以及一个用于注册副作用清理的回调函数。
+  - 回调函数接受三个参数：**新值、旧值，以及一个用于注册副作用清理的回调函数**。
   - 回调函数会在副作用下一次重新执行前调用，可以用来清除无效的副作用（同watchEffect）；
   - 当侦听多个来源时，回调函数接受两个数组，分别对应来源数组中的新值和旧值。
 
@@ -804,7 +761,7 @@ type StopHandle = () => void
 - **options**：一个可选的选项，一般用来调整副作用的刷新时机或调试副作用的依赖
 
   - 默认情况下，watch的回调函数会在组件重新渲染之前执行，flush 属性可以设置回调函数的触发时机（post：在组件渲染之后再执行；sync：在响应式依赖发生改变时立即触发侦听器），使用时可能会导致页面性能和数据不一致的情况
-  - ​
+  - ​flush这个在源码内部其实是通过promise.then方法构造微任务来处理的
 
 - **返回值**：返回一个用来停止该副作用的函数（停止监听）
 
@@ -834,19 +791,13 @@ export default {
   setup() {
     watchEffect(onCleanup => {
       const apiCall = someAsyncMethod(props.songID) // 异步 API
-      onInvalidate(() => {
+      onCleanup(() => {
         apiCall.cancel() // 取消 API 调用
       })
     })
   }
 }
 ```
-
-
-
-##### TODO 副作用刷新时机
-
-TODO 改到下面共享
 
 ##### watchEffect 和 watch
 
@@ -997,10 +948,10 @@ h2 {font-size: v-bind(fontSize);
 
 不仅允许 Vue 跳过虚拟 DOM 差异、甚至可以完全跳过新 VNode 的创建步骤
 
-````
+```javascript
 <div v-for="user of users" :key="user.id" v-memo="[user.name]">{{ user.name }}
 </div>
-````
+```
 
 使用`v-memo`，不会重新创建虚拟元素，并且会重新使用前一个元素，除非`v-memo`（user.name）的条件发生变化。
 
@@ -1084,14 +1035,14 @@ interface ComponentOptions {
 
 同 `mixins` 一样，所有选项都将使用相关的策略进行合并。
 
-````
+```javascript
 const CompA = { ... }
 
 const CompB = {
   extends: CompA,
   ...
 }
-````
+```
 
 ## dev 调试钩子
 
@@ -1139,7 +1090,6 @@ onRenderTracked 会跟踪页面上所有响应式变量和方法的状态（可�
 
 ### onRenderTriggered 组件状态触发
 
-当响应式依赖的**变更**触发了组件渲染时调用  
 当响应式依赖的变更触发了组件渲染时调用，用来确定哪个依赖正在触发更新
 
 onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，并且新值和旧值都会给你明确的展示出来。
@@ -1152,9 +1102,3 @@ onRenderTriggered 不会跟踪每一个值，而是给你变化值的信息，�
 - target 目前页面中的响应变量和函数
 
 感觉和watch 很像，而且是 immidate= true 的时候
-
-
-
-
-
-[https://mp.weixin.qq.com/s?__biz=MjM5MDA2MTI1MA==&mid=2649116447&idx=3&sn=92b8c56a00ed88545d3b6983de1e8310&chksm=be5868b2892fe1a4dfc2ad8bfd82f478d55fb70485c104ae4dfc7eb0cd2c2ab4a10d0b064906&scene=27](https://mp.weixin.qq.com/s?__biz=MjM5MDA2MTI1MA==&mid=2649116447&idx=3&sn=92b8c56a00ed88545d3b6983de1e8310&chksm=be5868b2892fe1a4dfc2ad8bfd82f478d55fb70485c104ae4dfc7eb0cd2c2ab4a10d0b064906&scene=27)

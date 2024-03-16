@@ -23,11 +23,11 @@ xhr.send(null)
 
 status为响应状态码（http状态），和 readystate 不同；
 
-1. 0：未初始化 -- 尚未调用.open() 方法；
-2. 1：启动 -- 已经调用.open() 方法，但尚未调用.send()方法；
-3. 2：发送 -- 已经调用.send()方法，但尚未接收到响应；
-4. 3：接收 -- 已经接收到部分响应数据；
-5. 4：完成 -- 已经接收到全部响应数据，而且已经可以在客户端使用；
+- 0：未初始化 -- 尚未调用.open() 方法；
+- 1：启动 -- 已经调用.open() 方法，但尚未调用.send()方法；
+- 2：发送 -- 已经调用.send()方法，但尚未接收到响应；
+- 3：接收 -- 已经接收到部分响应数据；
+- 4：完成 -- 已经接收到全部响应数据，而且已经可以在客户端使用；
 
 ## 取消异步
 
@@ -80,16 +80,18 @@ xhr.responseType = 'blob';
 xhr.send();
 ```
 
-
 ## fetch
+
 > fetch 是ES6 出现的，基于 promise，比 xhr 用起来会更简洁一点，它是为了取代xhr而诞生的
 
 fetch() 方法定义在window 对象以及 workerglobalScope 对象上，返回一个 Promise 对象，这个 Promise 对象会在请求响应后被 resolve, 并传回 Response 对象
 
-```
+````
 fetch(url, config)
-```
+````
+
 ### 配置对象
+
 - method ： 请求方法
 - headers： 请求的头信息
 - body ： 请求的body信息
@@ -102,15 +104,19 @@ fetch(url, config)
 - integrity ：包括请求的subresource integrity值
 
 ### 返回值
-fetch 主要返回这些字段：
+
+fetch 主要返回这些字段：  
 ![](image.png)
 
 这里fetch 和 xhr 有些区别，主要注意下面几点：
+
 - **http状态**：当服务器返回一个代表错误的http状态码（!==2xx）时，fetch() 返回的 promise 不会被 reject 而是 resolve， 即使是 404 错误也是resolve，但是res的 ok 属性为 false，statusText值也会有所不同；
+
   - fetch() 只有在请求失败或者被阻止的时候才会标记为 reject
   - 可以在拿到res 时预先封装处理一下
-    
-```
+
+
+```javascript
 function checkStatus(response) {
     if (response.status >= 200 && response.status < 300) {
         return response;
@@ -120,21 +126,24 @@ function checkStatus(response) {
     throw error;
 }
 ```
-    
 
 - **跨域携带cookie**：fetch() 不会发送 cookies，除非使用了 credentials（该字段表示请求是否携带 cookie） 的初始化选项（也需要目标服务器支持）
+
   - omit：忽略cookie发送，默认
   - same-origin：同源，只有同域请求才可以发送 cookie
   - include： 可以同源也可以跨域
-```
+
+
+````
 fetch(url,{
   credentials: 'include'
 });
-```
+````
 
 - fetch 默认对服务器通过 set-cookie 的设置也会忽略，如果需要接收，也必须要配置credentials
 - **超时问题**： fetch 是不能向其他 ajax库一样设置 timeout，如果你需要加入这个属性需要自己封装一下（比如用setTimeout 手动reject）
-```
+
+```javascript
 const oldFetch = fetch;
 window.fetch = function(url, configs) {
     return new Promise(function(resolve, reject) {
@@ -168,5 +177,3 @@ window.fetch = function (url, configs) {
 }
 
 ```
-
-    

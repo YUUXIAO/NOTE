@@ -72,7 +72,7 @@ document.write(object( helloworld WEBPACK IMPORTED MODULE 1 ["helloworld"1)));
 
 通过scope hoisting 可以减少函数声明代码和内存开销；
 
-![scopeHositing](C:\File\CODE\NOTE\Markdown\Webpack\image\scopeHositing.png)
+![scopeHositing](C:%5CFile%5CCODE%5CNOTE%5CMarkdown%5CWebpack%5Cimage%5CscopeHositing.png)
 
 ## 使用
 
