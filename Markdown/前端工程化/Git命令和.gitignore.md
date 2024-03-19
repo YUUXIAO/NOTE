@@ -38,29 +38,29 @@
 这个命令算是工作中比较常用的  
 比如当前我正在featureA开发新功能，此时我有featureB功能正在交付测试，现在有缺陷提交给我修复但是我在featureA的代码还不能提交，这时候可以
 
-````
+```javascript
 git stash //不添加信息直接保存 
 
 git stash save [stashname] // 添加说明 
-````
+```
 
 可以使用 `git stash list`  查看  
-![图片](assets/IMG_1.png)  
+![]()  
 再切回 featureA分支执行
 
-````
+```javascript
 git stash pop // 将最近一次的储藏取出来，同时将该暂存从列表中删除
 
 // 指定取出对应的stash 
 git stash pop [index]
 git stash pop statsh@[index]
-````
+```
 
 ### 代码回滚场景
 
 #### 未添加到远程仓库
 
-- **在工作区的修改（checkout）：**当文件只在工作区有修改，还没有进行 add 和 commit 操作时，可以使用以下命令来回滚工作区的修改（这种情况被丢弃的内容是不可操作的）
+- **在工作区的修改（checkout）：**当文只在工作区有修改，还没有进行 add 和 commit 操作时，可以使用以下命令来回滚工作区的修改（这种情况被丢弃的内容是不可操作的）
 
 ````
 git checkout -- [filePath]

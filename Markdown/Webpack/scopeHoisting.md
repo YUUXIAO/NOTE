@@ -70,9 +70,9 @@ document.write(object( helloworld WEBPACK IMPORTED MODULE 1 ["helloworld"1)));
 
 > 将所有模块的代码按照引用顺序放在一个函数作用域里，然后适当的重命名一些变量以防变量名冲突；
 
-通过scope hoisting 可以减少函数声明代码和内存开销；
+通过scope hoisting 可以减少函数声明代码和内存开销；![](image/scopeHositing.png)
 
-![scopeHositing](C:%5CFile%5CCODE%5CNOTE%5CMarkdown%5CWebpack%5Cimage%5CscopeHositing.png)
+
 
 ## 使用
 

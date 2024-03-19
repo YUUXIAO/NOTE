@@ -87,14 +87,6 @@ Store.prototype.commit = function commit(_type, _payload, _options) {
     .forEach(function (sub) {
       return sub(mutation, this$1$1.state)
     })
-  if (process.env.NODE_ENV !== 'production' && options && options.silent) {
-    console.warn(
-      '[vuex] mutation type: ' +
-        type +
-        '. Silent option has been removed. ' +
-        'Use the filter functionality in the vue-devtools'
-    )
-  }
 }
 
 ```
@@ -126,10 +118,7 @@ Store.prototype.dispatch = function dispatch(_type, _payload) {
         return sub.before(action, this$1$1.state)
       })
   } catch (e) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn('[vuex] error in before action subscribers: ')
-      console.error(e)
-    }
+    // ...
   }
   const result =
     entry.length > 1
@@ -151,10 +140,7 @@ Store.prototype.dispatch = function dispatch(_type, _payload) {
               return sub.after(action, this$1$1.state)
             })
         } catch (e) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn('[vuex] error in after action subscribers: ')
-            console.error(e)
-          }
+          // ...
         }
         resolve(res)
       },
@@ -168,10 +154,7 @@ Store.prototype.dispatch = function dispatch(_type, _payload) {
               return sub.error(action, this$1$1.state, error)
             })
         } catch (e) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn('[vuex] error in error action subscribers: ')
-            console.error(e)
-          }
+          // ...
         }
         reject(error)
       }

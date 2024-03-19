@@ -253,7 +253,7 @@ console.log(inherits.getReceiver === inherits); // true
 可以通过 Reflect 对象提供的 get 方法动态设置 receiver 对象的值；
 
 ```javascript
-console.log(Reflect.get(proxy, "getReceiver", "阿三"));
+console.log(Reflect.get(proxy, "getReceiver", "yabby"));
 ```
 
 ### 包装内置构造函数的实例

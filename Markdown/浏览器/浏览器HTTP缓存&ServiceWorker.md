@@ -36,7 +36,7 @@ Cache-Control:max-age=6000
 Cache-Control: max-age=<seconds>  // 缓存存储的最大周期，单位为秒
 Cache-Control: s-maxage=<seconds>  // 和max-age是一样的，不过它只针对代理服务器缓存而言；
 Cache-Control: max-stale[=<seconds>] // 客户端愿意接收一个已经过期的资源
-Cache-control: no-cache // 重新验证是否缓存(协商缓存验证)，强制客户端直接向服务器发送请求，每次请求都必须向服务器发送，服务器接收到请求后判断资源是返回新内容还是304
+Cache-control: no-cache // 重新验证是否缓存(协商缓存验证)，强制客户端直接向服务器发送请求，不会走强缓存的逻辑，服务器接收到请求后判断资源是返回新内容还是304
 Cache-control: no-store // 禁止一切缓存                       
 ```
 

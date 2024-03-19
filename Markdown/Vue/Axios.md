@@ -327,8 +327,8 @@ Axios.prototype.request = function request(config) {
 ## HTTP 适配器
 
 > http请求适配器主要指两种：XHR、http；
->
->  XHR的核心是浏览器端的XMLHttpRequest对象， http核心是node的http/https.request方法；
+> 
+> XHR的核心是浏览器端的XMLHttpRequest对象， http核心是node的http/https.request方法；
 
 
 
@@ -339,7 +339,7 @@ Axios.prototype.request = function request(config) {
 dispatchRequest 方法主要做3件事情 ：
 
 1. 拿到 config 对象，对 config 进行传给 http 请求适配器进行最后处理；
-2. http 
+2. http
 
 ```javascript
 // lib/core/dispatchRequest.js
@@ -432,7 +432,7 @@ function getDefaultAdapter() {
 }
 ```
 
-###  自定义适配器
+### 自定义适配器
 
 ```javascript
 var settle = require('./../core/settle');
@@ -516,7 +516,7 @@ CancelToken.source = function source() {
 };
 ```
 
-### CancelToken 
+### CancelToken
 
 1. axios.CancelToken.source().token 拿到的实例下挂载了 promise 和 reason 两个属性；
 2. promise 属性是一个处于 pending 状态的 promise 实例；
@@ -594,7 +594,7 @@ if (typeof config.onUploadProgress === 'function' && request.upload) {
 }
 ```
 
-##  Axios CSRF 防御
+## Axios CSRF 防御
 
 > Axios 内部是使用 双重 Cookie 防御 的方案来防御 CSRF 攻击；
 

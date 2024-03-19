@@ -117,10 +117,16 @@ DOM 型 XSS 是**不用与服务端交互的，它只发生在客户端数据处
 
 ##### 限制方式
 
-- default-src 限制全局；
-- 制定限制类型：connect-src、mainfest-src、img-src、font-src、media-src、style-src、frame-src、script-src…
+1. 设置meta标签：
 
-  - 资源类型有：connect-src、mainfest-src、img-src、font-src、media-src、style-src、frame-src、script-src…
+   ```javascript
+   <meta http-equiv="Content-Security-Policy">
+   ```
+
+2. 设置http头部的 Content-Security-Policy 属性
+
+   - default-src 限制全局；
+   - 其他限制类型：connect-src、mainfest-src、img-src、font-src、media-src、style-src、frame-src、script-src…
 
 
 #### HttpOnly
@@ -180,8 +186,7 @@ CSRF 攻击往往是在用户不知情的情况下构造了网络请求，所以
 
 在服务器端验证请求来源的站点：通过 HTTP 请求头中的 Header：**Origin Header** 和 **Referer Header**，服务器通过解析这两个 Header 中的域名，确定请求的来源域；
 
-- Orgin 只包含域名信息，Referer 包含了具体的 URL 路径；
-- 这两者都是可以伪造的，通过 AJax 中自定义请求头，安全性略差；
+- Orgin 只包含域名信息，Referer 包含了具体的 URL 路径：这两者都是可以伪造的，通过 AJax 中自定义请求头，安全性略差；
 
 #### SameSite（限制 cookie）
 
@@ -255,4 +260,4 @@ const sql =
 
 ### HTTP 劫持
 
-HTTP 本身是明文传输，并且传输的工程中很可能中间的某一环节被篡改；
+HTTP 本身是明文传输，并且传输的工程中很可能中间的某一环节被篡改，比如就修改http响应的内容-加广告啥的
