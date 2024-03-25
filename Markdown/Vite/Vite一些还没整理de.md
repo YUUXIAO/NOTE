@@ -41,7 +41,7 @@ Vite 为了解决这个问题**拦截了浏览器对模块的请求并返回处�
 
 这个包主要就是用来扫描import语法的，虽然babel也能实现扫描，但是针对ESM文件来说，使用es-module-lexer库在性能上能够有很大的提升，其压缩后的体积只有4kb
 
- **todo** 网上对于这个包的文档不是很多，后面等我看看具体代码再补充这里
+**todo** 网上对于这个包的文档不是很多，后面等我看看具体代码再补充这里
 
 ### [magic-string](https://github.com/rich-harris/magic-string#readme)
 
@@ -56,7 +56,9 @@ Vite 为了解决这个问题**拦截了浏览器对模块的请求并返回处�
 比如App.vue文件会处理成：
 
 - <template></template>语法转换成import { render as __render } from "/App.vue?type=template"
-- <style></style>语法转换成import "/App.vue?type=style&index=0"`
+- 
+  <style></style>语法转换成import "/App.vue?type=style&index=0"`
+  
 
 再遇到import会发起请求，vite就会根据query去进入不同区块的解析（这里也会将处理过的代码匹配文件路径进行缓存）：
 
@@ -406,5 +408,8 @@ Vite在预构建阶段，将**构建后的依赖缓存到node_modules/.vite** �
    - Webpack 启动后会经历一条很长的编译打包链条：语法解析、依赖收集、代码转译、打包合并、代码优化，打包出低版本、高兼容性的产物代码
    - Vite 没有打包的过程，而是直接启动了一个开发服务器devServer 和用 ESbuild预构建依赖，等到请求到对应的模块才简单处理一下内容，整个过程是没有对文件进行打包编译的
 
-     
 
+2. 热更新：
+
+   - webpack热更新也是需要对修改的模块进行一连串的编译打包过程，然后经过jsop的方式执行的
+   - vite因为是浏览器自己import的文件的，所以在代码更新的时候先判断是不是全局配置或者依赖修改，如果是就刷新页面，否则就直接让对应的import失效的，然后设置新的import路径和时间戳啥的
