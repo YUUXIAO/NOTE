@@ -250,7 +250,7 @@ var inherits = Object.create(proxy);
 console.log(inherits.getReceiver === inherits); // true
 ```
 
-可以通过 Reflect 对象提供的 get 方法动态设置 receiver 对象的值；
+可以通过 Reflect 对象提供的 get 方法动态设置 receiver 对象的值，这种一般出现在proto原型上的对象读写，所以可以用Reflect.get(target, attr, origin)来设置
 
 ```javascript
 console.log(Reflect.get(proxy, "getReceiver", "yabby"));
